@@ -15,7 +15,7 @@ ApplicationWindow {
   minimumWidth: 1200
 
   // Set default font for all child items
-  font.family: "Helvetia"
+  font.family: "Segoe UI Variable"
   font.pixelSize: 16
 
 

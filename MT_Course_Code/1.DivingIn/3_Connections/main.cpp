@@ -1,18 +1,12 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
-#include "cppworker.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    //Create the object on the C++ side
-    CppWorker cppworker;
-
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("BWorker", &cppworker);
-    const QUrl url(u"qrc:/ContextProperties/Main.qml"_qs);
+    const QUrl url(u"qrc:/Connections/Main.qml"_qs);
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
