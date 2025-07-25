@@ -4,7 +4,8 @@ project(2-ContextProperties VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Qml Charts)
+
 
 qt_standard_project_setup()
 
@@ -16,8 +17,11 @@ qt_add_qml_module(appContextProperties
     URI ContextProperties
     VERSION 1.0
     QML_FILES Main.qml
-    SOURCES cppworker.h cppworker.cpp
-    QML_FILES Other.qml
+    SOURCES
+    QML_FILES
+    QML_FILES LargeChartView.qml
+    QML_FILES CellBox.qml
+    QML_FILES SideNavButton.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -32,7 +36,12 @@ set_target_properties(appContextProperties PROPERTIES
 )
 
 target_link_libraries(appContextProperties
-    PRIVATE Qt6::Quick
+    PRIVATE
+    Qt6::Quick
+    Qt6::QuickControls2
+    Qt6::QuickTemplates2
+    Qt6::Charts
+    Qt6::QuickWidgets
 )
 
 include(GNUInstallDirs)
