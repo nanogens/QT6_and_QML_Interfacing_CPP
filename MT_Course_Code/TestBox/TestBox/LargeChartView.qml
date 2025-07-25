@@ -2,7 +2,7 @@ import QtCharts 2.2
 
 ChartView {
   animationOptions: ChartView.SeriesAnimations
-  //antialiasing: true
+  dropShadowEnabled: true
   margins.top: 0
   margins.bottom: 0
   margins.left: 0

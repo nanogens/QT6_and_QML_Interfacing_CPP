@@ -2,7 +2,8 @@ import QtQuick 2.13
 import QtQuick.Layouts 1.11
 import QtQuick.Controls 2.4
 import QtQuick.Controls.Material 2.4
-import QtQuick.Controls.Universal 2.4
+
+
 import QtCharts 2.2
 
 ApplicationWindow {
@@ -12,11 +13,19 @@ ApplicationWindow {
   height: 500
   minimumHeight: 500
   minimumWidth: 1200
+
+  // Set default font for all child items
+  font.family: "Helvetia"
+  font.pixelSize: 16
+
+
+  //Universal.theme: Universal[subTheme.currentText]
+  //Universal.accent: Universal[accentColor.currentText]
+
   Material.theme: Material[subTheme.currentText]
   Material.accent: Material[accentColor.currentText]
   Material.primary: Material[primaryColor.currentText]
-  Universal.theme: Universal[subTheme.currentText]
-  Universal.accent: Universal[accentColor.currentText]
+
   menuBar: MenuBar {
     Menu {
       title: '&File'
@@ -220,7 +229,7 @@ ApplicationWindow {
           anchors.fill: parent
           Dial {
             id: dial
-            scale: 0.8
+            scale: 1.1
             Layout.alignment: Qt.AlignHCenter
             ToolTip {
               parent: dial.handle
@@ -614,7 +623,7 @@ ApplicationWindow {
       ComboBox {
         id: accentColor
         Layout.fillWidth: true
-        enabled: qtquick2Themes.text === 'Material' || qtquick2Themes.text === 'Universal'
+        enabled: true // qtquick2Themes.text === 'Material' || qtquick2Themes.text === 'Universal'
         model: {
           if (qtquick2Themes.text === 'Universal') return parent.universalColors
           return parent.materialColors
@@ -624,7 +633,7 @@ ApplicationWindow {
       ComboBox {
         id: primaryColor
         Layout.fillWidth: true
-        enabled: qtquick2Themes.text === 'Material'
+        enabled: true // qtquick2Themes.text === 'Material'
         model: parent.materialColors
       }
     }

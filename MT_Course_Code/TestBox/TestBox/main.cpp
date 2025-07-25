@@ -8,14 +8,19 @@
 #include <QQuickView>
 
 #include <QQuickStyle>  // Required for setting the style
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
     // Qt Charts uses Qt Graphics View Framework for drawing, therefore QApplication must be used.
     QApplication app(argc, argv);
 
+
     // Set the Material style before loading QML
-    //QQuickStyle::setStyle("Material");  // Force Material theme
+    // Try both methods
+    qputenv("QT_QUICK_CONTROLS_STYLE", "Material");
+    QQuickStyle::setStyle("Material");
+
 
     /*
     QQuickView viewer;
@@ -35,7 +40,7 @@ int main(int argc, char *argv[])
 
 
     QQmlApplicationEngine engine;
-    engine.
+
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
