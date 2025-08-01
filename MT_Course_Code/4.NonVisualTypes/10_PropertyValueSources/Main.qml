@@ -15,8 +15,8 @@ Window {
         }
         height: 300
         color: "dodgerblue"
-        //RandomNumber on radius{
-        //    maxValue: 300
-       // }
+        RandomNumber on radius{
+            maxValue: 300
+        }
     }
 }
