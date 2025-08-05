@@ -6,7 +6,7 @@
 CppClass::CppClass(QObject *parent) : QObject(parent),
     qmlRootObject(nullptr)
 {
-
+    m_switchEnabled = true;
 }
 
 void CppClass::passFromQmlToCpp(QVariantList list/*array*/, QVariantMap map /*object*/)
@@ -51,21 +51,10 @@ void CppClass::setQmlRootObject(QObject *value)
 void CppClass::triggerJSCall()
 {
     qDebug() << "Calling JS";
-    QVariantList list;//array
-    list << 123.3 << QColor(Qt::cyan) << "Qt is great" << 10;
 
+    qDebug() << "I'm sending this to the MainB";
 
-    QVariantMap map;//object
-    map.insert("movie","Game of Thrones");
-    map.insert("names", "John Snow");
-    map.insert("role","Main Character");
-    map.insert("release", QDate(2011, 4, 17));
-
-
-
-    QMetaObject::invokeMethod(qmlRootObject, "arrayObjectFunc",
-                              Q_ARG(QVariant, QVariant::fromValue(list)),
-                              Q_ARG(QVariant, QVariant::fromValue(map)));
     qDebug() << "Called JS";
-
 }
+
+

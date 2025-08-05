@@ -10,6 +10,7 @@
 class CppClass : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool switchEnabled READ switchEnabled NOTIFY switchEnabledChanged)
 public:
     explicit CppClass(QObject *parent = nullptr);
 
@@ -21,11 +22,22 @@ public:
 
 signals:
 
+    void switchEnabledChanged();
+
 public slots:
     void triggerJSCall();
 
 private:
     QObject * qmlRootObject;
+
+
+
+// MT added
+public:
+    bool switchEnabled() const { return m_switchEnabled; }
+
+private:
+    bool m_switchEnabled;
 };
 
 #endif // CPPCLASS_H
