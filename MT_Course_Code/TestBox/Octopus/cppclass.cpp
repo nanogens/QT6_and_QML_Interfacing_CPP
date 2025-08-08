@@ -205,13 +205,13 @@ void CppClass::readwriteThread()
             }
             else
             {
-                qDebug() << "Sent" << bytesWritten << "bytes";
+                //qDebug() << "Sent" << bytesWritten << "bytes";
                 writePos = 0;
             }
 
             // Switch back to receive mode
             setTransmitMode(false);
-            QThread::usleep(100); // Guard time before reading
+            //QThread::usleep(100); // Guard time before reading
         }
 
         // Then check for incoming data
@@ -226,7 +226,7 @@ void CppClass::readwriteThread()
                 {
                     m_serialData.incoming.push(readBuffer[i]);
                 }
-
+                /*
                 // Print all received bytes
                 qDebug() << "Received" << bytesRead << "byte(s):";
                 for (DWORD i = 0; i < bytesRead; i++)
@@ -236,7 +236,7 @@ void CppClass::readwriteThread()
                              << "Hex: 0x" << Qt::hex << (static_cast<int>(readBuffer[i]) & 0xFF)
                              << "Char: '" << ((readBuffer[i] >= 32 && readBuffer[i] < 127) ? readBuffer[i] : '.') << "'";
                 }
-
+                */
                 emit dataReceived(QByteArray(readBuffer, bytesRead));
 
                 // Send raw byte array
@@ -310,10 +310,24 @@ void CppClass::stopCommunication() {
 
 // --------------
 
-void CppClass::passFromQmlToCpp(QVariantList list, QVariantMap map) {
+void CppClass::passFromQmlToCpp(QVariantList list/*array*/, QVariantMap map /*object*/)
+{
     qDebug() << "Received variant list and map from QML";
-    // ... (keep your existing QML code) ...
+    qDebug() << "List :";
+    for( int i{0} ; i < list.size(); i++)
+    {
+        qDebug() << "List item :" << list.at(i).toString();
+    }
+
+    /*
+    qDebug() << "Map :";
+    for( int i{0} ; i < map.keys().size(); i++)
+    {
+        qDebug() << "Map item :" << map[map.keys().at(i)].toString();
+    }
+    */
 }
+
 
 // Add a setter for the port name
 void CppClass::setPortName(const QString& portName)

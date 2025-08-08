@@ -43,7 +43,8 @@ Item {
 
 
 
-    property string currentInstrument: "RBR Concerto"
+    property string currentinstrumentModelTypes: "Submersible_Mini_AZ"
+    property string currentinstrumentBatteryTypes: "Alkaline"
 
     GridLayout
     {
@@ -100,12 +101,13 @@ Item {
                             Label { text: "Submersible Mini AZ"}
                             ComboBox
                             {
+                                id: modelComboBox
                                 model: instrumentModelTypes
                                 currentIndex: 0
                                 implicitWidth: 200
                                 implicitHeight: 26
                                 font.pixelSize: 12
-                                onCurrentIndexChanged: root.instrumentModelTypes = currentText
+                                onCurrentIndexChanged: listview2.currentinstrumentModelTypes = currentText
                             }
 
                             // Battery row
@@ -113,12 +115,13 @@ Item {
                             Label { text: "Lithium CR2"}
                             ComboBox
                             {
+                                id: batteryComboBox
                                 model: instrumentBatteryTypes
                                 currentIndex: 0
                                 implicitWidth: 200
                                 implicitHeight: 26
                                 font.pixelSize: 12
-                                onCurrentIndexChanged: root.instrumentBatteryTypes = currentText
+                                onCurrentIndexChanged: listview2.currentinstrumentBatteryTypes = currentText
                             }
 
                             // Last Communication row
@@ -140,8 +143,7 @@ Item {
                                 text: "Read Instrument"
                                 implicitHeight: 40
                                 implicitWidth: 200
-                                //Layout.fillWidth: true  // Fill available width
-                                //Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2  // Half width minus spacing
+
                                 onClicked:
                                 {
                                     var data = CppClass.getVariantListFromCpp()
@@ -160,14 +162,36 @@ Item {
                                 text: "Write Instrument"
                                 implicitHeight: 40
                                 implicitWidth: 200
-                                //Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2  // Half width minus spacing
                                 onClicked:
                                 {
-                                    var data = CppClass.getVariantListFromCpp()
-                                    data.forEach(function(element)
+
+                                    /*
+                                    var arr = ['Africa','Asia',"Europe","North America","South America","Oceania","Antarctica"]
+                                    var obj =
                                     {
-                                        console.log("Array item: " + element)
-                                    })
+                                        firstName:"John",
+                                        lastName:"Doe",
+                                        location:"Earth"
+                                    }
+
+                                    CppClass.passFromQmlToCpp(arr,obj);
+                                    */
+
+                                    // Get the selected values from the ComboBoxes
+                                    var selectedModel = modelComboBox.currentText;
+                                    var selectedBattery = batteryComboBox.currentText;
+
+                                    console.log("Selected Model:", selectedModel);
+                                    console.log("Selected Battery:", selectedBattery);
+
+                                    // You can then pass these values to your C++ function
+                                    var arr = [selectedModel, selectedBattery];
+                                    var obj = {
+                                        model: selectedModel,
+                                        battery: selectedBattery
+                                    };
+
+                                    CppClass.passFromQmlToCpp(arr, obj);
                                 }
                             }
                         }
