@@ -29,6 +29,8 @@ int main(int argc, char *argv[])
     CppClass cppclass;
     engine.rootContext()->setContextProperty("CppClass", &cppclass);
 
+
+
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,

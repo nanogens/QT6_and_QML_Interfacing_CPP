@@ -31,6 +31,8 @@ qt_add_qml_module(appOctopus
         cppclass.h
         cppclass.cpp
         RESOURCES
+        QML_FILES ListView2.qml
+        QML_FILES ListView3.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

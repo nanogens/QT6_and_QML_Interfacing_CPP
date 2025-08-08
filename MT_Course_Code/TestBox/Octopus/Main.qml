@@ -86,6 +86,14 @@ ApplicationWindow
       Label
       {
         text: 'Octopus - Submersible Application ver 1.00 beta'
+        color: "black"
+        font {
+            bold: true
+            pixelSize: 18
+            family: "Arial"
+        }
+
+
         elide: Label.ElideRight
         horizontalAlignment: Qt.AlignHCenter
         verticalAlignment: Qt.AlignVCenter
@@ -154,8 +162,9 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
-          ListView1 {}  // Your original grid content
-          ListView0 {}  // New simple view
+          ListView2 {}  // Your original grid content
+          ListView1 {}  // New simple view
+          ListView0 {}
 
           // Add more views as needed
       }

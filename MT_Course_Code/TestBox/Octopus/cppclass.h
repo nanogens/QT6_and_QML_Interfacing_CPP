@@ -4,15 +4,21 @@
 #include <QObject>
 #include <QVariantList>
 #include <QVariantMap>
-#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
+
+#include <windows.h>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <queue>
+#include <condition_variable>
 
 class CppClass : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(bool switchEnabled READ switchEnabled NOTIFY switchEnabledChanged)
 public:
     explicit CppClass(QObject *parent = nullptr);
+    ~CppClass();
 
     Q_INVOKABLE void passFromQmlToCpp(QVariantList list, QVariantMap map);
     Q_INVOKABLE QVariantList getVariantListFromCpp();
@@ -20,24 +26,50 @@ public:
 
     void setQmlRootObject(QObject *value);
 
-signals:
+    // Public interface
+    bool startCommunication(const char* portName);
+    void stopCommunication();
+    void sendData(const QByteArray &data);
+    void setPortName(const QString& );
 
-    void switchEnabledChanged();
+    // Additions
+    void setTransmitMode(bool transmitting);
+
+private:
+    QString m_portName;
+
+
+signals:
+    void dataReceived(const QByteArray &data);
 
 public slots:
     void triggerJSCall();
 
 private:
-    QObject * qmlRootObject;
+    // Serial communication
+    struct SerialData {
+        std::queue<char> incoming;
+        std::queue<char> outgoing;
+        std::mutex incomingMutex;
+        std::mutex outgoingMutex;
+        std::condition_variable cv;
+        std::atomic<bool> running{false};
+    };
 
+    HANDLE openCommPort(const char* portName, DWORD baudRate = CBR_115200);
+    void readThread();
+    void writeThread();
+    void readwriteThread();
+    void processReceivedData();
 
-
-// MT added
-public:
-    bool switchEnabled() const { return m_switchEnabled; }
-
-private:
-    bool m_switchEnabled;
+    // Member variables
+    HANDLE m_hPort = INVALID_HANDLE_VALUE;
+    SerialData m_serialData;
+    std::thread m_readThread;
+    std::thread m_writeThread;
+    std::thread m_readwriteThread;
+    std::mutex m_portMutex;
+    QObject* qmlRootObject = nullptr;
 };
 
 #endif // CPPCLASS_H
