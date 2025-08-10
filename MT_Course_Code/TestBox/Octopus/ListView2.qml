@@ -12,8 +12,14 @@ Item {
         Rectangle {
             property alias text: bannerText.text
             width: parent.width
-            height: 30
-            color: Qt.rgba(1, 0.75, 0, 1)
+            height: 50
+
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: "#FFBF00" }  // Vibrant yellow
+                GradientStop { position: 0.95; color: "#FFD351" }  // Noticeably lighter
+                GradientStop { position: 1.0; color: "#FFE082" }  // Pale yellow
+            }
 
             Text {
                 id: bannerText
@@ -25,7 +31,7 @@ Item {
                 color: "black"
                 font {
                     bold: true
-                    pixelSize: 14
+                    pixelSize: 18
                     family: "Arial"
                 }
             }
@@ -60,18 +66,35 @@ Item {
         {
             id: cellA
             Layout.fillHeight: true
-            title: 'A'
+            //title: 'A'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Instrument"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/A_Instrument.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Instrument"
+                    }
+
+
                 }
 
                 Item
@@ -207,18 +230,32 @@ Item {
         {
             id: cellB
             Layout.fillHeight: true
-            title: 'B'
+            //title: 'B'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Communications (Wired)"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/B_Communications.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Communications (Wired)"
+                    }
                 }
 
                 Item
@@ -261,18 +298,33 @@ Item {
         {
             id: cellC
             Layout.fillHeight: true
-            title: 'C'
+            //title: 'C'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Power Configuration"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/C_Power.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Power Configuration"
+                    }
                 }
 
                 Item
@@ -313,18 +365,32 @@ Item {
         {
             id: cellD
             Layout.fillHeight: true
-            title: 'D'
+            //title: 'D'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Time Synchronization"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/D_Time.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Time Synchronization"
+                    }
                 }
 
                 Item
@@ -369,18 +435,33 @@ Item {
         {
             id: cellE
             Layout.fillHeight: true
-            title: 'E'
+            //title: 'E'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Recording"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/E_Recording.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Recording"
+                    }
                 }
 
                 Item
@@ -426,18 +507,32 @@ Item {
         {
             id: cellF
             Layout.fillHeight: true
-            title: 'F'
+            //title: 'F'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Notes"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/F_Notes.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Notes"
+                    }
                 }
 
                 Item
@@ -474,18 +569,33 @@ Item {
         {
             id: cellG
             Layout.fillHeight: true
-            title: 'G'
+            //title: 'G'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Activation"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/G_Activation.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Activation"
+                    }
                 }
 
                 Item
@@ -519,30 +629,37 @@ Item {
         }
 
 
-
-
-
-
-
-
-
         // First Column
         CellBox
         {
             id: cellH
             Layout.fillHeight: true
-            title: 'H'
+            //title: 'H'
 
             ColumnLayout
             {
                 anchors.fill: parent
                 spacing: 5
 
-                Loader
+                GridLayout
                 {
-                    sourceComponent: bannerComponent
                     Layout.fillWidth: true
-                    onLoaded: item.text = "Sampling"
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/H_Sampling.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Sampling"
+                    }
                 }
 
                 Item
@@ -670,6 +787,68 @@ Item {
         }
 
 
+        CellBox
+        {
+            id: cellI
+            Layout.fillHeight: true
+            //title: 'I'
+
+            ColumnLayout
+            {
+                anchors.fill: parent
+                spacing: 5
+
+
+                GridLayout
+                {
+                    Layout.fillWidth: true
+                    columns: 2
+                    rowSpacing: 5
+                    columnSpacing: 0
+
+                    Image {
+                        source: "qrc:/Octopus/images/I_Misc.png"  // Replace with your image path
+                        Layout.preferredWidth: 50  // Set desired width
+                        Layout.preferredHeight: 50 // Set desired height
+                    }
+
+                    Loader
+                    {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Miscelleneous"
+                    }
+                }
+
+                Item
+                {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+
+                    Column
+                    {
+                        anchors.fill: parent
+                        spacing: 2
+
+                        GridLayout
+                        {
+                            Layout.fillWidth: true
+                            columns: 2
+                            rowSpacing: 5
+                            columnSpacing: 10
+
+                            Label { text: ""; font.bold: true }
+                            Label { text: ""; Layout.fillWidth: true }
+
+                            Label { text: "  Misc:"; font.bold: true }
+                            Label { text: Misc_misc; Layout.fillWidth: true }
+                        }
+                    }
+                }
+
+                Item { Layout.fillHeight: true }
+            }
+        }
 
 
 

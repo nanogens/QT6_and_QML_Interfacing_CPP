@@ -383,6 +383,274 @@ Item {
           TabButton { text: 'Spine' }
           TabButton { text: 'Pie' }
         }
+
+        StackLayout
+        {
+          width: parent.width
+          height: parent.height - y
+          anchors.top: bar.bottom
+          currentIndex: bar.currentIndex
+
+          // Bar Graph - 2 x Y axis (Depth, Tempeature)
+          ChartView
+          {
+              width: 1600
+              height: 800
+              theme: ChartView.ChartThemeDark
+              antialiasing: true
+              legend.visible: true
+              legend.alignment: Qt.AlignBottom
+              margins { top: 20; bottom: 40; left: 20; right: 40 } // Increased right margin
+
+              /*
+              // Customize the legend appearance
+              // Add a custom legend (e.g., using Row + Rectangle + Text)
+              Row
+              {
+                  anchors.bottom: parent.bottom
+                  spacing: 10
+                  Repeater
+                  {
+                      model: ["Temperature", "Depth", "Conductivity"]
+                      delegate: Row
+                      {
+                          spacing: 5
+                          Rectangle { width: 15; height: 15; color: "green" }
+                          Text { text: modelData; color: "white"; font.pixelSize: 14 }
+                      }
+                  }
+              }
+              */
+
+              // X-Axis (Time)
+              DateTimeAxis {
+                  id: axisX
+                  format: "hh:mm"
+                  titleText: "Time (minutes)"
+                  min: new Date(2023, 0, 1, 0, 0, 0)
+                  max: new Date(2023, 0, 1, 3, 20, 0) // 3 hours, 20 minutes
+              }
+
+              // Left Y-Axis (Depth - Primary)
+              ValueAxis {
+                  id: axisYDepth
+                  min: 0
+                  max: 50
+                  titleText: "Depth (meters)"
+                  labelFormat: "%.0f"
+              }
+
+              // Right Y-Axis 1 (Temperature)
+              ValueAxis {
+                  id: axisYTemp
+                  min: 10
+                  max: 30
+                  titleText: "Temperature (°C)"
+                  labelFormat: "%.1f"
+              }
+
+              // Right Y-Axis 2 (Conductivity)
+              ValueAxis {
+                  id: axisYConductivity
+                  min: 0
+                  max: 60
+                  titleText: "Conductivity (mS/cm)"
+                  labelFormat: "%.0f"
+              }
+
+              /*
+              // Right Y-Axis 3 (Oxygen - New)
+              ValueAxis {
+                  id: axisYOxygen
+                  min: 0
+                  max: 10
+                  titleText: "Oxygen (mg/L)"
+                  labelFormat: "%.1f"
+              }
+              */
+
+              // Temperature Line
+              LineSeries {
+                  name: "Temperature"
+                  axisX: axisX
+                  axisYRight: axisYTemp
+                  color: "#ff7f0e" // Orange
+                  width: 2
+                  style: Qt.DashLine
+
+                  Component.onCompleted: {
+                      for (var i = 0; i <= 500; i++) {
+                          var temp = 18 + 7 * Math.sin(i/16);
+                          append(new Date(2023,0,1,0,i,0).getTime(), temp);
+                      }
+                  }
+              }
+
+              // Conductivity Line
+              LineSeries {
+                  name: "Conductivity"
+                  axisX: axisX
+                  axisYRight: axisYConductivity
+                  color: "#2ca02c" // Green
+                  width: 2
+                  style: Qt.DotLine
+
+                  Component.onCompleted: {
+                      for (var i = 0; i <= 500; i+=2) {
+                          var cond = 10 + 50 * Math.sin(i/25);
+                          append(new Date(2023,0,1,0,i,0).getTime(), cond);
+                      }
+                  }
+              }
+
+              // Oxygen Line (New)
+              LineSeries {
+                  name: "Oxygen"
+                  axisX: axisX
+                  axisYRight: axisYOxygen
+                  color: "#d62728" // Red
+                  width: 2
+                  style: Qt.DashDotLine
+
+                  Component.onCompleted: {
+                      for (var i = 0; i <= 500; i+=2) {
+                          var oxygen = 5 + 4 * Math.cos(i/20);
+                          append(new Date(2023,0,1,0,i,0).getTime(), oxygen);
+                      }
+                  }
+              }
+
+              // Depth Line (Primary)
+              LineSeries {
+                  name: "Depth"
+                  axisX: axisX
+                  axisY: axisYDepth
+                  color: "#1f77b4" // Blue
+                  width: 4
+
+                  Component.onCompleted: {
+                      for (var i = 0; i <= 500; i++) {
+                          var depth = 20 + 15 * Math.sin(i/10);
+                          append(new Date(2023,0,1,0,i,0).getTime(), depth);
+                      }
+                  }
+              }
+
+              // Custom axis placement
+              onPlotAreaChanged: {
+                  // Position Temperature axis (first right axis)
+                  axisYTemp.visible = true;
+                  axisYTemp.lineVisible = true;
+                  axisYTemp.labelsVisible = true;
+                  axisYTemp.titleVisible = true;
+                  axisYTemp.alignment = Qt.AlignRight;
+                  axisYTemp.offset = 0;
+
+                  // Position Conductivity axis (second right axis)
+                  axisYConductivity.visible = true;
+                  axisYConductivity.lineVisible = true;
+                  axisYConductivity.labelsVisible = true;
+                  axisYConductivity.titleVisible = true;
+                  axisYConductivity.alignment = Qt.AlignRight;
+                  axisYConductivity.offset = -50; // Adjust based on your chart width
+
+                  // Position Oxygen axis (third right axis)
+                  axisYOxygen.visible = true;
+                  axisYOxygen.lineVisible = true;
+                  axisYOxygen.labelsVisible = true;
+                  axisYOxygen.titleVisible = true;
+                  axisYOxygen.alignment = Qt.AlignRight;
+                  axisYOxygen.offset = -100; // Adjust based on your chart width
+              }
+          }
+
+
+
+/*
+          // Line Graph - 2 x Y axis (Depth, Tempeature)
+          ChartView {
+              width: 800
+              height: 500
+              theme: ChartView.ChartThemeLight
+              antialiasing: true
+              legend.visible: true
+              legend.alignment: Qt.AlignBottom
+
+              // X-Axis (Time)
+              DateTimeAxis {
+                  id: axisX
+                  format: "hh:mm"
+                  titleText: "Time"
+                  min: new Date(2023, 0, 1, 8, 0)  // Jan 1 2023, 8:00 AM
+                  max: new Date(2023, 0, 1, 12, 0) // Jan 1 2023, 12:00 PM
+              }
+
+              // Left Y-Axis (Depth)
+              ValueAxis {
+                  id: axisYDepth
+                  min: 0
+                  max: 40
+                  titleText: "Depth (meters)"
+                  labelFormat: "%.0f"
+              }
+
+              // Right Y-Axis (Temperature)
+              ValueAxis {
+                  id: axisYTemp
+                  min: 15
+                  max: 25
+                  titleText: "Temperature (°C)"
+                  labelFormat: "%.0f"
+              }
+
+              // Temperature Line (right axis)
+              LineSeries {
+                  name: "Temperature"
+                  axisX: axisX
+                  axisYRight: axisYTemp
+                  color: "#ff7f0e"  // Orange
+                  width: 3
+                  style: Qt.DashLine
+
+                  // Sample temperature data points
+                  XYPoint { x: new Date(2023, 0, 1, 8, 0).getTime(); y: 18 }
+                  XYPoint { x: new Date(2023, 0, 1, 9, 0).getTime(); y: 19 }
+                  XYPoint { x: new Date(2023, 0, 1, 10, 0).getTime(); y: 22 }
+                  XYPoint { x: new Date(2023, 0, 1, 11, 0).getTime(); y: 20 }
+                  XYPoint { x: new Date(2023, 0, 1, 12, 0).getTime(); y: 17 }
+              }
+
+              // Depth Line (left axis)
+              LineSeries {
+                  name: "Depth"
+                  axisX: axisX
+                  axisY: axisYDepth
+                  color: "#1f77b4"  // Blue
+                  width: 3
+
+                  // Sample depth data points
+                  XYPoint { x: new Date(2023, 0, 1, 8, 0).getTime(); y: 12 }
+                  XYPoint { x: new Date(2023, 0, 1, 9, 0).getTime(); y: 22 }
+                  XYPoint { x: new Date(2023, 0, 1, 10, 0).getTime(); y: 35 }
+                  XYPoint { x: new Date(2023, 0, 1, 11, 0).getTime(); y: 18 }
+                  XYPoint { x: new Date(2023, 0, 1, 12, 0).getTime(); y: 8 }
+              }
+
+              // Add margins to prevent clipping
+              margins {
+                  top: 20
+                  bottom: 30
+                  left: 20
+                  right: 20
+              }
+          }
+
+*/
+        }
+
+
+
+/*
         StackLayout
         {
           width: parent.width
@@ -437,7 +705,7 @@ Item {
                 XYPoint { x: 2008; y: 4 }
                 XYPoint { x: 2009; y: 3 }
                 XYPoint { x: 2010; y: 2 }
-                XYPoint { x: 2011; y: 1 }
+                XYPoint { x: 2011; y: 1 }             
               }
             }
             AreaSeries
@@ -589,6 +857,19 @@ Item {
               XYPoint { x: 3.4; y: 2.3 }
               XYPoint { x: 4.1; y: 3.1 }
             }
+
+            SplineSeries
+            {
+              name: 'Temp'
+              XYPoint { x: 0; y: 0.0 }
+              XYPoint { x: 1.1; y: 15.2 }
+              XYPoint { x: 1.9; y: 12.4 }
+              XYPoint { x: 2.1; y: 25.1 }
+              XYPoint { x: 2.9; y: 22.6 }
+              XYPoint { x: 3.4; y: 8.3 }
+              XYPoint { x: 4.1; y: 13.1 }
+            }
+
           }
           LargeChartView
           {
@@ -599,6 +880,9 @@ Item {
             }
           }
         }
+
+*/
+
       }
       Popup
       {

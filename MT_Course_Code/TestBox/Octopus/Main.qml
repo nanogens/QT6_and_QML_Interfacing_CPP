@@ -73,51 +73,53 @@ ApplicationWindow
       Action { text: '&About' }
     }
   }
-  header: ToolBar
-  {
-    RowLayout
-    {
-      anchors.fill: parent
-      ToolButton
-      {
-        icon.source: "qrc:/Octopus/images/baseline-menu-24px.svg"
-        onClicked: sideNav.open()
-      }
-      Label
-      {
-        text: 'Octopus - Submersible Application ver 1.00 beta'
-        color: "black"
-        font {
-            bold: true
-            pixelSize: 18
-            family: "Arial"
-        }
+  header: ToolBar {
+      contentItem: Rectangle {
+          // Gradient fill for the toolbar
+          gradient: Gradient {
+              orientation: Gradient.Horizontal
+              GradientStop { position: 0.0; color: "#4E342E" }  // Deep Warm Brown
+              GradientStop { position: 0.25; color: "#FFA500" }  // Vibrant Orange Core
+              GradientStop { position: 1.0; color: "#FFBF00" }  // Bright Golden Yellow
+          }
 
-
-        elide: Label.ElideRight
-        horizontalAlignment: Qt.AlignHCenter
-        verticalAlignment: Qt.AlignVCenter
-        Layout.fillWidth: true
+          RowLayout {
+              anchors.fill: parent
+              ToolButton {
+                  icon.source: "qrc:/Octopus/images/baseline-menu-24px.svg"
+                  onClicked: sideNav.open()
+              }
+              Label {
+                  text: 'Octopus - Submersible Application ver 1.00 beta'
+                  color: "black"  // Keeps text readable against the gradient
+                  font {
+                      bold: true
+                      pixelSize: 18
+                      family: "Arial"
+                  }
+                  elide: Label.ElideRight
+                  horizontalAlignment: Qt.AlignHCenter
+                  verticalAlignment: Qt.AlignVCenter
+                  Layout.fillWidth: true
+              }
+              ToolButton { text: 'Action 1' }
+              ToolButton { text: 'Action 2' }
+              ToolSeparator {}
+              ToolButton { text: 'Action 3' }
+              ToolButton { text: 'Action 4' }
+              ToolButton {
+                  icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
+                  onClicked: menu.open()
+                  Menu {
+                      id: menu
+                      y: parent.height
+                      MenuItem { text: 'New...' }
+                      MenuItem { text: 'Open...' }
+                      MenuItem { text: 'Save' }
+                  }
+              }
+          }
       }
-      ToolButton { text: 'Action 1' }
-      ToolButton { text: 'Action 2' }
-      ToolSeparator {}
-      ToolButton { text: 'Action 3' }
-      ToolButton { text: 'Action 4' }
-      ToolButton
-      {
-        icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
-        onClicked: menu.open()
-        Menu
-        {
-          id: menu
-          y: parent.height
-          MenuItem { text: 'New...' }
-          MenuItem { text: 'Open...' }
-          MenuItem { text: 'Save' }
-        }
-      }
-    }
   }
   Drawer
   {
@@ -162,9 +164,10 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
-          ListView2 {}  // Your original grid content
+          ListView2 {}
+          ListView0 {}  // Your original grid content
           ListView1 {}  // New simple view
-          ListView0 {}
+
 
           // Add more views as needed
       }
