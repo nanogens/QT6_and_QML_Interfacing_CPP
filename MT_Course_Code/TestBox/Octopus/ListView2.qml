@@ -6,32 +6,38 @@ import QtCharts 2.15
 Item {
     id: listview2
 
-    // Component must be declared inside a parent item
+    // Reference sizes for scaling (unchanged)
+    readonly property real baseWidth: 1920
+    readonly property real baseHeight: 1080
+    property real scaleFactor: 1
+    property real refSize: Math.max(40 * listview2.scaleFactor, 30)
+    property real generalFontSize: 16 * scaleFactor
+    property real dropdownFontSize: 12 * scaleFactor
+
+    // Banner Component (unchanged)
     Component {
         id: bannerComponent
         Rectangle {
             property alias text: bannerText.text
             width: parent.width
-            height: 50
-
+            height: Math.max(40 * listview2.scaleFactor, 30)
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: "#FFBF00" }  // Vibrant yellow
-                GradientStop { position: 0.95; color: "#FFD351" }  // Noticeably lighter
-                GradientStop { position: 1.0; color: "#FFE082" }  // Pale yellow
+                GradientStop { position: 0.0; color: "#FFBF00" }
+                GradientStop { position: 0.95; color: "#FFD351" }
+                GradientStop { position: 1.0; color: "#FFE082" }
             }
-
             Text {
                 id: bannerText
                 anchors {
                     left: parent.left
                     verticalCenter: parent.verticalCenter
-                    leftMargin: 5
+                    leftMargin: 5 * listview2.scaleFactor
                 }
                 color: "black"
                 font {
                     bold: true
-                    pixelSize: 18
+                    pixelSize: Math.max(generalFontSize, (18 * listview2.scaleFactor))
                     family: "Arial"
                 }
             }
@@ -40,828 +46,1602 @@ Item {
 
     // Your properties
     property var instrumentModelTypes: ["Submersible_Mini_AZ", "Submersible_Mini_BZ", "Submersible_Mini_CZ"]
-    property var instrumentBatteryTypes: ["Alkaline", "Lithium", "Rechargeable Li-Ion", "External"]
+    property var instrumentBatteryTypes: ["Lithium CR2", "Alkaline", "Rechargeable Li-Ion", "External"]
     property var recordingModes: ["Continuous", "Scheduled", "Event-Triggered"]
-    property var samplingRate: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
+    property var recordingSamplingRate: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
     property var modeTypes: ["Continuous", "Average", "Burst", "Directional"]
     property var durationTime: ["60 mins", "120 mins", "240 mins", "480 mins", "720 mins"]
     property var intervalTime: ["1 min", "5 mins", "10 mins", "15 mins", "30 mins"]
-
-
+    property var activationMethod : ["Switch", "Time", "Trigger"]
 
     property string currentinstrumentModelTypes: "Submersible_Mini_AZ"
     property string currentinstrumentBatteryTypes: "Alkaline"
+    property string currentRecordingModes: "Continuous"
+    property string currentSamplingRate: "1 sec"
+    property string currentActivationMethod: "Switch"
 
-    GridLayout
-    {
+    property var instrumentWiredConnection: ["RS-485", "Ethernet", "CAN"]
+    property var instrumentPort: ["COM_1", "COM_2", "COM_3", "COM_4"]
+    property var instrumentBaudRate: ["115200", "57600", "38400", "19200", "9600"]
+
+    // Main Grid Layout
+    GridLayout {
         anchors.fill: parent
         columns: 3
         rows: 3
-        rowSpacing: 15
-        columnSpacing: 15
-        width: (parent.width)
+        rowSpacing: refSize/5
+        columnSpacing: refSize/5
 
-        // First Column
-        CellBox
-        {
+        // Cell A - Instrument (Template for others)
+        CellBox {
             id: cellA
-            Layout.fillHeight: true
-            //title: 'A'
+            Layout.row: 0
+            Layout.column: 0
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0
 
-
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/A_Instrument.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/A_Instrument.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
                         onLoaded: item.text = "Instrument"
                     }
-
-
                 }
 
-                Item
-                {
+                // Content Grid
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 3
-                            rowSpacing: 5
-                            columnSpacing: 12
 
-                            // READ / WRITE row
-                            Label { text: ""; font.bold: true }
-                            Label { text: "READ"; font.bold: true; color: "lightgreen"}
-                            Label { text: "WRITE"; font.bold: true; color: "lightgreen"; Layout.fillWidth: true }
+                    // Row 1: Model
+                    Label {
+                        text: "  Model  . . . . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "Submersible Mini AZ"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: modelComboBox
+                        model: instrumentModelTypes
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.currentinstrumentModelTypes = currentText
+                    }
 
-                            // Model row
-                            Label { text: "  Model  . . . . . . . . . . . . ."; font.bold: true }
-                            Label { text: "Submersible Mini AZ"}
-                            ComboBox
-                            {
-                                id: modelComboBox
-                                model: instrumentModelTypes
-                                currentIndex: 0
-                                implicitWidth: 200
-                                implicitHeight: 26
-                                font.pixelSize: 12
-                                onCurrentIndexChanged: listview2.currentinstrumentModelTypes = currentText
-                            }
+                    // Row 2: Battery
+                    Label {
+                        text: "  Battery  . . . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "Lithium CR2"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: batteryComboBox
+                        model: instrumentBatteryTypes
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.currentinstrumentBatteryTypes = currentText
+                    }
 
-                            // Battery row
-                            Label { text: "  Battery  . . . . . . . . . . . ."; font.bold: true }
-                            Label { text: "Lithium CR2"}
-                            ComboBox
-                            {
-                                id: batteryComboBox
-                                model: instrumentBatteryTypes
-                                currentIndex: 0
-                                implicitWidth: 200
-                                implicitHeight: 26
-                                font.pixelSize: 12
-                                onCurrentIndexChanged: listview2.currentinstrumentBatteryTypes = currentText
-                            }
+                    // Row 3: Last communication
+                    Label {
+                        text: "  Last Communication"
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "0 Days Ago"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: Instrument_lastCommunication
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            // Last Communication row
-                            Label { text: "  Last communication"; font.bold: true }
-                            Label { text: "0 Days Ago"}
-                            Label { text: Instrument_lastCommunication; Layout.fillWidth: true }
+                    // Row 4: Serial number
+                    Label {
+                        text: "  Serial Number  . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "SZM-AZ-000001"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: Instrument_serialNumber
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            // Current state row
-                            Label { text: "  Serial Number  . . . . ."; font.bold: true }
-                            Label { text: "SZM-AZ-000001"}
-                            Label { text: Instrument_serialNumber; Layout.fillWidth: true }
+                    // Spacer
+                    Label { text: ""; Layout.row: 5; Layout.column: 0; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 5; Layout.column: 1; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 5; Layout.column: 2; Layout.fillHeight: true }
 
-                            // Read/Set buttons
-                            Label { text: ""; font.bold: true }
-                            Button
-                            {
-                                id: button1Id
-                                font.pixelSize: 16
-                                text: "Read Instrument"
-                                implicitHeight: 40
-                                implicitWidth: 200
-
-                                onClicked:
-                                {
-                                    var data = CppClass.getVariantListFromCpp()
-                                    data.forEach(function(element)
-                                    {
-                                        console.log("Array item: " + element)
-                                    })
-                                }
-                            }
-
-                            Button
-                            {
-                                id: button2Id
-                                //implicitHeight: 30
-                                font.pixelSize: 16
-                                text: "Write Instrument"
-                                implicitHeight: 40
-                                implicitWidth: 200
-                                onClicked:
-                                {
-
-                                    /*
-                                    var arr = ['Africa','Asia',"Europe","North America","South America","Oceania","Antarctica"]
-                                    var obj =
-                                    {
-                                        firstName:"John",
-                                        lastName:"Doe",
-                                        location:"Earth"
-                                    }
-
-                                    CppClass.passFromQmlToCpp(arr,obj);
-                                    */
-
-                                    // Get the selected values from the ComboBoxes
-                                    var selectedModel = modelComboBox.currentText;
-                                    var selectedBattery = batteryComboBox.currentText;
-
-                                    console.log("Selected Model:", selectedModel);
-                                    console.log("Selected Battery:", selectedBattery);
-
-                                    // You can then pass these values to your C++ function
-                                    var arr = [selectedModel, selectedBattery];
-                                    var obj = {
-                                        model: selectedModel,
-                                        battery: selectedBattery
-                                    };
-
-                                    CppClass.passFromQmlToCpp(arr, obj);
-                                }
-                            }
-                        }
-
+                    // Row 6: Buttons
+                    Label { text: ""; Layout.row: 6; Layout.column: 0 }
+                    Button {
+                        id: button1Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 6
+                        Layout.column: 1
+                    }
+                    Button {
+                        id: button2Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 6
+                        Layout.column: 2
                     }
                 }
-
-                Item { Layout.fillHeight: true }
             }
         }
 
-        CellBox
-        {
+        // Cell B - Communications (same structure as A)
+        CellBox {
             id: cellB
-            Layout.fillHeight: true
-            //title: 'B'
+            Layout.row: 0
+            Layout.column: 1
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0  // Changed to 0 to eliminate extra spacing
 
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/B_Communications.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/B_Communications.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
-                        onLoaded: item.text = "Communications (Wired)"
+                        onLoaded: item.text = "Communications"
                     }
                 }
 
-                Item
-                {
+                // Content Grid - 3 columns, multiple rows
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
+                    Label {
+                        text: "  Wired Connection  . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "RS-485"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: wiredconnectionComboBox
+                        model: instrumentWiredConnection
+                        currentIndex: 0
+                        implicitWidth: 200 * scaleFactor
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        onCurrentIndexChanged: listview2.instrumentWiredConnection = currentText
+                    }
 
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
+                    Label {
+                        text: "  Port  . . . . . . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "COM_3"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: portComboBox
+                        model: instrumentPort
+                        currentIndex: 0
+                        implicitWidth: 200 * scaleFactor
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        onCurrentIndexChanged: listview2.instrumentPort = currentText
+                    }
 
-                            Label { text: "  Wired Connection:"; font.bold: true }
-                            Label { text: Communications_wiredconnection; Layout.fillWidth: true }
+                    Label {
+                        text: "  Baud Rate  . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "115200"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: baudrateComboBox
+                        model: instrumentBaudRate
+                        currentIndex: 0
+                        implicitWidth: 200 * scaleFactor
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        onCurrentIndexChanged: listview2.instrumentBaudRate = currentText
+                    }
 
-                            Label { text: "  Port:"; font.bold: true }
-                            Label { text: Communications_port; Layout.fillWidth: true }
 
-                            Label { text: "  Baud Rate:"; font.bold: true }
-                            Label { text: Communications_baudrate; Layout.fillWidth: true }
+                    // Row 5: Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
+
+                    // Row 6: Buttons
+                    Label {
+                        text: ""
+                        Layout.row: 5
+                        Layout.column: 0
+                    }
+                    Button {
+                        id: button3Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 1
+                        onClicked: {
+                            var data = CppClass.getVariantListFromCpp()
+                            data.forEach(function(element) {
+                                console.log("Array item: " + element)
+                            })
+                        }
+                    }
+                    Button {
+                        id: button4Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 2
+                        onClicked: {
+                            var selectedModel = modelComboBox.currentText;
+                            var selectedBattery = batteryComboBox.currentText;
+                            var arr = [selectedModel, selectedBattery];
+                            var obj = {
+                                model: selectedModel,
+                                battery: selectedBattery
+                            };
+                            CppClass.passFromQmlToCpp(arr, obj);
                         }
                     }
                 }
-                Item { Layout.fillHeight: true }
             }
         }
 
-        // Continue for C-F...
-        CellBox
-        {
+        // Cell C - Power (same structure)
+        CellBox {
             id: cellC
-            Layout.fillHeight: true
-            //title: 'C'
+            Layout.row: 0
+            Layout.column: 2
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0  // Changed to 0 to eliminate extra spacing
 
-
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/C_Power.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/C_Power.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
-                        onLoaded: item.text = "Power Configuration"
+                        onLoaded: item.text = "Power"
                     }
                 }
 
-                Item
-                {
+                // Content Grid - 3 columns, multiple rows
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
+                    Label {
+                        text: "  Estimated Duration  . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "28 days at current usage"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: ""  // don't think we need to fill it in with anything since we are reading from instrument, and no write is available
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
+                    Label {
+                        text: "  Estimated Duration  . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "28 days at current usage"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: ""  // don't think we need to fill it in with anything since we are reading from instrument, and no write is available
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: "  Estimated Duration:"; font.bold: true }
-                            Label { text: "  28 days at current usage" }
+                    Label {
+                        text: "  Power Remaining  . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "75% Remaining"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: ""  // don't think we need to fill it in with anything since we are reading from instrument, and no write is available
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: "  Percentage Power Remaining:"; font.bold: true }
-                            Label { text: "  75% Remaining"; horizontalAlignment: Text.AlignHCenter; color:"lightgreen" }
+
+                    // Row 5: Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
+
+                    // Row 6: Buttons
+                    Label {
+                        text: ""
+                        Layout.row: 5
+                        Layout.column: 0
+                    }
+                    Button {
+                        id: button5Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 1
+                        onClicked: {
+                            var data = CppClass.getVariantListFromCpp()
+                            data.forEach(function(element) {
+                                console.log("Array item: " + element)
+                            })
+                        }
+                    }
+                    Button {
+                        id: button6Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 2
+                        onClicked: {
+                            var selectedModel = modelComboBox.currentText;
+                            var selectedBattery = batteryComboBox.currentText;
+                            var arr = [selectedModel, selectedBattery];
+                            var obj = {
+                                model: selectedModel,
+                                battery: selectedBattery
+                            };
+                            CppClass.passFromQmlToCpp(arr, obj);
                         }
                     }
                 }
-
-                Item { Layout.fillHeight: true }
             }
         }
 
-
-        CellBox
-        {
+        // Cell D - Time (same structure)
+        CellBox {
             id: cellD
-            Layout.fillHeight: true
-            //title: 'D'
+            Layout.row: 1
+            Layout.column: 0
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0
 
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/D_Time.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/D_Time.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
-                        onLoaded: item.text = "Time Synchronization"
+                        onLoaded: item.text = "Time"
                     }
                 }
 
-                Item
-                {
+                // Content Grid
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
+                    // Row 1: Instrument Clock
+                    Label {
+                        text: "  Instrument Clock  . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "03:15:45"  // replace with variable
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: Time_instrumentClock  // replace with variable
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
+                    // Row 2: Sync with Computer
+                    Label {
+                        text: "  Sync with Computer "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "05:15:45"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: Time_syncwithComputer  // replace with variable
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: "  Instrument Clock:"; font.bold: true }
-                            Label { text: Time_instrumentclock; Layout.fillWidth: true }
+                    // Row : Time Zone
+                    Label {
+                        text: "  Time Zone "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "UTC-4"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: Time_timeZone  // replace with variable
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: "  Sync with Computer:"; font.bold: true }
-                            Label { text: Time_syncwithcomputer; Layout.fillWidth: true }
+                    // Row : Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
 
-                            Label { text: "  Time Zone:"; font.bold: true }
-                            Label { text: Time_timezone; Layout.fillWidth: true }
-                        }
+                    // Row 3: Buttons
+                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
+                    Button {
+                        id: buttonf1Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 1
+                    }
+                    Button {
+                        id: buttonf2Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 2
                     }
                 }
-                Item { Layout.fillHeight: true }
             }
         }
 
-
-
-
-        CellBox
-        {
+        // Cell E - Recording (same structure)
+        CellBox {
             id: cellE
-            Layout.fillHeight: true
-            //title: 'E'
+            Layout.row: 1
+            Layout.column: 1
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0
 
-
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/E_Recording.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/E_Recording.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
                         onLoaded: item.text = "Recording"
                     }
                 }
 
-                Item
-                {
+                // Content Grid
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
+                    // Row 1: Recording Mode
+                    Label {
+                        text: "  Recording Mode  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: currentRecordingModes
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: recordingmodeComboBox
+                        model: recordingModes
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.recordingModes = currentText
+                    }
 
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
+                    // Row 2: Sampling Rate
+                    Label {
+                        text: "  Sampling Rate  . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: currentSamplingRate
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: samplingrateComboBox
+                        model: recordingSamplingRate
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.recordingSamplingRate = currentText
+                    }
 
-                            Label { text: "  Recording Mode:"; font.bold: true }
-                            Label { text: Recording_mode; Layout.fillWidth: true }
+                    // Row : Time Zone
+                    Label {
+                        text: "  End Time  . . . . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "05:18:22"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    Label {
+                        text: ""
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
 
-                            Label { text: "  Sampling Interval:"; font.bold: true }
-                            Label { text: Recording_samplinginterval; Layout.fillWidth: true }
+                    // Row : Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 4
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
 
-                            Label { text: "  Start Time:"; font.bold: true }
-                            Label { text: Recording_starttime; Layout.fillWidth: true }
-
-                            Label { text: "  End Time:"; font.bold: true }
-                            Label { text: Recording_endtime; Layout.fillWidth: true }
-                        }
+                    // Row : Buttons
+                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
+                    Button {
+                        id: buttonfc1Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 1
+                    }
+                    Button {
+                        id: buttonfc2Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5
+                        Layout.column: 2
                     }
                 }
-
-                Item { Layout.fillHeight: true }
             }
         }
 
-        CellBox
-        {
+        // Cell F - Notes
+        CellBox {
             id: cellF
-            Layout.fillHeight: true
-            //title: 'F'
+            Layout.row: 1
+            Layout.column: 2
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0  // Changed to 0 to eliminate extra spacing
 
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/F_Notes.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/F_Notes.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
                         onLoaded: item.text = "Notes"
                     }
                 }
 
-                Item
-                {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 60
-
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
-
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
-
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
-
-                            Label { text: "  Notes:"; font.bold: true }
-                            Label { text: Notes_notes; Layout.fillWidth: true }
-                        }
-                    }
-                }
-
-                Item { Layout.fillHeight: true }
-            }
-        }
-
-        CellBox
-        {
-            id: cellG
-            Layout.fillHeight: true
-            //title: 'G'
-
-            ColumnLayout
-            {
-                anchors.fill: parent
-                spacing: 5
-
-
+                // Content Grid
                 GridLayout
                 {
                     Layout.fillWidth: true
+                    Layout.fillHeight: true
                     columns: 2
-                    rowSpacing: 5
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/2
+                    Layout.topMargin: 5 * scaleFactor
+                    Layout.leftMargin: 15 * scaleFactor
+                    Layout.rightMargin: 15 * scaleFactor
+                    columnSpacing: generalFontSize * scaleFactor
+
+                    // Row 0
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    // Replace your Label with this:
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: parent.width * 0.5
+                        contentWidth: width
+                        contentHeight: textItem.height
+                        clip: true
+                        Layout.row: 1
+                        Layout.column: 0
+                        Text {
+                            id: textItem
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: "\nA paragraph is a distinct unit of writing, typically composed of several sentences, that focuses on a single idea or topic. It serves to organize and structure written work, making it easier for readers to follow the author's train of thought. Each paragraph usually begins with an indent and should ideally contain a topic sentence that introduces the main idea, supported by details and examples.  "
+                            font.bold: true
+                            color: "lightgray"
+                            font.pixelSize: generalFontSize * scaleFactor
+                        }
+                        //ScrollBar.vertical: ScrollBar {} // Optional scrollbar
+                    }
+                    ScrollView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: parent.width * 0.5
+                        Layout.row: 1
+                        Layout.column: 1
+                        TextArea {
+                            anchors.fill: parent
+                            placeholderText: 'Multi-line text editor...'
+                            selectByMouse: true
+                            persistentSelection: true
+                        }
+                    }
+
+                    Button {
+                        id: button1xId
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                        onClicked: {
+                            var data = CppClass.getVariantListFromCpp()
+                            data.forEach(function(element) {
+                                console.log("Array item: " + element)
+                            })
+                        }
+                        Layout.alignment: Qt.AlignCenter
+                    }
+                    Button
+                    {
+                        id: button2xId
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                        onClicked: {
+                            var selectedModel = modelComboBox.currentText;
+                            var selectedBattery = batteryComboBox.currentText;
+                            var arr = [selectedModel, selectedBattery];
+                            var obj = {
+                                model: selectedModel,
+                                battery: selectedBattery
+                            };
+                            CppClass.passFromQmlToCpp(arr, obj);
+                        }
+                        Layout.alignment: Qt.AlignCenter
+                    }
+                }
+            }
+        }
+
+        // Cell G - Activation
+        CellBox {
+            id: cellG
+            Layout.row: 2
+            Layout.column: 0
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                // Header
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/G_Activation.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/G_Activation.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
                         onLoaded: item.text = "Activation"
                     }
                 }
 
-                Item
-                {
+                // Content Grid
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
+                    // Row 1: Recording Mode
+                    Label {
+                        text: "  Activation Method  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: currentActivationMethod
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: activationmethodComboBox
+                        model: activationMethod
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.activationMethod = currentText
+                    }
 
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
+                    // Temporary
+                    Label {
+                        text: "  Activation Method  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: currentActivationMethod
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: activationmetxhodComboBox
+                        model: activationMethod
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.activationMethod = currentText
+                    }
 
-                            Label { text: "  Method:"; font.bold: true }
-                            Label { text: Activation_method; Layout.fillWidth: true }
-                        }
+                    // Row : Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 3
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 3
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
+
+                    // Row : Buttons
+                    Label { text: ""; Layout.row: 4; Layout.column: 0 }
+                    Button {
+                        id: buttonfec1Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 1
+                    }
+                    Button {
+                        id: buttonfec2Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 2
                     }
                 }
-
-                Item { Layout.fillHeight: true }
             }
         }
 
-
-        // First Column
-        CellBox
-        {
+        // Cell H - Activation
+        CellBox {
             id: cellH
-            Layout.fillHeight: true
-            //title: 'H'
+            Layout.row: 2
+            Layout.column: 1
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0
 
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/H_Sampling.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/H_Sampling.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
                         onLoaded: item.text = "Sampling"
                     }
                 }
 
-                Item
-                {
+                // Content Grid
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 3
-                            rowSpacing: 5
-                            columnSpacing: 12
-
-                            Label { text: ""; font.bold: true }
-                            Label { text: "READ"; font.bold: true; color: "lightgreen"}
-                            Label { text: "WRITE"; font.bold: true; color: "lightgreen"; Layout.fillWidth: true }
-
-                            // Mode row
-                            Label { text: "  Mode  . . . . . . . . . . . . . ."; font.bold: true }
-                            Label { text: "Continuous"}
-                            ComboBox
-                            {
-                                model: modeTypes
-                                currentIndex: 0
-                                implicitWidth: 200
-                                implicitHeight: 26
-                                font.pixelSize: 12
-                                onCurrentIndexChanged: root.modeTypes = currentText
-                            }
-
-                            // Sampling Rate row
-                            //Label { text: "  Last Communication:"; font.bold: true }
-                            Label { text: "  Sampling Rate  . . . . . ."; font.bold: true }
-                            Label { text: "1 Hz"}
-                            ComboBox
-                            {
-                                model: samplingRate
-                                currentIndex: 0
-                                implicitWidth: 200
-                                implicitHeight: 26
-                                font.pixelSize: 12
-                                onCurrentIndexChanged: root.samplingRate = currentText
-                            }
-
-
-                            // Duration row
-                            Label { text: "  Duration Time  . . . . . ."; font.bold: true }
-                            Label { text: "60 mins"}
-                            ComboBox
-                            {
-                                model: durationTime
-                                currentIndex: 0
-                                implicitWidth: 200
-                                implicitHeight: 26
-                                font.pixelSize: 12
-                                onCurrentIndexChanged: root.durationTime = currentText
-                            }
-
-                            // Interval row
-                            Label { text: "  Interval Time  . . . . . . ."; font.bold: true }
-                            Label { text: "1 min"}
-                            ComboBox
-                            {
-                                model: intervalTime
-                                currentIndex: 0
-                                implicitWidth: 200
-                                implicitHeight: 26
-                                font.pixelSize: 12
-                                onCurrentIndexChanged: root.intervalTime = currentText
-                            }
+                    // Row 1: Recording Mode
+                    Label {
+                        text: "  Activation Method  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: currentActivationMethod
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: activationmethodComboBoxx
+                        model: activationMethod
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.activationMethod = currentText
+                    }
 
 
-                            // Read/Set buttons
-                            Label { text: ""; font.bold: true }
-                            Button
-                            {
-                                id: button3Id
-                                font.pixelSize: 16
+                    // Row : Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 2
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 2
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
 
-                                text: "Read Sampling"
-                                implicitHeight: 40
-                                implicitWidth: 200
-                                //Layout.fillWidth: true  // Fill available width
-                                //Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2  // Half width minus spacing
-                                onClicked:
-                                {
-                                    var data = CppClass.getVariantListFromCpp()
-                                    data.forEach(function(element)
-                                    {
-                                        console.log("Array item: " + element)
-                                    })
-                                }
-                            }
-
-                            Button
-                            {
-                                id: button4Id
-                                //implicitHeight: 30
-                                font.pixelSize: 16
-                                text: "Write Sampling"
-                                implicitHeight: 40
-                                implicitWidth: 200
-                                //Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2  // Half width minus spacing
-                                onClicked:
-                                {
-                                    var data = CppClass.getVariantListFromCpp()
-                                    data.forEach(function(element)
-                                    {
-                                        console.log("Array item: " + element)
-                                    })
-                                }
-                            }
-                        }
+                    // Row : Buttons
+                    Label { text: ""; Layout.row: 3; Layout.column: 0 }
+                    Button {
+                        id: buttonfecd1Id
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    Button {
+                        id: buttonfecd2Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
                     }
                 }
-
-                Item { Layout.fillHeight: true }
             }
         }
 
-
-        CellBox
-        {
+        // Cell I - Activation
+        CellBox {
             id: cellI
-            Layout.fillHeight: true
-            //title: 'I'
+            Layout.row: 2
+            Layout.column: 2
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Critical for equal height
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
 
-            ColumnLayout
-            {
+            ColumnLayout {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 0
 
-
-                GridLayout
-                {
+                // Header
+                GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 5
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/I_Misc.png"  // Replace with your image path
-                        Layout.preferredWidth: 50  // Set desired width
-                        Layout.preferredHeight: 50 // Set desired height
+                        source: "qrc:/Octopus/images/I_Misc.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
                     }
-
-                    Loader
-                    {
+                    Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
                         onLoaded: item.text = "Miscelleneous"
                     }
                 }
 
-                Item
-                {
+                // Content Grid
+                GridLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.columnSpan: parent.width/3
+                    Layout.topMargin: 5 * scaleFactor
 
-                    Column
-                    {
-                        anchors.fill: parent
-                        spacing: 2
+                    // Row 0
+                    Label {
+                        text: "";
+                        Layout.row: 0;
+                        Layout.column: 0
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
 
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 2
-                            rowSpacing: 5
-                            columnSpacing: 10
+                    // Row 1: Recording Mode
+                    Label {
+                        text: "  Activation Method  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: currentActivationMethod
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: activationmethodComboBoxxx
+                        model: activationMethod
+                        currentIndex: 0
+                        implicitHeight: 26 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.activationMethod = currentText
+                    }
 
-                            Label { text: ""; font.bold: true }
-                            Label { text: ""; Layout.fillWidth: true }
 
-                            Label { text: "  Misc:"; font.bold: true }
-                            Label { text: Misc_misc; Layout.fillWidth: true }
-                        }
+                    // Row : Empty spacer
+                    Label {
+                        text: ""
+                        Layout.row: 2
+                        Layout.column: 0
+                        Layout.fillHeight: true  // Pushes buttons to bottom
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 2
+                        Layout.column: 1
+                        Layout.fillHeight: true
+                    }
+                    Label {
+                        text: ""
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillHeight: true
+                    }
+
+                    // Row : Buttons
+                    Label { text: ""; Layout.row: 3; Layout.column: 0 }
+                    Button {
+                        id: buttonfecd1rId
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    Button {
+                        id: buttonfecd2rId
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
                     }
                 }
-
-                Item { Layout.fillHeight: true }
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-
     }
 }
-
-

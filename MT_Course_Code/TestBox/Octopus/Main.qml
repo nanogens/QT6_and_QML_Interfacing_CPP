@@ -31,9 +31,12 @@ ApplicationWindow
   //Universal.theme: Universal[subTheme.currentText]
   //Universal.accent: Universal[accentColor.currentText]
 
-  Material.theme: Material[subTheme.currentText]
-  Material.accent: Material[accentColor.currentText]
-  Material.primary: Material[primaryColor.currentText]
+  //Material.theme: Material[subTheme.currentText] // MT removed this to fix it to Dark
+  //Material.accent: Material[accentColor.currentText]
+  //Material.primary: Material[primaryColor.currentText]
+  Material.theme: Material.Dark
+  Material.accent: Material.Red
+  Material.primary: Material.DeepOrange
 
 
   function arrayObjectFunc(array, object)
@@ -171,12 +174,7 @@ ApplicationWindow
 
           // Add more views as needed
       }
-
-
   }
-
-
-
 
 
 
@@ -255,4 +253,5 @@ ApplicationWindow
       }
     }
   }
+
 }
