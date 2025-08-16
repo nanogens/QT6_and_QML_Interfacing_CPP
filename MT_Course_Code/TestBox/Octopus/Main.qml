@@ -18,10 +18,10 @@ ApplicationWindow
 
   title: "QML Modern UI Samples By MT 1"
   visible: true
-  width: 1200
-  height: 500
-  minimumHeight: 500
-  minimumWidth: 1200
+  width: 1920  // 1200
+  height: 1050  // 500
+  minimumHeight: 1050  // 500
+  minimumWidth: 1920  // 1200
 
   // Set default font for all child items
   font.family: "Segoe UI Variable"
@@ -167,6 +167,7 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
+          ListView3 {}  // New simple view
           ListView2 {}
           ListView0 {}  // Your original grid content
           ListView1 {}  // New simple view
@@ -177,7 +178,7 @@ ApplicationWindow
   }
 
 
-
+/*
   footer: RowLayout
   {
     width: parent.width
@@ -253,5 +254,5 @@ ApplicationWindow
       }
     }
   }
-
+*/
 }

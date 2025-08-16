@@ -705,7 +705,7 @@ Item {
                 XYPoint { x: 2008; y: 4 }
                 XYPoint { x: 2009; y: 3 }
                 XYPoint { x: 2010; y: 2 }
-                XYPoint { x: 2011; y: 1 }             
+                XYPoint { x: 2011; y: 1 }
               }
             }
             AreaSeries

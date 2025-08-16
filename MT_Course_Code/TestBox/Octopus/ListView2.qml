@@ -45,24 +45,38 @@ Item {
     }
 
     // Your properties
-    property var instrumentModelTypes: ["Submersible_Mini_AZ", "Submersible_Mini_BZ", "Submersible_Mini_CZ"]
+    // cellA - Instrument
+    property var model_Instrument_Device_ComboBox: ["Submersible_Mini_AZ", "Submersible_Mini_BZ", "Submersible_Mini_CZ"]
+    property string current_Instrument_Device: "Submersible_Mini_AZ"
+
+    // cellB - Communications - (to surface module)
+    property var model_Communication_Connection_ComboBox: ["RS-485", "IrDA"]
+    property string current_Communication_Connection: "RS-485"
+
+    property var model_Communication_BaudRate_ComboBox: ["115200", "57600", "38400", "19200", "9600"]
+    property string current_Communication_BaudRate: "115200"
+
+
+
+
+
+
+
     property var instrumentBatteryTypes: ["Lithium CR2", "Alkaline", "Rechargeable Li-Ion", "External"]
-    property var recordingModes: ["Continuous", "Scheduled", "Event-Triggered"]
-    property var recordingSamplingRate: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
-    property var modeTypes: ["Continuous", "Average", "Burst", "Directional"]
+    property var samplingModes: ["Continuous", "Scheduled", "Event-Triggered"]
+    property var samplingSamplingRate: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
     property var durationTime: ["60 mins", "120 mins", "240 mins", "480 mins", "720 mins"]
     property var intervalTime: ["1 min", "5 mins", "10 mins", "15 mins", "30 mins"]
     property var activationMethod : ["Switch", "Time", "Trigger"]
 
-    property string currentinstrumentModelTypes: "Submersible_Mini_AZ"
+
     property string currentinstrumentBatteryTypes: "Alkaline"
     property string currentRecordingModes: "Continuous"
     property string currentSamplingRate: "1 sec"
     property string currentActivationMethod: "Switch"
 
-    property var instrumentWiredConnection: ["RS-485", "Ethernet", "CAN"]
-    property var instrumentPort: ["COM_1", "COM_2", "COM_3", "COM_4"]
-    property var instrumentBaudRate: ["115200", "57600", "38400", "19200", "9600"]
+
+
 
     // Main Grid Layout
     GridLayout {
@@ -145,7 +159,7 @@ Item {
 
                     // Row 1: Model
                     Label {
-                        text: "  Model  . . . . . . . . . . . . ."
+                        text: "  Device  . . . . . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
@@ -158,18 +172,19 @@ Item {
                         Layout.column: 1
                     }
                     ComboBox {
-                        id: modelComboBox
-                        model: instrumentModelTypes
+                        id: id_Instrument_Device_ComboBox
+                        model: model_Instrument_Device_ComboBox
                         currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.currentinstrumentModelTypes = currentText
+                        onCurrentIndexChanged: listview2.current_Instrument_Device = currentText
                     }
 
+                    /*
                     // Row 2: Battery
                     Label {
                         text: "  Battery  . . . . . . . . . . . ."
@@ -188,7 +203,7 @@ Item {
                         id: batteryComboBox
                         model: instrumentBatteryTypes
                         currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 2
@@ -196,65 +211,79 @@ Item {
                         Layout.preferredWidth: 200 * scaleFactor
                         onCurrentIndexChanged: listview2.currentinstrumentBatteryTypes = currentText
                     }
+                    */
 
-                    // Row 3: Last communication
-                    Label {
-                        text: "  Last Communication"
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: "0 Days Ago"
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 1
-                    }
-                    Label {
-                        text: Instrument_lastCommunication
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                    }
-
-                    // Row 4: Serial number
+                    // Row : Serial number
                     Label {
                         text: "  Serial Number  . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 4
+                        Layout.row: 2
                         Layout.column: 0
                     }
                     Label {
                         text: "SZM-AZ-000001"
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 4
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    TextField {
+                        id: input_Instrument_SerialInput
+                        implicitHeight: 28 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        maximumLength: 13
+                        onEditingFinished: console.log("Entered:", text)
+                    }
+                    /*
+                    Label {
+                        text: Instrument_SerialNumber
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                    }
+                    */
+
+                    // Row : Usage
+                    Label {
+                        text: "  Usage  . . . . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "52 Hours"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
                         Layout.column: 1
                     }
                     Label {
-                        text: Instrument_serialNumber
+                        text: ""
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 4
+                        Layout.row: 3
                         Layout.column: 2
                         Layout.fillWidth: true
                     }
 
                     // Spacer
-                    Label { text: ""; Layout.row: 5; Layout.column: 0; Layout.fillHeight: true }
-                    Label { text: ""; Layout.row: 5; Layout.column: 1; Layout.fillHeight: true }
-                    Label { text: ""; Layout.row: 5; Layout.column: 2; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 4; Layout.column: 1; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 4; Layout.column: 2; Layout.fillHeight: true }
 
-                    // Row 6: Buttons
-                    Label { text: ""; Layout.row: 6; Layout.column: 0 }
+                    // Row : Buttons
+                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
                         id: button1Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 6
+                        Layout.row: 5
                         Layout.column: 1
                     }
                     Button {
@@ -263,7 +292,7 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 6
+                        Layout.row: 5
                         Layout.column: 2
                     }
                 }
@@ -340,106 +369,82 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
+                    // Row : Cable Link
                     Label {
-                        text: "  Wired Connection  . ."
+                        text: "  Connection  . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: "RS-485"
+                        text: "RS-485" //var_Communication_Connection
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
                     }
                     ComboBox {
-                        id: wiredconnectionComboBox
-                        model: instrumentWiredConnection
+                        id: id_Communication_Connection_ComboBox
+                        model: model_Communication_Connection_ComboBox
                         currentIndex: 0
                         implicitWidth: 200 * scaleFactor
-                        implicitHeight: 26 * scaleFactor
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
-                        onCurrentIndexChanged: listview2.instrumentWiredConnection = currentText
+                        onCurrentIndexChanged: listview2.current_Communication_Connection = currentText
                     }
 
+                    // Row : Baud Rate
                     Label {
-                        text: "  Port  . . . . . . . . . . . . . . ."
+                        text: "  Baud Rate  . . . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 0
                     }
                     Label {
-                        text: "COM_3"
+                        text: "115200" //var_Communication_BaudRate
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
                     }
                     ComboBox {
-                        id: portComboBox
-                        model: instrumentPort
+                        id: id_Communication_BaudRate_ComboBox
+                        model: model_Communication_BaudRate_ComboBox
                         currentIndex: 0
                         implicitWidth: 200 * scaleFactor
-                        implicitHeight: 26 * scaleFactor
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 2
-                        onCurrentIndexChanged: listview2.instrumentPort = currentText
+                        onCurrentIndexChanged: listview2.current_Communication_BaudRate = currentText
                     }
 
-                    Label {
-                        text: "  Baud Rate  . . . . . . . . . ."
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: "115200"
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 1
-                    }
-                    ComboBox {
-                        id: baudrateComboBox
-                        model: instrumentBaudRate
-                        currentIndex: 0
-                        implicitWidth: 200 * scaleFactor
-                        implicitHeight: 26 * scaleFactor
-                        font.pixelSize: dropdownFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 2
-                        onCurrentIndexChanged: listview2.instrumentBaudRate = currentText
-                    }
-
-
-                    // Row 5: Empty spacer
+                    // Row : Empty spacer
                     Label {
                         text: ""
-                        Layout.row: 4
+                        Layout.row: 3
                         Layout.column: 0
                         Layout.fillHeight: true  // Pushes buttons to bottom
                     }
                     Label {
                         text: ""
-                        Layout.row: 4
+                        Layout.row: 3
                         Layout.column: 1
                         Layout.fillHeight: true
                     }
                     Label {
                         text: ""
-                        Layout.row: 4
+                        Layout.row: 3
                         Layout.column: 2
                         Layout.fillHeight: true
                     }
 
-                    // Row 6: Buttons
+                    // Row : Buttons
                     Label {
                         text: ""
-                        Layout.row: 5
+                        Layout.row: 4
                         Layout.column: 0
                     }
                     Button {
@@ -448,7 +453,7 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 5
+                        Layout.row: 4
                         Layout.column: 1
                         onClicked: {
                             var data = CppClass.getVariantListFromCpp()
@@ -463,7 +468,7 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 5
+                        Layout.row: 4
                         Layout.column: 2
                         onClicked: {
                             var selectedModel = modelComboBox.currentText;
@@ -551,14 +556,14 @@ Item {
                     }
 
                     Label {
-                        text: "  Estimated Duration  . ."
+                        text: "  Battery Type  . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: "28 days at current usage"
+                        text: "Lithium CR2" // var_Power_BatteryType
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
@@ -572,7 +577,7 @@ Item {
                     }
 
                     Label {
-                        text: "  Estimated Duration  . ."
+                        text: "  Duration  . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
@@ -634,7 +639,7 @@ Item {
                         Layout.fillHeight: true
                     }
 
-                    // Row 6: Buttons
+                    // Row : Buttons
                     Label {
                         text: ""
                         Layout.row: 5
@@ -858,7 +863,7 @@ Item {
             }
         }
 
-        // Cell E - Recording (same structure)
+        // Cell E - Sampling (same structure)
         CellBox {
             id: cellE
             Layout.row: 1
@@ -880,14 +885,14 @@ Item {
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/E_Recording.png"
+                        source: "qrc:/Octopus/images/H_Sampling.png"
                         Layout.preferredWidth: refSize
                         Layout.preferredHeight: refSize
                     }
                     Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
-                        onLoaded: item.text = "Recording"
+                        onLoaded: item.text = "Sampling"
                     }
                 }
 
@@ -930,34 +935,34 @@ Item {
 
                     // Row 1: Recording Mode
                     Label {
-                        text: "  Recording Mode  . . "
+                        text: "  Sampling Mode  . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: currentRecordingModes
+                        text: currentSamplingModes
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
                     }
                     ComboBox {
-                        id: recordingmodeComboBox
-                        model: recordingModes
+                        id: samplingmodeComboBox
+                        model: samplingModes
                         currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.recordingModes = currentText
+                        onCurrentIndexChanged: listview2.samplingModes = currentText
                     }
 
                     // Row 2: Sampling Rate
                     Label {
-                        text: "  Sampling Rate  . ."
+                        text: "  Sampling Rate  . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
@@ -971,37 +976,15 @@ Item {
                     }
                     ComboBox {
                         id: samplingrateComboBox
-                        model: recordingSamplingRate
+                        model: samplingSamplingRate
                         currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.recordingSamplingRate = currentText
-                    }
-
-                    // Row : Time Zone
-                    Label {
-                        text: "  End Time  . . . . . "
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: "05:18:22"
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 1
-                    }
-                    Label {
-                        text: ""
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 2
-                        Layout.fillWidth: true
+                        onCurrentIndexChanged: listview2.samplingSamplingRate = currentText
                     }
 
                     // Row : Empty spacer
@@ -1130,7 +1113,7 @@ Item {
                             id: textItem
                             width: parent.width
                             wrapMode: Text.WordWrap
-                            text: "\nA paragraph is a distinct unit of writing, typically composed of several sentences, that focuses on a single idea or topic. It serves to organize and structure written work, making it easier for readers to follow the author's train of thought. Each paragraph usually begins with an indent and should ideally contain a topic sentence that introduces the main idea, supported by details and examples.  "
+                            text: "\nGeneral notes regarding the logger can go in here.  Identity, ownership, last battery change, anomalies and other info.  It serves to inform the user."
                             font.bold: true
                             color: "lightgray"
                             font.pixelSize: generalFontSize * scaleFactor
@@ -1144,10 +1127,23 @@ Item {
                         Layout.row: 1
                         Layout.column: 1
                         TextArea {
+                            id: id_Notes_ScrollView
                             anchors.fill: parent
                             placeholderText: 'Multi-line text editor...'
                             selectByMouse: true
                             persistentSelection: true
+                            wrapMode: Text.Wrap   // Ensures text wraps to next line
+                            width: scrollView.width  // Match ScrollView's width
+                            property int maxChars: 64
+                            // Limit to 64 characters
+                            Keys.onPressed: (event) =>
+                            {
+                                // Block new input if max length reached (but allow deletions/backspace)
+                                if (text.length >= maxChars && event.key !== Qt.Key_Backspace && event.key !== Qt.Key_Delete)
+                                {
+                                    event.accepted = true;  // Ignore key press
+                                }
+                            }
                         }
                     }
 
@@ -1360,7 +1356,7 @@ Item {
             }
         }
 
-        // Cell H - Activation
+        // cell
         CellBox {
             id: cellH
             Layout.row: 2
@@ -1382,14 +1378,14 @@ Item {
                     columnSpacing: 0
 
                     Image {
-                        source: "qrc:/Octopus/images/H_Sampling.png"
+                        source: "qrc:/Octopus/images/J_Cloud.png"
                         Layout.preferredWidth: refSize
                         Layout.preferredHeight: refSize
                     }
                     Loader {
                         sourceComponent: bannerComponent
                         Layout.fillWidth: true
-                        onLoaded: item.text = "Sampling"
+                        onLoaded: item.text = "Cloud"
                     }
                 }
 
@@ -1430,63 +1426,115 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
-                    // Row 1: Recording Mode
+
+                    // Row 1:
                     Label {
-                        text: "  Activation Method  . . "
+                        text: "  IP  . . . . . . . . . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: currentActivationMethod
+                        text: "192.168.0.105" // current_Cloud_IP
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
                     }
-                    ComboBox {
-                        id: activationmethodComboBoxx
-                        model: activationMethod
-                        currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
+                    TextField {
+                        id: id_Cloud_IP
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.activationMethod = currentText
+                        maximumLength: 13
+                        onEditingFinished: console.log("Entered:", text)
+                    }
+
+                    // Row 2:
+                    Label {
+                        text: "  Login  . . . . . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "Manish" // current_Cloud_IP
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 1
+                    }
+                    TextField {
+                        id: id_Cloud_Login
+                        implicitHeight: 28 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 2
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        maximumLength: 13
+                        onEditingFinished: console.log("Entered:", text)
+                    }
+
+                    // Row 3:
+                    Label {
+                        text: "  Password  . . . . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 0
+                    }
+                    Label {
+                        text: "Qwerty123" // current_Cloud_Password
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    TextField {
+                        id: id_Cloud_Password
+                        implicitHeight: 28 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        maximumLength: 13
+                        onEditingFinished: console.log("Entered:", text)
                     }
 
 
                     // Row : Empty spacer
                     Label {
                         text: ""
-                        Layout.row: 2
+                        Layout.row: 4
                         Layout.column: 0
                         Layout.fillHeight: true  // Pushes buttons to bottom
                     }
                     Label {
                         text: ""
-                        Layout.row: 2
+                        Layout.row: 4
                         Layout.column: 1
                         Layout.fillHeight: true
                     }
                     Label {
                         text: ""
-                        Layout.row: 2
+                        Layout.row: 4
                         Layout.column: 2
                         Layout.fillHeight: true
                     }
 
                     // Row : Buttons
-                    Label { text: ""; Layout.row: 3; Layout.column: 0 }
+                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
                         id: buttonfecd1Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 3
+                        Layout.row: 5
                         Layout.column: 1
                     }
                     Button {
@@ -1495,7 +1543,7 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 3
+                        Layout.row: 5
                         Layout.column: 2
                     }
                 }
@@ -1574,31 +1622,29 @@ Item {
 
                     // Row 1: Recording Mode
                     Label {
-                        text: "  Activation Method  . . "
+                        text: "  Some Stuff  . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: currentActivationMethod
+                        text: "Stuff"
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
                     }
-                    ComboBox {
-                        id: activationmethodComboBoxxx
-                        model: activationMethod
-                        currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
+                    TextField {
+                        id: id_Miscelleneous_Stuff
+                        implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.activationMethod = currentText
+                        maximumLength: 13
+                        onEditingFinished: console.log("Entered:", text)
                     }
-
 
                     // Row : Empty spacer
                     Label {
