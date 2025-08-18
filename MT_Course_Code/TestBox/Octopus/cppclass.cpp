@@ -312,12 +312,20 @@ void CppClass::stopCommunication() {
 
 void CppClass::passFromQmlToCpp(QVariantList list/*array*/, QVariantMap map /*object*/)
 {
+    /*
     qDebug() << "Received variant list and map from QML";
     qDebug() << "List :";
     for( int i{0} ; i < list.size(); i++)
     {
         qDebug() << "List item :" << list.at(i).toString();
     }
+    */
+
+    // Print from QVariantList (array)
+    if (!list.isEmpty()) {
+        qDebug() << "First filename (from list):" << list[0].toString();
+    }
+
 
     /*
     qDebug() << "Map :";
@@ -328,6 +336,18 @@ void CppClass::passFromQmlToCpp(QVariantList list/*array*/, QVariantMap map /*ob
     */
 }
 
+void CppClass::passFromQmlToCpp2(const QVariantList &files)
+{
+    for (const QVariant &fileVariant : files) {
+        QVariantMap file = fileVariant.toMap();
+        QDateTime modified = QDateTime::fromMSecsSinceEpoch(
+            file["lastModified"].toLongLong());
+
+        qDebug() << "File:" << file["fileName"].toString()
+                 << "Size:" << file["fileSize"].toLongLong() << "bytes"
+                 << "Modified:" << modified.toString("yyyy-MM-dd hh:mm:ss");
+    }
+}
 
 // Add a setter for the port name
 void CppClass::setPortName(const QString& portName)
@@ -381,5 +401,26 @@ void CppClass::triggerJSCall()
 }
 
 
+// --------------
 
+/*
+void CppClass::processFiles(const QString& directory, const QVariantList& fileVariants) {
+    qDebug() << "Processing directory:" << directory;
+
+    QList<FileInfo> files;
+    for (const QVariant& fileVariant : fileVariants) {
+        QVariantMap fileMap = fileVariant.toMap();
+        files.append({
+            fileMap["fileName"].toString(),
+            fileMap["fileSize"].toLongLong(),
+            fileMap["lastModified"].toDateTime()
+        });
+    }
+
+    // Now you have:
+    // - QString directory: the directory path
+    // - QList<FileInfo> files: all file information
+    // Process them as needed...
+}
+*/
 

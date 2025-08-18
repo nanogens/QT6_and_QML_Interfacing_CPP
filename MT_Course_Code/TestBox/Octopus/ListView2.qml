@@ -1505,7 +1505,6 @@ Item {
                         onEditingFinished: console.log("Entered:", text)
                     }
 
-
                     // Row : Empty spacer
                     Label {
                         text: ""
@@ -1690,4 +1689,61 @@ Item {
             }
         }
     }
+
+
+
+    Popup {
+        id: normalPopup
+        ColumnLayout {
+            anchors.fill: parent
+            Label {
+                text: 'Normal Popup'
+            }
+            CheckBox {
+                text: 'E-mail'
+            }
+            CheckBox {
+                text: 'Calendar'
+            }
+            CheckBox {
+                text: 'Contacts'
+            }
+        }
+    }
+
+    Popup {
+        id: modalPopup
+        modal: true
+        ColumnLayout {
+            anchors.fill: parent
+            Label {
+                text: 'Modal Popup'
+            }
+            CheckBox {
+                text: 'E-mail'
+            }
+            CheckBox {
+                text: 'Calendar'
+            }
+            CheckBox {
+                text: 'Contacts'
+            }
+        }
+    }
+
+    Dialog {
+        id: dialog
+        title: 'Dialog'
+        Label {
+            text: 'The standard dialog.'
+        }
+        footer: DialogButtonBox {
+            standardButtons: DialogButtonBox.Ok | DialogButtonBox.Cancel
+        }
+    }
+
 }
+
+
+
+

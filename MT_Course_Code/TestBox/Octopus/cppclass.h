@@ -13,6 +13,35 @@
 #include <queue>
 #include <condition_variable>
 
+
+// In your C++ header file
+//#include <QObject>
+//#include <QString>
+//#include <QVariant>
+//#include <QVariantList>
+//#include <QDateTime>
+//#include <QMetaType>  // Required for Q_DECLARE_METATYPE
+
+/*
+// MT added
+struct FileInfo {
+    QString fileName;
+    qint64 fileSize; // in bytes
+    QDateTime lastModified;
+
+    // Convert to QVariantMap for QML
+    QVariantMap toVariant() const {
+        return {
+            {"fileName", fileName},
+            {"fileSize", fileSize},
+            {"lastModified", lastModified}
+        };
+    }
+};
+*/
+
+//Q_DECLARE_METATYPE(FileInfo)
+
 class CppClass : public QObject
 {
     Q_OBJECT
@@ -21,9 +50,10 @@ public:
     ~CppClass();
 
     Q_INVOKABLE void passFromQmlToCpp(QVariantList list, QVariantMap map);
+    Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
     Q_INVOKABLE QVariantList getVariantListFromCpp();
     Q_INVOKABLE QVariantMap getVariantMapFromCpp();
-
+    //Q_INVOKABLE void processFiles(const QString& directory, const QVariantList& fileInfos); // MT added
     void setQmlRootObject(QObject *value);
 
     // Public interface
@@ -70,6 +100,7 @@ private:
     std::thread m_readwriteThread;
     std::mutex m_portMutex;
     QObject* qmlRootObject = nullptr;
+
 };
 
 #endif // CPPCLASS_H

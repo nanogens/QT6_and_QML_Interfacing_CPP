@@ -18,6 +18,16 @@ int main(int argc, char *argv[])
     // Qt Charts uses Qt Graphics View Framework for drawing, therefore QApplication must be used.
     QApplication app(argc, argv);
 
+    // =============================================
+    // Register your custom types with the Qt system
+    // =============================================
+
+    // Register the FileInfo struct as a metatype
+    //qRegisterMetaType<FileInfo>("FileInfo");
+
+    // Register the Backend class as a QML type
+    //qmlRegisterType<CppClass>("com.example.backend", 1, 0, "Backend");
+
     // Set the Material style before loading QML
     // Try both methods
     qputenv("QT_QUICK_CONTROLS_STYLE", "Material");
@@ -28,7 +38,6 @@ int main(int argc, char *argv[])
 
     CppClass cppclass;
     engine.rootContext()->setContextProperty("CppClass", &cppclass);
-
 
 
     QObject::connect(

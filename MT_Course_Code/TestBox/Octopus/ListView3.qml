@@ -1,14 +1,207 @@
 // ListView0.qml
-import QtQuick 2.13
-import QtQuick.Layouts 1.11
-import QtQuick.Controls 2.4
-import QtQuick.Controls.Material 2.4
-import QtCharts 2.2
+import QtQuick 2.15
+import QtQuick.Layouts 1.15
+import QtQuick.Controls 2.15
+import QtQuick.Controls.Material 2.15
+import QtCharts 2.15
+import Qt.labs.folderlistmodel 2.15
+import QtQuick.Dialogs
 
 GridLayout {
     anchors.fill: parent
     flow: GridLayout.TopToBottom
     rows: 2
+
+    // 1. Folder Dialog
+    FolderDialog {
+        id: folderDialog
+        title: "Please choose a directory"
+        currentFolder: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+        onAccepted: {
+            var path = selectedFolder.toString().replace(/^(file:\/{3})/, "");
+            console.log("Selected directory:", path);
+
+            // Force refresh by first clearing the folderModel
+            folderModel.folder = "";
+            fileListModel.clear();
+
+            // Small delay to ensure model clears before setting new folder
+            Qt.callLater(function() {
+                folderModel.folder = selectedFolder;
+            });
+        }
+    }
+
+    // 2. Folder Model
+    FolderListModel {
+        id: folderModel
+        showDirs: false
+        nameFilters: ["*.txt"]
+        showDotAndDotDot: false
+        showOnlyReadable: true
+
+        onCountChanged: {
+            if (count > 0) {
+                console.log("Found", count, "text files:");
+                for (var i = 0; i < count; i++) {
+                    console.log("- " + get(i, "fileName"));
+                }
+                updateFileList();  // Update ListView
+                //sendFilesToBackend(); // Send to C++
+            }
+        }
+    }
+
+    // 3. ListModel for the ListView
+    ListModel {
+        id: fileListModel
+        ListElement {
+            fileName: "data_20230815.csv"
+            fileSize: "2.4 MB"
+            timeClosed: "15:42:23"
+            note: "Main dataset"
+        }
+        ListElement {
+            fileName: "calibration.json"
+            fileSize: "145 KB"
+            timeClosed: "14:15:07"
+            note: "Sensor calibration"
+        }
+        ListElement {
+            fileName: "config_backup.ini"
+            fileSize: "87 KB"
+            timeClosed: "11:30:45"
+            note: "System configuration"
+        }
+        ListElement {
+            fileName: "log_20230814.txt"
+            fileSize: "1.2 MB"
+            timeClosed: "09:22:18"
+            note: "Debug logs"
+        }
+        ListElement {
+            fileName: "export_results.xlsx"
+            fileSize: "3.1 MB"
+            timeClosed: "16:55:33"
+            note: "Final report"
+        }
+    }
+
+    // 4. Helper functions
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+        else return (bytes / 1048576).toFixed(1) + " MB";
+    }
+
+    function formatFileTime(fileTime) {
+        var date = new Date(fileTime);
+        return date.toLocaleTimeString(Qt.locale(), "HH:mm:ss");
+    }
+
+
+    /*
+    // Helper functions (place at root level of your QML file)
+    function updateFileList()
+    {
+        console.log("Updating file list with", folderModel.count, "files");
+
+        // Clear existing files first
+        fileListModel.clear();
+
+        // Process files and get first filename
+        var firstFileData = null;
+        for (var i = 0; i < folderModel.count; i++) {
+            var fileData = {
+                fileName: folderModel.get(i, "fileName"),
+                fileSize: folderModel.get(i, "fileSize"), // in bytes
+                lastModified: new Date(folderModel.get(i, "fileModified"))
+            };
+
+            fileListModel.append(fileData);
+
+            // Capture first file's data
+            if (i === 0) firstFileData = fileData;
+        }
+
+        // Send to C++ backend if files exist
+        if (firstFileData)
+        {
+            CppClass.passFromQmlToCpp(
+                [firstFileData.fileName],  // Array with first filename
+                firstFileData              // Full first file object
+            );
+        }
+    }
+    */
+
+
+    /*
+    function updateFileList() {
+        console.log("Updating file list with", folderModel.count, "files");
+
+        // Clear existing files
+        fileListModel.clear();
+
+        // Prepare data for C++
+        var filesData = [];
+        for (var i = 0; i < folderModel.count; i++) {
+            var fileInfo = {
+                fileName: folderModel.get(i, "fileName"),
+                fileSize: folderModel.get(i, "fileSize"),
+                lastModified: new Date(folderModel.get(i, "fileModified")).getTime() // Milliseconds since epoch
+            };
+
+            fileListModel.append(fileInfo); // Add to visual model
+            filesData.push(fileInfo);      // Add to C++ transfer data
+        }
+
+        // Send complete files data to C++
+        if (filesData.length > 0) {
+            CppClass.passFromQmlToCpp2(filesData);
+        }
+    }
+    */
+
+    function updateFileList() {
+        fileListModel.clear();
+        var filesData = [];
+
+        for (var i = 0; i < folderModel.count; i++) {
+            var fileInfo = {
+                fileName: folderModel.get(i, "fileName"),
+                fileSize: folderModel.get(i, "fileSize"),
+                lastModified: new Date(folderModel.get(i, "fileModified")).getTime(),
+                note: "Text file"  // For visual model only
+            };
+
+            fileListModel.append(fileInfo);  // Update visual ListView
+            filesData.push(fileInfo);       // Prepare for C++
+        }
+
+        if (filesData.length > 0) {
+            CppClass.passFromQmlToCpp2(filesData);
+        }
+    }
+
+
+
+    function sendFilesToBackend() {
+        var fileData = [];
+        for (var i = 0; i < fileListModel.count; i++) {
+            fileData.push({
+                fileName: fileListModel.get(i).fileName,
+                fileSize: fileListModel.get(i).fileSize,
+                lastModified: fileListModel.get(i).lastModified
+            });
+        }
+
+        // Call C++ backend (assuming registered as 'backend')
+        cppclass.processFiles(
+            folderModel.folder.toString().replace(/^(file:\/{3})/, ""),
+            fileData
+        );
+    }
 
     CellBox {
         title: 'File Operations'
@@ -18,7 +211,7 @@ GridLayout {
             GridLayout {
                 columns: 1
                 columnSpacing: 20
-                rowSpacing: 0
+                rowSpacing: 10
                 Layout.alignment: Qt.AlignTop
 
                 RowLayout {
@@ -29,9 +222,10 @@ GridLayout {
                         implicitHeight: 40
                     }
                     Button {
-                        text: "File"
+                        text: "Local"
                         Layout.fillWidth: true
                         implicitHeight: 40
+                        onClicked: folderDialog.open()
                     }
                     Button {
                         text: "Cloud"
@@ -40,50 +234,18 @@ GridLayout {
                     }
                 }
 
-                // File List View
                 ListView {
                     id: fileListView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
                     spacing: 2
-                    model: ListModel {
-                        ListElement {
-                            fileName: "data_20230815.csv"
-                            fileSize: "2.4 MB"
-                            timeClosed: "15:42:23"
-                            note: "Main dataset"
-                        }
-                        ListElement {
-                            fileName: "calibration.json"
-                            fileSize: "145 KB"
-                            timeClosed: "14:15:07"
-                            note: "Sensor calibration"
-                        }
-                        ListElement {
-                            fileName: "config_backup.ini"
-                            fileSize: "87 KB"
-                            timeClosed: "11:30:45"
-                            note: "System configuration"
-                        }
-                        ListElement {
-                            fileName: "log_20230814.txt"
-                            fileSize: "1.2 MB"
-                            timeClosed: "09:22:18"
-                            note: "Debug logs"
-                        }
-                        ListElement {
-                            fileName: "export_results.xlsx"
-                            fileSize: "3.1 MB"
-                            timeClosed: "16:55:33"
-                            note: "Final report"
-                        }
-                    }
+                    model: fileListModel
 
                     delegate: Rectangle {
                         width: fileListView.width
                         height: 60
-                        color: index % 2 ? "#f5f5f5" : "white"
+                        color: index % 2 ? "#f5f5f5" : "gray"
                         border.color: "#e0e0e0"
                         radius: 2
 
@@ -132,10 +294,7 @@ GridLayout {
 
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
-                                fileListView.currentIndex = index
-                                // Add any file selection handling here
-                            }
+                            onClicked: fileListView.currentIndex = index
                         }
                     }
 

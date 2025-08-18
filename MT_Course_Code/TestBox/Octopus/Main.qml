@@ -178,7 +178,11 @@ ApplicationWindow
   }
 
 
-/*
+
+
+
+
+
   footer: RowLayout
   {
     width: parent.width
@@ -254,5 +258,5 @@ ApplicationWindow
       }
     }
   }
-*/
+
 }
