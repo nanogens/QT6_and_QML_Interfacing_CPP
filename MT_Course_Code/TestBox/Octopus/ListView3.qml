@@ -55,37 +55,99 @@ GridLayout {
     // 3. ListModel for the ListView
     ListModel {
         id: fileListModel
-        ListElement {
-            fileName: "data_20230815.csv"
-            fileSize: "2.4 MB"
-            timeClosed: "15:42:23"
-            note: "Main dataset"
+        // Remove the static ListElement entries since we're populating dynamically
+        // The roles will be defined by the data we append
+    }
+
+
+
+    // Connections to C++ backend
+    Connections {
+        target: CppClass
+
+        function onFileDataReady(metadata, dataPoints) {
+            console.log("Metadata received:", JSON.stringify(metadata, null, 2));
+            console.log("Data points count:", dataPoints.length);
+
+            // Update UI with metadata
+            deviceInfo.text = metadata.device + " - " + metadata.serialNumber;
+            timeInfo.text = metadata.instrumentTime + " " + metadata.timeZone;
+
+            updateChart(dataPoints);
         }
-        ListElement {
-            fileName: "calibration.json"
-            fileSize: "145 KB"
-            timeClosed: "14:15:07"
-            note: "Sensor calibration"
-        }
-        ListElement {
-            fileName: "config_backup.ini"
-            fileSize: "87 KB"
-            timeClosed: "11:30:45"
-            note: "System configuration"
-        }
-        ListElement {
-            fileName: "log_20230814.txt"
-            fileSize: "1.2 MB"
-            timeClosed: "09:22:18"
-            note: "Debug logs"
-        }
-        ListElement {
-            fileName: "export_results.xlsx"
-            fileSize: "3.1 MB"
-            timeClosed: "16:55:33"
-            note: "Final report"
+
+        function onNewDataPointsAdded(newPoints) {
+            console.log("New data points count:", newPoints.length);
+            addToChart(newPoints);
         }
     }
+
+    function updateChart(points) {
+        console.log("Updating chart with", points.length, "points");
+
+        // Clear existing data
+        depthSeries.clear();
+        temperatureSeries.clear();
+
+        if (points.length === 0) {
+            console.log("No points to chart");
+            return;
+        }
+
+        var minTime = Number.MAX_VALUE;
+        var maxTime = Number.MIN_VALUE;
+        var minDepth = Number.MAX_VALUE;
+        var maxDepth = Number.MIN_VALUE;
+        var minTemp = Number.MAX_VALUE;
+        var maxTemp = Number.MIN_VALUE;
+
+        // Add points and find ranges
+        for (var i = 0; i < points.length; i++) {
+            var point = points[i];
+            var timeMinutes = timeStringToMinutes(point.time);
+            var depth = point.depth;
+            var temp = point.temperature;
+
+            depthSeries.append(timeMinutes, depth);
+            temperatureSeries.append(timeMinutes, temp);
+
+            // Update ranges
+            minTime = Math.min(minTime, timeMinutes);
+            maxTime = Math.max(maxTime, timeMinutes);
+            minDepth = Math.min(minDepth, depth);
+            maxDepth = Math.max(maxDepth, depth);
+            minTemp = Math.min(minTemp, temp);
+            maxTemp = Math.max(maxTemp, temp);
+        }
+
+        // Set axis ranges with some padding
+        axisX.min = Math.max(0, minTime - 5);
+        axisX.max = maxTime + 5;
+
+        axisYDepth.min = Math.max(0, minDepth - 5);
+        axisYDepth.max = maxDepth + 5;
+
+        axisYTemp.min = Math.max(-40, minTemp - 2);
+        axisYTemp.max = Math.min(85, maxTemp + 2);
+
+        console.log("Chart updated - Time range:", minTime.toFixed(1), "to", maxTime.toFixed(1), "minutes");
+        console.log("Depth range:", minDepth.toFixed(1), "to", maxDepth.toFixed(1), "m");
+        console.log("Temperature range:", minTemp.toFixed(1), "to", maxTemp.toFixed(1), "°C");
+    }
+
+    function addToChart(newPoints) {
+        console.log("Adding", newPoints.length, "new points to chart");
+
+        for (var i = 0; i < newPoints.length; i++) {
+            var point = newPoints[i];
+            var timeMinutes = timeStringToMinutes(point.time);
+
+            depthSeries.append(timeMinutes, point.depth);
+            temperatureSeries.append(timeMinutes, point.temperature);
+        }
+    }
+
+
 
     // 4. Helper functions
     function formatFileSize(bytes) {
@@ -168,11 +230,17 @@ GridLayout {
         var filesData = [];
 
         for (var i = 0; i < folderModel.count; i++) {
+            var fileSizeBytes = folderModel.get(i, "fileSize");
+            var fileSizeFormatted = formatFileSize(fileSizeBytes);
+            var lastModified = new Date(folderModel.get(i, "fileModified"));
+
             var fileInfo = {
                 fileName: folderModel.get(i, "fileName"),
-                fileSize: folderModel.get(i, "fileSize"),
-                lastModified: new Date(folderModel.get(i, "fileModified")).getTime(),
-                note: "Text file"  // For visual model only
+                fileSize: fileSizeFormatted, // Use formatted string for display
+                fileSizeBytes: fileSizeBytes, // Keep original bytes for C++
+                lastModified: lastModified.getTime(),
+                timeClosed: formatFileTime(lastModified),
+                note: "Text file"
             };
 
             fileListModel.append(fileInfo);  // Update visual ListView
@@ -201,6 +269,18 @@ GridLayout {
             folderModel.folder.toString().replace(/^(file:\/{3})/, ""),
             fileData
         );
+    }
+
+    // Add this function to your QML to convert time strings to plotable values
+    function timeStringToMinutes(timeStr) {
+        var parts = timeStr.split(":");
+        if (parts.length === 3) {
+            var hours = parseInt(parts[0]);
+            var minutes = parseInt(parts[1]);
+            var seconds = parseInt(parts[2]);
+            return hours * 60 + minutes + seconds / 60;
+        }
+        return 0;
     }
 
     CellBox {
@@ -236,6 +316,7 @@ GridLayout {
 
                 ListView {
                     id: fileListView
+                    currentIndex: -1  // Start with no selection
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -245,8 +326,8 @@ GridLayout {
                     delegate: Rectangle {
                         width: fileListView.width
                         height: 60
-                        color: index % 2 ? "#f5f5f5" : "gray"
-                        border.color: "#e0e0e0"
+                        color: fileListView.currentIndex === index ? "#d4e6f1" : (index % 2 ? "#f5f5f5" : "white")
+                        border.color: fileListView.currentIndex === index ? "#3498db" : "#e0e0e0"
                         radius: 2
 
                         RowLayout {
@@ -291,13 +372,22 @@ GridLayout {
                                 }
                             }
                         }
-
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: fileListView.currentIndex = index
+                            onClicked: {
+                                fileListView.currentIndex = index;
+                                var selectedFile = fileListModel.get(index);
+                                var fullPath = folderModel.folder.toString().replace(/^(file:\/{3})/, "") +
+                                               "/" + selectedFile.fileName;
+                                CppClass.openAndReadFile(fullPath);
+
+                                // Clear selection to allow re-clicking the same file
+                                Qt.callLater(function() {
+                                    fileListView.currentIndex = -1;
+                                });
+                            }
                         }
                     }
-
                     ScrollBar.vertical: ScrollBar {
                         policy: ScrollBar.AsNeeded
                     }
@@ -311,6 +401,22 @@ GridLayout {
         Layout.minimumWidth: 700
         title: 'Graph'
         Layout.preferredWidth: height // Keep the ratio right!
+
+        // Add this somewhere in your UI (maybe near the chart title)
+        Text {
+            id: deviceInfo
+            text: "Device: "
+            color: "white"
+            font.pixelSize: 14
+        }
+
+        Text {
+            id: timeInfo
+            text: "Time: "
+            color: "white"
+            font.pixelSize: 12
+        }
+
         TabBar {
             id: bar
             width: parent.width
@@ -327,204 +433,65 @@ GridLayout {
 
             // Bar Graph - 2 x Y axis (Depth, Tempeature)
             ChartView {
+                id: chartView
                 width: 1600
                 height: 800
                 theme: ChartView.ChartThemeDark
                 antialiasing: true
-                legend.visible: true // MT was true
-                legend.alignment: Qt.AlignBottom
-                margins {
-                    top: 20
-                    bottom: 40
-                    left: 20
-                    right: 40
-                } // Increased right margin
+                legend.visible: false
 
-                // Customize the legend appearance
-                // Add a custom legend (e.g., using Row + Rectangle + Text)
-                Row {
-                    anchors.bottom: parent.bottom
-                    spacing: 10
-                    Repeater {
-                        model: ["Temperature", "Depth", "Conductivity"]
-                        delegate: Row {
-                            spacing: 5
-                            Rectangle {
-                                width: 15
-                                height: 15
-                                color: "green"
-                            }
-                            Text {
-                                text: modelData
-                                color: "white"
-                                font.pixelSize: 14
-                            }
-                        }
-                    }
-                }
-
-                // X-Axis (Time)
-                DateTimeAxis {
+                // X-Axis (Time - converted from HH:MM:SS to milliseconds)
+                ValueAxis {
                     id: axisX
-                    format: "hh:mm"
-                    titleText: "Time (min)"
-                    min: new Date(2023, 0, 1, 0, 0, 0)
-                    max: new Date(2023, 0, 1, 3, 20, 0) // 3 hours, 20 minutes
-
-                    // Set font size for axis labels
-                    labelsFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 16
-                    })
-
-                    // Set font size for axis title
-                    titleFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 18,
-                        "bold": true
-                    })
+                    titleText: "Time (minutes)"
+                    min: 0
+                    max: 200 // Will be dynamically updated
+                    labelFormat: "%.0f"
+                    labelsFont: Qt.font({ family: "Arial", pointSize: 12, bold: true })
+                    titleFont: Qt.font({ family: "Arial", pointSize: 14, bold: true })
                 }
 
+                // Left Y-Axis (Depth)
                 ValueAxis {
                     id: axisYDepth
+                    titleText: "Depth (m)"
                     min: 0
-                    max: 50
-                    titleText: "Depth  (m)"
+                    max: 100
                     labelFormat: "%.0f"
-
-                    // Set font size for axis labels
-                    labelsFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 16
-                    })
-
-                    // Set font size for axis title
-                    titleFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 18,
-                        "bold": true
-                    })
+                    labelsFont: Qt.font({ family: "Arial", pointSize: 12, bold: true })
+                    titleFont: Qt.font({ family: "Arial", pointSize: 14, bold: true })
                 }
 
-                // Right Y-Axis 1 (Temperature)
+                // Right Y-Axis (Temperature)
                 ValueAxis {
                     id: axisYTemp
-                    min: 10
+                    titleText: "Temperature (°C)"
+                    min: 0
                     max: 30
-                    titleText: "Temperature  (°C)"
                     labelFormat: "%.1f"
-
-                    // Set font size for axis labels
-                    labelsFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 16
-                    })
-
-                    // Set font size for axis title
-                    titleFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 18,
-                        "bold": true
-                    })
+                    labelsFont: Qt.font({ family: "Arial", pointSize: 12, bold: true })
+                    titleFont: Qt.font({ family: "Arial", pointSize: 14, bold: true })
                 }
 
-                // Right Y-Axis 2 (Conductivity)
-                ValueAxis {
-                    id: axisYConductivity
-                    min: -100
-                    max: 100
-                    titleText: "Conductivity  (mS/cm)"
-                    labelFormat: "%.0f"
-
-                    // Set font size for axis labels
-                    labelsFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 16
-                    })
-
-                    // Set font size for axis title
-                    titleFont: Qt.font({
-                        "family": "Arial",
-                        "pixelSize": 18,
-                        "bold": true
-                    })
-                }
-
-                // Temperature Line
+                // Depth Line Series (Primary - Left Axis)
                 LineSeries {
+                    id: depthSeries
+                    name: "Depth"
+                    axisX: axisX
+                    axisY: axisYDepth
+                    color: "#1f77b4" // Blue
+                    width: 2
+                }
+
+                // Temperature Line Series (Secondary - Right Axis)
+                LineSeries {
+                    id: temperatureSeries
                     name: "Temperature"
                     axisX: axisX
                     axisYRight: axisYTemp
                     color: "#ff7f0e" // Orange
                     width: 2
                     style: Qt.DashLine
-
-                    Component.onCompleted: {
-                        for (var i = 0; i <= 500; i++) {
-                            var temp = 18 + 7 * Math.sin(i / 16)
-                            append(new Date(2023, 0, 1, 0, i, 0).getTime(), temp)
-                        }
-                    }
-                }
-
-                // Conductivity Line
-                LineSeries {
-                    name: "Conductivity"
-                    axisX: axisX
-                    axisYRight: axisYConductivity
-                    color: "#2ca02c" // Green
-                    width: 2
-                    style: Qt.DotLine
-
-                    Component.onCompleted: {
-                        for (var i = 0; i <= 500; i += 2) {
-                            var cond = 10 + 50 * Math.sin(i / 25)
-                            append(new Date(2023, 0, 1, 0, i, 0).getTime(), cond)
-                        }
-                    }
-                }
-
-                // Depth Line (Primary)
-                LineSeries {
-                    name: "Depth"
-                    axisX: axisX
-                    axisY: axisYDepth
-                    color: "#1f77b4" // Blue
-                    width: 4
-
-                    Component.onCompleted: {
-                        for (var i = 0; i <= 500; i++) {
-                            var depth = 20 + 15 * Math.sin(i / 10)
-                            append(new Date(2023, 0, 1, 0, i, 0).getTime(), depth)
-                        }
-                    }
-                }
-
-                // Custom axis placement
-                onPlotAreaChanged: {
-                    // Position Temperature axis (first right axis)
-                    axisYTemp.visible = true
-                    axisYTemp.lineVisible = true
-                    axisYTemp.labelsVisible = true
-                    axisYTemp.titleVisible = true
-                    axisYTemp.alignment = Qt.AlignRight
-                    axisYTemp.offset = 0
-
-                    // Position Conductivity axis (second right axis)
-                    axisYConductivity.visible = true
-                    axisYConductivity.lineVisible = true
-                    axisYConductivity.labelsVisible = true
-                    axisYConductivity.titleVisible = true
-                    axisYConductivity.alignment = Qt.AlignRight
-                    axisYConductivity.offset = -50 // Adjust based on your chart width
-
-                    // Position Depth axis (third right axis)
-                    axisYDepth.visible = true
-                    axisYDepth.lineVisible = true
-                    axisYDepth.labelsVisible = true
-                    axisYDepth.titleVisible = true
-                    axisYDepth.alignment = Qt.AlignRight
-                    axisYDepth.offset = -100 // Adjust based on your chart width
                 }
             }
         }

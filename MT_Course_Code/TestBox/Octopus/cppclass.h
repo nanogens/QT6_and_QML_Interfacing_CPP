@@ -13,34 +13,30 @@
 #include <queue>
 #include <condition_variable>
 
+// Add to cppclass.h
+#include <QFile>
+#include <QTextStream>
+#include <QTimer>
 
-// In your C++ header file
-//#include <QObject>
-//#include <QString>
-//#include <QVariant>
-//#include <QVariantList>
-//#include <QDateTime>
-//#include <QMetaType>  // Required for Q_DECLARE_METATYPE
-
-/*
-// MT added
-struct FileInfo {
-    QString fileName;
-    qint64 fileSize; // in bytes
-    QDateTime lastModified;
-
-    // Convert to QVariantMap for QML
-    QVariantMap toVariant() const {
-        return {
-            {"fileName", fileName},
-            {"fileSize", fileSize},
-            {"lastModified", lastModified}
-        };
-    }
+struct DataPoint {
+    QString time;
+    double temperature;
+    double depth;
 };
-*/
 
-//Q_DECLARE_METATYPE(FileInfo)
+struct FileMetadata {
+    QString device;
+    QString serialNumber;
+    QString instrumentTime;
+    QString timeZone;
+    QString activationMethod;
+};
+
+struct FileData {
+    FileMetadata metadata;
+    QVector<DataPoint> dataPoints;
+};
+
 
 class CppClass : public QObject
 {
@@ -53,7 +49,7 @@ public:
     Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
     Q_INVOKABLE QVariantList getVariantListFromCpp();
     Q_INVOKABLE QVariantMap getVariantMapFromCpp();
-    //Q_INVOKABLE void processFiles(const QString& directory, const QVariantList& fileInfos); // MT added
+    Q_INVOKABLE void openAndReadFile(const QString& filePath);
     void setQmlRootObject(QObject *value);
 
     // Public interface
@@ -71,6 +67,8 @@ private:
 
 signals:
     void dataReceived(const QByteArray &data);
+    void fileDataReady(const QVariantMap &metadata, const QVariantList &dataPoints);
+    void newDataPointsAdded(const QVariantList &newPoints);
 
 public slots:
     void triggerJSCall();
@@ -101,6 +99,16 @@ private:
     std::mutex m_portMutex;
     QObject* qmlRootObject = nullptr;
 
+public:
+    void startFileMonitoring(const QString& filePath);
+    void stopFileMonitoring();
+    void readFileContents();
+
+private:
+    QFile m_dataFile;
+    FileData m_currentFileData;
+    QTimer m_fileMonitorTimer;
+    qint64 m_lastFileSize;
 };
 
 #endif // CPPCLASS_H

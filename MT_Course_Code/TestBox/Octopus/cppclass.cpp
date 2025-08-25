@@ -344,7 +344,7 @@ void CppClass::passFromQmlToCpp2(const QVariantList &files)
             file["lastModified"].toLongLong());
 
         qDebug() << "File:" << file["fileName"].toString()
-                 << "Size:" << file["fileSize"].toLongLong() << "bytes"
+                 << "Size:" << file["fileSizeBytes"].toLongLong() << "bytes"
                  << "Modified:" << modified.toString("yyyy-MM-dd hh:mm:ss");
     }
 }
@@ -403,24 +403,225 @@ void CppClass::triggerJSCall()
 
 // --------------
 
-/*
-void CppClass::processFiles(const QString& directory, const QVariantList& fileVariants) {
-    qDebug() << "Processing directory:" << directory;
+void CppClass::openAndReadFile(const QString& filePath) {
+    stopFileMonitoring();
 
-    QList<FileInfo> files;
-    for (const QVariant& fileVariant : fileVariants) {
-        QVariantMap fileMap = fileVariant.toMap();
-        files.append({
-            fileMap["fileName"].toString(),
-            fileMap["fileSize"].toLongLong(),
-            fileMap["lastModified"].toDateTime()
-        });
+    qDebug() << "Attempting to open file:" << filePath;
+
+    m_dataFile.setFileName(filePath);
+    if (!m_dataFile.open(QIODevice::ReadOnly | QIODevice::Text | QIODevice::ExistingOnly)) {
+        qDebug() << "Failed to open file:" << filePath << "Error:" << m_dataFile.errorString();
+        return;
     }
 
-    // Now you have:
-    // - QString directory: the directory path
-    // - QList<FileInfo> files: all file information
-    // Process them as needed...
+    // Try to detect encoding
+    QTextStream stream(&m_dataFile);
+    stream.setAutoDetectUnicode(true);
+    QString testLine = stream.readLine();
+    qDebug() << "First line test:" << testLine;
+    m_dataFile.seek(0); // Reset to beginning
+
+    m_currentFileData = FileData();
+    m_lastFileSize = 0;
+
+    // Read initial contents
+    readFileContents();
+
+    // Start monitoring for changes
+    startFileMonitoring(filePath);
 }
-*/
+
+void CppClass::readFileContents() {
+    if (!m_dataFile.isOpen()) {
+        qDebug() << "File is not open for reading";
+        return;
+    }
+
+    m_dataFile.seek(0);
+    QTextStream stream(&m_dataFile);
+    QString line;
+    bool readingMetadata = true;
+    bool foundMetadata = false;
+    int lineNumber = 0;
+
+    m_currentFileData = FileData(); // Reset data
+
+    qDebug() << "Reading file contents...";
+
+    while (!stream.atEnd()) {
+        lineNumber++;
+        line = stream.readLine().trimmed();
+        qDebug() << "Line" << lineNumber << ":" << line;
+
+        // Skip empty lines at the beginning
+        if (line.isEmpty() && !foundMetadata) {
+            qDebug() << "Skipping empty line at beginning";
+            continue;
+        }
+
+        if (readingMetadata) {
+            if (line.contains(":")) {
+                foundMetadata = true;
+                int colonIndex = line.indexOf(":");
+                QString key = line.left(colonIndex).trimmed();
+                QString value = line.mid(colonIndex + 1).trimmed();
+
+                qDebug() << "Found metadata - Key:" << key << "Value:" << value;
+
+                if (key == "Instrument_Device") m_currentFileData.metadata.device = value;
+                else if (key == "Instrument_SerialNumber") m_currentFileData.metadata.serialNumber = value;
+                else if (key == "Time_InstrumentClock") m_currentFileData.metadata.instrumentTime = value;
+                else if (key == "Time_TimeZone") m_currentFileData.metadata.timeZone = value;
+                else if (key == "Activation_ActivationMethod") m_currentFileData.metadata.activationMethod = value;
+            }
+            else if (line.isEmpty() && foundMetadata) {
+                // Empty line after metadata indicates transition to data section
+                qDebug() << "Transitioning from metadata to data section";
+                readingMetadata = false;
+            }
+        }
+        else {
+            // Read data points - skip empty lines in data section
+            if (line.isEmpty()) {
+                qDebug() << "Skipping empty line in data section";
+                continue;
+            }
+
+            QStringList values = line.split(",");
+            qDebug() << "Data line split into:" << values;
+
+            if (values.size() >= 3) {
+                // Trim all values
+                for (int i = 0; i < values.size(); i++) {
+                    values[i] = values[i].trimmed();
+                }
+
+                DataPoint point;
+                point.time = values[0];
+
+                // Convert temperature and depth with validation
+                bool tempOk, depthOk;
+                point.temperature = values[1].toDouble(&tempOk);
+                point.depth = values[2].toDouble(&depthOk);
+
+                qDebug() << "Parsed point - Time:" << point.time
+                         << "Temp:" << point.temperature << "(valid:" << tempOk << ")"
+                         << "Depth:" << point.depth << "(valid:" << depthOk << ")";
+
+                // Only add valid data points
+                if (tempOk && depthOk && !point.time.isEmpty()) {
+                    m_currentFileData.dataPoints.append(point);
+                    qDebug() << "Added valid data point";
+                } else {
+                    qDebug() << "Skipping invalid data line:" << line;
+                }
+            } else {
+                qDebug() << "Skipping malformed data line (expected 3+ values, got" << values.size() << "):" << line;
+            }
+        }
+    }
+
+    m_lastFileSize = m_dataFile.size();
+
+    // Debug output
+    qDebug() << "Read" << m_currentFileData.dataPoints.size() << "data points";
+    if (!m_currentFileData.dataPoints.isEmpty()) {
+        const DataPoint& first = m_currentFileData.dataPoints.first();
+        const DataPoint& last = m_currentFileData.dataPoints.last();
+        qDebug() << "First point - Time:" << first.time << "Temp:" << first.temperature << "Depth:" << first.depth;
+        qDebug() << "Last point - Time:" << last.time << "Temp:" << last.temperature << "Depth:" << last.depth;
+    }
+
+    qDebug() << "Metadata:";
+    qDebug() << "  Device:" << m_currentFileData.metadata.device;
+    qDebug() << "  SN:" << m_currentFileData.metadata.serialNumber;
+    qDebug() << "  Time:" << m_currentFileData.metadata.instrumentTime;
+    qDebug() << "  TimeZone:" << m_currentFileData.metadata.timeZone;
+    qDebug() << "  Activation:" << m_currentFileData.metadata.activationMethod;
+
+    // Emit data to QML
+    QVariantMap metadata;
+    metadata["device"] = m_currentFileData.metadata.device;
+    metadata["serialNumber"] = m_currentFileData.metadata.serialNumber;
+    metadata["instrumentTime"] = m_currentFileData.metadata.instrumentTime;
+    metadata["timeZone"] = m_currentFileData.metadata.timeZone;
+    metadata["activationMethod"] = m_currentFileData.metadata.activationMethod;
+
+    QVariantList dataPoints;
+    for (const DataPoint& point : m_currentFileData.dataPoints) {
+        QVariantMap pointMap;
+        pointMap["time"] = point.time;
+        pointMap["temperature"] = point.temperature;
+        pointMap["depth"] = point.depth;
+        dataPoints.append(pointMap);
+    }
+
+    emit fileDataReady(metadata, dataPoints);
+}
+
+void CppClass::startFileMonitoring(const QString& filePath) {
+    m_fileMonitorTimer.stop();
+    m_fileMonitorTimer.setInterval(1000); // Check every 1 second
+
+    QObject::connect(&m_fileMonitorTimer, &QTimer::timeout, [this]() {
+        if (m_dataFile.size() > m_lastFileSize) {
+            // Read only new data
+            m_dataFile.seek(m_lastFileSize);
+            QTextStream stream(&m_dataFile);
+            QString line;
+            QVariantList newPoints;
+
+            while (!stream.atEnd()) {
+                line = stream.readLine().trimmed();
+
+                // Skip empty lines and metadata lines
+                if (line.isEmpty() || line.contains(":")) {
+                    continue;
+                }
+
+                QStringList values = line.split(",");
+                if (values.size() >= 3) {
+                    // Trim all values
+                    for (int i = 0; i < values.size(); i++) {
+                        values[i] = values[i].trimmed();
+                    }
+
+                    DataPoint point;
+                    point.time = values[0];
+
+                    bool tempOk, depthOk;
+                    point.temperature = values[1].toDouble(&tempOk);
+                    point.depth = values[2].toDouble(&depthOk);
+
+                    if (tempOk && depthOk && !point.time.isEmpty()) {
+                        m_currentFileData.dataPoints.append(point);
+
+                        QVariantMap pointMap;
+                        pointMap["time"] = point.time;
+                        pointMap["temperature"] = point.temperature;
+                        pointMap["depth"] = point.depth;
+                        newPoints.append(pointMap);
+                    }
+                }
+            }
+
+            m_lastFileSize = m_dataFile.size();
+            if (!newPoints.isEmpty()) {
+                qDebug() << "Added" << newPoints.size() << "new data points";
+                emit newDataPointsAdded(newPoints);
+            }
+        }
+    });
+
+    m_fileMonitorTimer.start();
+}
+
+void CppClass::stopFileMonitoring() {
+    m_fileMonitorTimer.stop();
+    if (m_dataFile.isOpen()) {
+        m_dataFile.close();
+    }
+}
+
+
 
