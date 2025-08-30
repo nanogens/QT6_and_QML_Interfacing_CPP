@@ -44,10 +44,14 @@ Item {
         }
     }
 
+    // Global property
+    property string selection: ""
+
     // Your properties
     // cellA - Instrument
     property var model_Instrument_Device_ComboBox: ["Submersible_Mini_AZ", "Submersible_Mini_BZ", "Submersible_Mini_CZ"]
     property string current_Instrument_Device: "Submersible_Mini_AZ"
+
 
     // cellB - Communications - (to surface module)
     property var model_Communication_Connection_ComboBox: ["RS-485", "IrDA"]
@@ -55,8 +59,6 @@ Item {
 
     property var model_Communication_BaudRate_ComboBox: ["115200", "57600", "38400", "19200", "9600"]
     property string current_Communication_BaudRate: "115200"
-
-
 
 
 
@@ -157,7 +159,7 @@ Item {
                     }
 
 
-                    // Row 1: Model
+                    // Row 1: Device
                     Label {
                         text: "  Device  . . . . . . . . . . . . ."
                         font.bold: true
@@ -184,35 +186,6 @@ Item {
                         onCurrentIndexChanged: listview2.current_Instrument_Device = currentText
                     }
 
-                    /*
-                    // Row 2: Battery
-                    Label {
-                        text: "  Battery  . . . . . . . . . . . ."
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: "Lithium CR2"
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 1
-                    }
-                    ComboBox {
-                        id: batteryComboBox
-                        model: instrumentBatteryTypes
-                        currentIndex: 0
-                        implicitHeight: 28 * scaleFactor
-                        font.pixelSize: dropdownFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.currentinstrumentBatteryTypes = currentText
-                    }
-                    */
-
                     // Row : Serial number
                     Label {
                         text: "  Serial Number  . . . . ."
@@ -228,7 +201,7 @@ Item {
                         Layout.column: 1
                     }
                     TextField {
-                        id: input_Instrument_SerialInput
+                        id: input_Instrument_SerialNumber
                         implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 2
@@ -293,7 +266,19 @@ Item {
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
                         Layout.row: 5
-                        Layout.column: 2
+                        Layout.column: 2                            
+                        onClicked: {
+                            var selection = "1";
+                            var selected_Instrument_Device = current_Instrument_Device;
+                            var selected_Instrument_Serial_Number = input_Instrument_SerialNumber.text;
+                            var arr = [selection, selected_Instrument_Device, selected_Instrument_Serial_Number];
+                            var obj = {
+                                Selection : selection,
+                                Instrument_Device: selected_Instrument_Device,
+                                Instrument_Serial_Number: selected_Instrument_Serial_Number
+                            };
+                            CppClass.passFromQmlToCpp3(arr, obj);
+                        }
                     }
                 }
             }
@@ -392,7 +377,7 @@ Item {
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
-                        onCurrentIndexChanged: listview2.current_Communication_Connection = currentText
+                        onCurrentIndexChanged: current_Communication_Connection = model[currentIndex]
                     }
 
                     // Row : Baud Rate
@@ -418,7 +403,7 @@ Item {
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 2
-                        onCurrentIndexChanged: listview2.current_Communication_BaudRate = currentText
+                        onCurrentIndexChanged: current_Communication_BaudRate = model[currentIndex]
                     }
 
                     // Row : Empty spacer
@@ -471,14 +456,14 @@ Item {
                         Layout.row: 4
                         Layout.column: 2
                         onClicked: {
-                            var selectedModel = modelComboBox.currentText;
-                            var selectedBattery = batteryComboBox.currentText;
-                            var arr = [selectedModel, selectedBattery];
+                            var selected_Communication_Connection = current_Communication_Connection; //model_Communication_Connection_ComboBox.currentText;
+                            var selected_Communication_BaudRate = current_Communication_BaudRate; //model_Communication_BaudRate_ComboBox.currentText;
+                            var arr = [selected_Communication_Connection, selected_Communication_BaudRate];
                             var obj = {
-                                model: selectedModel,
-                                battery: selectedBattery
+                                Communication_Connection: selected_Communication_Connection,
+                                Communication_BaudRate: selected_Communication_BaudRate
                             };
-                            CppClass.passFromQmlToCpp(arr, obj);
+                            CppClass.passFromQmlToCpp3(arr, obj);
                         }
                     }
                 }
@@ -842,7 +827,7 @@ Item {
                     // Row 3: Buttons
                     Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
-                        id: buttonf1Id
+                        id: button7Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -851,7 +836,7 @@ Item {
                         Layout.column: 1
                     }
                     Button {
-                        id: buttonf2Id
+                        id: button8Id
                         text: "Write Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1010,7 +995,7 @@ Item {
                     // Row : Buttons
                     Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
-                        id: buttonfc1Id
+                        id: button9Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1019,7 +1004,7 @@ Item {
                         Layout.column: 1
                     }
                     Button {
-                        id: buttonfc2Id
+                        id: button10Id
                         text: "Write Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1148,7 +1133,7 @@ Item {
                     }
 
                     Button {
-                        id: button1xId
+                        id: button11Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1165,7 +1150,7 @@ Item {
                     }
                     Button
                     {
-                        id: button2xId
+                        id: button12Id
                         text: "Write Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1335,7 +1320,7 @@ Item {
                     // Row : Buttons
                     Label { text: ""; Layout.row: 4; Layout.column: 0 }
                     Button {
-                        id: buttonfec1Id
+                        id: button13d
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1344,7 +1329,7 @@ Item {
                         Layout.column: 1
                     }
                     Button {
-                        id: buttonfec2Id
+                        id: button14Id
                         text: "Write Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1528,7 +1513,7 @@ Item {
                     // Row : Buttons
                     Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
-                        id: buttonfecd1Id
+                        id: button15Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1537,7 +1522,7 @@ Item {
                         Layout.column: 1
                     }
                     Button {
-                        id: buttonfecd2Id
+                        id: button16Id
                         text: "Write Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1668,7 +1653,7 @@ Item {
                     // Row : Buttons
                     Label { text: ""; Layout.row: 3; Layout.column: 0 }
                     Button {
-                        id: buttonfecd1rId
+                        id: button17Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
@@ -1677,7 +1662,7 @@ Item {
                         Layout.column: 1
                     }
                     Button {
-                        id: buttonfecd2rId
+                        id: button18Id
                         text: "Write Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor

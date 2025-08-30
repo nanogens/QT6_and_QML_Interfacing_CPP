@@ -170,23 +170,24 @@ void CppClass::setTransmitMode(bool transmitting)
     } else {
         EscapeCommFunction(m_hPort, CLRRTS);  // Deassert RTS for receive
     }
-    QThread::usleep(50);  // Transceiver switching delay
+    QThread::usleep(1);  // Transceiver switching delay
 }
 
 void CppClass::readwriteThread()
 {
-    const int BUFFER_SIZE = 256;
-    char readBuffer[BUFFER_SIZE];
-    char writeBuffer[BUFFER_SIZE];
-    DWORD bytesRead;
-    int writePos = 0;
+    //const int BUFFER_SIZE = 256;
+    //char readBuffer[BUFFER_SIZE];
+    //char writeBuffer[BUFFER_SIZE];
+    //DWORD bytesRead;
+    //int writePos = 0;
 
     while (m_serialData.running)
     {
         // First check for outgoing data
         {
             std::unique_lock<std::mutex> lock(m_serialData.outgoingMutex);
-            while (!m_serialData.outgoing.empty() && writePos < BUFFER_SIZE) {
+            while (!m_serialData.outgoing.empty() && writePos < BUFFER_SIZE)
+            {
                 writeBuffer[writePos++] = m_serialData.outgoing.front();
                 m_serialData.outgoing.pop();
             }
@@ -347,6 +348,57 @@ void CppClass::passFromQmlToCpp2(const QVariantList &files)
                  << "Size:" << file["fileSizeBytes"].toLongLong() << "bytes"
                  << "Modified:" << modified.toString("yyyy-MM-dd hh:mm:ss");
     }
+}
+
+void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
+{
+    int writePos_temp = 0;
+
+    qDebug() << "Received variant list and map from QML";
+    qDebug() << "List :";
+    for( int i{0} ; i < list.size(); i++)
+    {
+        //qDebug() << "List item :" << list.at(i).toString();
+        //if(i < 5) // max
+        {
+            qDebug() << "List item :" << list.at(i).toString().toUtf8();
+
+            // Convert QString to char array
+            QByteArray byteArray = list.at(i).toString().toUtf8();
+
+            // The first string is the selection string.
+            // Use it to determine what category the information came from
+            // and what therefore needs to be processed.
+            if(i == 0)
+            {
+                int x = byteArray.toInt();
+                if(x == 1)
+                {
+                  qDebug() << "MT ";
+                }
+            }
+
+            for (char c : byteArray)
+            {
+                writeBuffer[writePos_temp] = c;
+
+                //if(writePos_temp == 0)
+                //{
+                    //qDebug() << c.toInt();
+                //}
+                writePos_temp++;
+            }
+        }
+    }
+    writePos = writePos_temp;
+
+    /*
+    qDebug() << "Map :";
+    for( int i{0} ; i < map.keys().size(); i++)
+    {
+        qDebug() << "Map item :" << map[map.keys().at(i)].toString();
+    }
+    */
 }
 
 // Add a setter for the port name

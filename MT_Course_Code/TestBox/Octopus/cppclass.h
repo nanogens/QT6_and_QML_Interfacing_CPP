@@ -47,6 +47,9 @@ public:
 
     Q_INVOKABLE void passFromQmlToCpp(QVariantList list, QVariantMap map);
     Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
+
+    Q_INVOKABLE void passFromQmlToCpp3(QVariantList list, QVariantMap map);
+
     Q_INVOKABLE QVariantList getVariantListFromCpp();
     Q_INVOKABLE QVariantMap getVariantMapFromCpp();
     Q_INVOKABLE void openAndReadFile(const QString& filePath);
@@ -110,5 +113,11 @@ private:
     QTimer m_fileMonitorTimer;
     qint64 m_lastFileSize;
 };
+
+static const int BUFFER_SIZE = 256;
+static char writeBuffer[BUFFER_SIZE];
+static int writePos = 0;
+static char readBuffer[BUFFER_SIZE];
+static DWORD bytesRead;
 
 #endif // CPPCLASS_H
