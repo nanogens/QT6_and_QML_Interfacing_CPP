@@ -1,6 +1,9 @@
 #ifndef CPPCLASS_H
 #define CPPCLASS_H
 
+
+#include "Defines.h"
+
 #include <QObject>
 #include <QVariantList>
 #include <QVariantMap>
@@ -49,6 +52,8 @@ public:
     Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
 
     Q_INVOKABLE void passFromQmlToCpp3(QVariantList list, QVariantMap map);
+    Q_INVOKABLE void passFromQmlToCpp3prev(QVariantList list, QVariantMap map);
+
 
     Q_INVOKABLE QVariantList getVariantListFromCpp();
     Q_INVOKABLE QVariantMap getVariantMapFromCpp();
@@ -88,8 +93,6 @@ private:
     };
 
     HANDLE openCommPort(const char* portName, DWORD baudRate = CBR_115200);
-    void readThread();
-    void writeThread();
     void readwriteThread();
     void processReceivedData();
 
@@ -120,4 +123,18 @@ static int writePos = 0;
 static char readBuffer[BUFFER_SIZE];
 static DWORD bytesRead;
 
+
+struct Instrument
+{
+  uint8_t selection;
+  uint8_t device;
+  uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX];
+  uint8_t usage;
+  uint8_t errorcode;
+};
+
+
+
+
 #endif // CPPCLASS_H
+

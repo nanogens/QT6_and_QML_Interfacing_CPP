@@ -6,6 +6,14 @@ import QtCharts 2.15
 Item {
     id: listview2
 
+    // Define statements (must match Defines.h)
+    readonly property int iNSTRUMENT: 1
+    readonly property int cOMMUNICATIONS: 2
+
+    readonly property int aRRAY_SERIALNUMBER_MAX: 13
+
+
+
     // Reference sizes for scaling (unchanged)
     readonly property real baseWidth: 1920
     readonly property real baseHeight: 1080
@@ -208,8 +216,9 @@ Item {
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        maximumLength: 13
+                        maximumLength: aRRAY_SERIALNUMBER_MAX
                         onEditingFinished: console.log("Entered:", text)
+                        placeholderText: "XXX-XX-XXXXXX"
                     }
                     /*
                     Label {
@@ -269,7 +278,7 @@ Item {
                         Layout.column: 2                            
                         onClicked: {
                             var selection = "1";
-                            var selected_Instrument_Device = current_Instrument_Device;
+                            var selected_Instrument_Device = id_Instrument_Device_ComboBox.currentIndex;
                             var selected_Instrument_Serial_Number = input_Instrument_SerialNumber.text;
                             var arr = [selection, selected_Instrument_Device, selected_Instrument_Serial_Number];
                             var obj = {

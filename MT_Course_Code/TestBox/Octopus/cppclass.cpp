@@ -4,7 +4,13 @@
 #include <QDate>
 #include <QThread>  // Add this line
 
-CppClass::CppClass(QObject *parent) : QObject(parent) {}
+// Structure Instantiation
+Instrument Instrument1;
+
+CppClass::CppClass(QObject *parent) : QObject(parent)
+{
+  m_serialData.running = false;
+}
 
 CppClass::~CppClass() {
     stopCommunication();
@@ -15,7 +21,6 @@ CppClass::~CppClass() {
 
 
 // ---------------------
-
 
 
 HANDLE CppClass::openCommPort(const char* portName, DWORD baudRate)
@@ -74,90 +79,7 @@ HANDLE CppClass::openCommPort(const char* portName, DWORD baudRate)
         CloseHandle(hSerial);
         return INVALID_HANDLE_VALUE;
     }
-
     return hSerial;
-}
-
-void CppClass::readThread()
-{
-    const int BUFFER_SIZE = 256;
-    char buffer[BUFFER_SIZE];
-    DWORD bytesRead;
-    QByteArray receivedData;
-
-    while (m_serialData.running)
-    {
-        if (ReadFile(m_hPort, buffer, BUFFER_SIZE, &bytesRead, NULL))
-        {
-            if (bytesRead > 0)
-            {
-                std::lock_guard<std::mutex> lock(m_serialData.incomingMutex);
-
-                // Store all received bytes
-                for (DWORD i = 0; i < bytesRead; i++)
-                {
-                    m_serialData.incoming.push(buffer[i]);
-                }
-
-                // Print all received bytes
-                qDebug() << "Received" << bytesRead << "byte(s):";
-                for (DWORD i = 0; i < bytesRead; i++)
-                {
-                    qDebug() << "  Byte" << i << ":"
-                             << "Dec:" << static_cast<int>(buffer[i])
-                             << "Hex: 0x" << Qt::hex << (static_cast<int>(buffer[i]) & 0xFF)
-                             << "Char: '" << ((buffer[i] >= 32 && buffer[i] < 127) ? buffer[i] : '.') << "'";
-                }
-
-                emit dataReceived(QByteArray(buffer, bytesRead));
-
-                // Send raw byte array
-                //static const char response[] = {0x31, 0x32, 0x33, 0x34};
-                //sendData(QByteArray(response, sizeof(response)));
-            }
-        }
-        // ... error handling remains the same ...
-    }
-}
-
-void CppClass::writeThread()
-{
-    const int BUFFER_SIZE = 256;
-    char writeBuffer[BUFFER_SIZE];
-    int bufferPos = 0;
-
-    while (m_serialData.running)
-    {
-        std::unique_lock<std::mutex> lock(m_serialData.outgoingMutex);
-
-        // Wait for data if buffer is empty
-        if (m_serialData.outgoing.empty())
-        {
-            m_serialData.cv.wait(lock);
-        }
-
-        // Fill the write buffer
-        while (!m_serialData.outgoing.empty() && bufferPos < BUFFER_SIZE) {
-            writeBuffer[bufferPos++] = m_serialData.outgoing.front();
-            m_serialData.outgoing.pop();
-        }
-        lock.unlock();
-
-        // Send the entire buffer at once
-        if (bufferPos > 0)
-        {
-            DWORD bytesWritten;
-            if (!WriteFile(m_hPort, writeBuffer, bufferPos, &bytesWritten, NULL))
-            {
-                qDebug() << "Write error:" << GetLastError();
-            }
-            else
-            {
-                qDebug() << "Sent" << bytesWritten << "bytes";
-            }
-            bufferPos = 0;
-        }
-    }
 }
 
 void CppClass::setTransmitMode(bool transmitting)
@@ -175,88 +97,88 @@ void CppClass::setTransmitMode(bool transmitting)
 
 void CppClass::readwriteThread()
 {
-    //const int BUFFER_SIZE = 256;
-    //char readBuffer[BUFFER_SIZE];
-    //char writeBuffer[BUFFER_SIZE];
-    //DWORD bytesRead;
-    //int writePos = 0;
-
     while (m_serialData.running)
     {
-        // First check for outgoing data
+        // Check for outgoing data with minimal locking
+        int localWritePos = 0;
         {
             std::unique_lock<std::mutex> lock(m_serialData.outgoingMutex);
-            while (!m_serialData.outgoing.empty() && writePos < BUFFER_SIZE)
+            localWritePos = writePos; // Copy protected value
+            writePos = 0; // Reset after copying to prevent race condition
+            while (!m_serialData.outgoing.empty() && localWritePos < BUFFER_SIZE)
             {
-                writeBuffer[writePos++] = m_serialData.outgoing.front();
+                writeBuffer[localWritePos++] = m_serialData.outgoing.front();
                 m_serialData.outgoing.pop();
             }
         }
 
         // If we have data to send
-        if (writePos > 0)
+        if (localWritePos > 0)
         {
             // Switch to transmit mode
             setTransmitMode(true);
 
+            // Small delay to ensure transceiver is ready (reduced from 1μs)
+            QThread::usleep(50);
+
             DWORD bytesWritten;
-            if (!WriteFile(m_hPort, writeBuffer, writePos, &bytesWritten, NULL))
+            if (!WriteFile(m_hPort, writeBuffer, localWritePos, &bytesWritten, NULL))
             {
                 qDebug() << "Write error:" << GetLastError();
             }
             else
             {
-                //qDebug() << "Sent" << bytesWritten << "bytes";
-                writePos = 0;
+                qDebug() << "Sent" << bytesWritten << "bytes";
             }
+
+            // Wait for transmission to complete (important for RS-485)
+            // This ensures all bytes are physically transmitted before switching modes
+            PurgeComm(m_hPort, PURGE_TXABORT | PURGE_TXCLEAR);
+
+            // Reduced guard time
+            QThread::usleep(100); // Guard time before reading
 
             // Switch back to receive mode
             setTransmitMode(false);
-            //QThread::usleep(100); // Guard time before reading
         }
 
-        // Then check for incoming data
+        // Check for incoming data with timeout
+        COMMTIMEOUTS timeouts = {0};
+        timeouts.ReadIntervalTimeout = 1;  // Reduced timeout
+        timeouts.ReadTotalTimeoutMultiplier = 1;
+        timeouts.ReadTotalTimeoutConstant = 10;
+        SetCommTimeouts(m_hPort, &timeouts);
+
+        DWORD bytesRead;
         if (ReadFile(m_hPort, readBuffer, BUFFER_SIZE, &bytesRead, NULL))
         {
             if (bytesRead > 0)
             {
+                // Process received data...
                 std::lock_guard<std::mutex> lock(m_serialData.incomingMutex);
-
-                // Store all received bytes
                 for (DWORD i = 0; i < bytesRead; i++)
                 {
                     m_serialData.incoming.push(readBuffer[i]);
                 }
-                /*
-                // Print all received bytes
-                qDebug() << "Received" << bytesRead << "byte(s):";
-                for (DWORD i = 0; i < bytesRead; i++)
-                {
-                    qDebug() << "  Byte" << i << ":"
-                             << "Dec:" << static_cast<int>(readBuffer[i])
-                             << "Hex: 0x" << Qt::hex << (static_cast<int>(readBuffer[i]) & 0xFF)
-                             << "Char: '" << ((readBuffer[i] >= 32 && readBuffer[i] < 127) ? readBuffer[i] : '.') << "'";
-                }
-                */
                 emit dataReceived(QByteArray(readBuffer, bytesRead));
 
-                // Send raw byte array
-                static const char response[] = {0x31, 0x32, 0x33, 0x34};
-                sendData(QByteArray(response, sizeof(response)));
+                // Temporary test -- Send raw byte array in response
+                //static const char response[] = {0x31, 0x32, 0x33, 0x34};
+                //sendData(QByteArray(response, sizeof(response)));
             }
         }
         else
         {
             DWORD err = GetLastError();
-            if (err != ERROR_IO_PENDING)
+            if (err != ERROR_IO_PENDING && err != WAIT_TIMEOUT)
             {
                 qDebug() << "Read error:" << err;
                 break;
             }
         }
 
-        // Small sleep to prevent CPU overuse
-        QThread::usleep(1000);
+        // Reduced sleep time
+        QThread::usleep(100);  // Reduced from 1000μs
     }
 }
 
@@ -280,11 +202,13 @@ bool CppClass::startCommunication(const char* portName)
         return false;
     }
 
-    m_serialData.running = true;
-    //m_readThread = std::thread(&CppClass::readThread, this);
-    //m_writeThread = std::thread(&CppClass::writeThread, this);
-    m_readwriteThread = std::thread(&CppClass::readwriteThread, this);
-
+    if(m_serialData.running == false)
+    {
+      m_serialData.running = true;
+      //m_readThread = std::thread(&CppClass::readThread, this);
+      //m_writeThread = std::thread(&CppClass::writeThread, this);
+      m_readwriteThread = std::thread(&CppClass::readwriteThread, this);
+    }
     return true;
 }
 
@@ -352,6 +276,139 @@ void CppClass::passFromQmlToCpp2(const QVariantList &files)
 
 void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 {
+    int bytePos_index = 0;
+    int x = 0;
+    QByteArray byteArray;
+
+    // Reset all errorcodes for boxes
+    Instrument1.errorcode = 0;
+
+    qDebug() << "Received variant list and map from QML";
+    qDebug() << "List :";
+    for( int i{0} ; i < list.size(); i++)
+    {
+        //qDebug() << "List item :" << list.at(i).toString();
+        //if(i < 5) // protection max
+        //{
+            //qDebug() << "List item :" << list.at(i).toString().toUtf8();
+
+
+
+            // The first string is the selection string.
+            // Use it to determine what category the information came from
+            // and what therefore needs to be processed.
+            if(i == 0)
+            {
+                // Convert QString to char array
+                byteArray = list.at(i).toString().toUtf8();
+
+                x = byteArray.toInt();
+                if (x == 1)
+                {
+                  qDebug() << "MT ";
+                }
+            }
+            else
+            {
+                /*
+                for (char c : byteArray)
+                {
+                    writeBuffer[writePos_temp] = c;
+                    writePos_temp++;
+                }
+                */
+
+                switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
+                {
+                  case INSTRUMENT:
+                    // Device
+                    if(i == 1)
+                    {
+                      Instrument1.device = ((list.at(i).toString().toUtf8()).toInt());
+                      qDebug() << "Instrument.device : " << Instrument1.device;
+                    }
+                    // Serial Number
+                    else if(i == 2)
+                    {
+                      byteArray = list.at(i).toString().toUtf8();
+                      bytePos_index = 0;
+                      for (char c : byteArray)
+                      {
+                        if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                        {
+                          Instrument1.serialnumber[bytePos_index] = c;
+                          bytePos_index++;
+                          //writeBuffer[writePos_temp] = c;
+                          //writePos_temp++;
+                        }
+                      }
+
+                      // Check if insufficient number of characters
+                      if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                      {
+                        qDebug() << "Insufficient number of serial characters";
+                        Instrument1.errorcode = 0;
+                      }
+                      else  // print it out
+                      {
+                        for(int s=0; s < bytePos_index; s++)
+                        {
+                          //qDebug() << Instrument1.serialnumber[s];
+                        }
+                        Instrument1.errorcode = 0;
+                      }
+
+                      // if everything is alright, we can send it
+                      if((Instrument1.errorcode == 0) && (writePos == 0))
+                      {
+                          writeBuffer[0] = Instrument1.selection;
+                          for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
+                          {
+                            writeBuffer[r+1] = Instrument1.serialnumber[r];  // plus +1 for the selection
+                          }
+
+                          for(int m=0; m < bytePos_index; m++)
+                          {
+                            //qDebug() << Instrument1.serialnumber[m];
+                          }
+
+                          std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+                          writePos = 14; // 1 + 13 // triggers send
+
+                          // Send raw byte array
+                          //static const char response[] = {0x31, 0x32, 0x33, 0x34};
+                          //sendData(QByteArray(response, sizeof(response)));
+
+                          qDebug() << "Bytes sent!";
+                      }
+                    }
+                    break;
+
+
+                  case COMMUNICATIONS:
+                    qDebug() << "2";
+                    break;
+                  default:
+                    qDebug() << "Error : x should have a value";
+                    break;
+                }
+            }
+        //}
+    }
+    //writePos = writePos_temp;
+
+    /*
+    qDebug() << "Map :";
+    for( int i{0} ; i < map.keys().size(); i++)
+    {
+        qDebug() << "Map item :" << map[map.keys().at(i)].toString();
+    }
+    */
+}
+
+
+void CppClass::passFromQmlToCpp3prev(QVariantList list, QVariantMap map)
+{
     int writePos_temp = 0;
 
     qDebug() << "Received variant list and map from QML";
@@ -374,7 +431,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                 int x = byteArray.toInt();
                 if(x == 1)
                 {
-                  qDebug() << "MT ";
+                    qDebug() << "MT ";
                 }
             }
 
@@ -384,7 +441,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 
                 //if(writePos_temp == 0)
                 //{
-                    //qDebug() << c.toInt();
+                //qDebug() << c.toInt();
                 //}
                 writePos_temp++;
             }
