@@ -5,7 +5,9 @@
 #include <QThread>  // Add this line
 
 // Structure Instantiation
+Send Send1;
 Instrument Instrument1;
+
 
 CppClass::CppClass(QObject *parent) : QObject(parent)
 {
@@ -303,6 +305,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                 byteArray = list.at(i).toString().toUtf8();
 
                 x = byteArray.toInt();
+
                 if (x == 1)
                 {
                   qDebug() << "MT ";
@@ -321,6 +324,10 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                 switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
                 {
                   case INSTRUMENT:
+                    // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
+                    //           - it should be zero i think?  maybe not
+                    Instrument1.selection = INSTRUMENT;
+
                     // Device
                     if(i == 1)
                     {
@@ -361,19 +368,41 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                       // if everything is alright, we can send it
                       if((Instrument1.errorcode == 0) && (writePos == 0))
                       {
-                          writeBuffer[0] = Instrument1.selection;
+                          SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
+
+                          AddByteToSend(0x01, false); // Reserved
+
+                          AddByteToSend(Instrument1.selection, false); // Box Selection
+
+                          qDebug() << "here0: " << Send1.writepos;
+
+                          AddByteToSend(Instrument1.device, false); // Devices
+
+                          qDebug() << "here1: " << Send1.writepos;
+
                           for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
                           {
-                            writeBuffer[r+1] = Instrument1.serialnumber[r];  // plus +1 for the selection
+                            AddByteToSend(Instrument1.serialnumber[r], false);
                           }
 
-                          for(int m=0; m < bytePos_index; m++)
+
+
+                          for(int m=0; m < Send1.writepos; m++)
                           {
-                            //qDebug() << Instrument1.serialnumber[m];
+                            qDebug() << writeBuffer[m];
                           }
+
+                          qDebug() << "here2: " << Send1.writepos;
+
+                          qDebug() << "crc: " << Send1.crcsend;
+
+                          AddByteToSend(Send1.crcsend, true);
 
                           std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
-                          writePos = 14; // 1 + 13 // triggers send
+                          writePos = Send1.writepos; // triggers send
+
+
+
 
                           // Send raw byte array
                           //static const char response[] = {0x31, 0x32, 0x33, 0x34};
@@ -406,6 +435,28 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
     */
 }
 
+// Helper functions
+void CppClass::AddByteToSend(uint8_t data, bool crc_yesno)
+{
+    writeBuffer[Send1.writepos] = data;
+    if(crc_yesno == false)
+    {
+      Send1.crcsend += writeBuffer[Send1.writepos];
+    }
+    Send1.writepos += 1;
+}
+
+void CppClass::SendHeader(uint8_t msg_length, uint8_t msg_id)
+{
+  Send1.writepos = 0;
+  Send1.crcsend = 0;
+  AddByteToSend(DLE, false);
+  AddByteToSend(STX, false);
+  AddByteToSend(SOURCE, false); // 0x00
+  AddByteToSend(DEST, false);   // 0x88  // note : source and dest are opposite on receiving end
+  AddByteToSend(msg_length, false);
+  AddByteToSend(msg_id, false);
+}
 
 void CppClass::passFromQmlToCpp3prev(QVariantList list, QVariantMap map)
 {

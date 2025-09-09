@@ -69,6 +69,10 @@ public:
     // Additions
     void setTransmitMode(bool transmitting);
 
+    // Helper functions
+    void AddByteToSend(uint8_t data, bool crc_yesno);
+    void SendHeader(uint8_t msg_length, uint8_t msg_id);
+
 private:
     QString m_portName;
 
@@ -117,12 +121,16 @@ private:
     qint64 m_lastFileSize;
 };
 
-static const int BUFFER_SIZE = 256;
 static char writeBuffer[BUFFER_SIZE];
 static int writePos = 0;
 static char readBuffer[BUFFER_SIZE];
 static DWORD bytesRead;
 
+struct Send
+{
+  uint8_t crcsend;
+  uint8_t writepos;
+};
 
 struct Instrument
 {
