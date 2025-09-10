@@ -105,11 +105,41 @@ ApplicationWindow
                   verticalAlignment: Qt.AlignVCenter
                   Layout.fillWidth: true
               }
-              ToolButton { text: 'Action 1' }
-              ToolButton { text: 'Action 2' }
+              ToolButton
+              {
+                text: 'Connect'
+
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: CppClass.running ? 18 : 16
+                    font.bold: CppClass.running
+                    color: CppClass.running ? "#36454F" : "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: {
+                    CppClass.startComm();
+                }
+              }
               ToolSeparator {}
-              ToolButton { text: 'Action 3' }
-              ToolButton { text: 'Action 4' }
+              ToolButton
+              {
+                text: 'Disconnect'
+
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: !CppClass.running ? 18 : 16
+                    font.bold: !CppClass.running
+                    color: !CppClass.running ? "#36454F" : "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: {
+                    CppClass.stopComm();
+                }
+              }
               ToolButton {
                   icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
                   onClicked: menu.open()

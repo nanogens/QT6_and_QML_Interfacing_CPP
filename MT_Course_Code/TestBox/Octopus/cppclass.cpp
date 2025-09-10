@@ -783,5 +783,31 @@ void CppClass::stopFileMonitoring() {
     }
 }
 
+// ------------------
+
+
+void CppClass::startComm()
+{
+  setPortName("COM3");
+  if(startCommunication(m_portName.toUtf8().constData()) == true)
+  {
+    emit runningChanged();  // Emit signal when status changes
+  }
+}
+
+void CppClass::stopComm()
+{
+  stopCommunication();
+  if (m_hPort != INVALID_HANDLE_VALUE)
+  {
+    CloseHandle(m_hPort);
+    emit runningChanged();  // Emit signal when status changes
+  }
+}
+
+bool CppClass::isRunning()
+{
+  return m_serialData.running;
+}
 
 

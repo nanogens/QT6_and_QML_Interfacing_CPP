@@ -58,6 +58,15 @@ public:
     Q_INVOKABLE QVariantList getVariantListFromCpp();
     Q_INVOKABLE QVariantMap getVariantMapFromCpp();
     Q_INVOKABLE void openAndReadFile(const QString& filePath);
+
+    // MT recent additions
+    Q_INVOKABLE void startComm();
+    Q_INVOKABLE void stopComm();
+
+    // Property binding
+    Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)  // running property binding.
+                                                                   // isRunning return value changes and informs runningChanged which is linked via property binding to running
+
     void setQmlRootObject(QObject *value);
 
     // Public interface
@@ -72,6 +81,12 @@ public:
     // Helper functions
     void AddByteToSend(uint8_t data, bool crc_yesno);
     void SendHeader(uint8_t msg_length, uint8_t msg_id);
+
+    // Helper functions - Connect
+    bool isRunning();
+
+signals:
+    void runningChanged();
 
 private:
     QString m_portName;
