@@ -9,9 +9,11 @@ Item {
     // Define statements (must match Defines.h)
     readonly property int iNSTRUMENT: 1
     readonly property int cOMMUNICATIONS: 2
+    readonly property int pOWER: 3
 
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
-
+    readonly property int aRRAY_IP_MAX: 11
+    readonly property int aRRAY_LOGIN_MAX: 13
 
 
     // Reference sizes for scaling (unchanged)
@@ -60,17 +62,21 @@ Item {
     property var model_Instrument_Device_ComboBox: ["Submersible_Mini_AZ", "Submersible_Mini_BZ", "Submersible_Mini_CZ"]
     property string current_Instrument_Device: "Submersible_Mini_AZ"
 
-
     // cellB - Communications - (to surface module)
     property var model_Communication_Connection_ComboBox: ["RS-485", "IrDA"]
     property string current_Communication_Connection: "RS-485"
-
     property var model_Communication_BaudRate_ComboBox: ["115200", "57600", "38400", "19200", "9600"]
     property string current_Communication_BaudRate: "115200"
 
+    // cellC - Power
+    property var model_Power_BatteryType_ComboBox: ["Internal_Lithium", "Internal_Alkaline", "External"]
+    property string current_Power_BatteryType: "Internal_Alkaline"
 
-
-
+    // cellD - Sampling
+    property var model_Sampling_Mode_ComboBox: ["Continuous", "Scheduled", "Event-Triggered"]
+    property string current_Sampling_Mode: "Continuous"
+    property var model_Sampling_Rate_ComboBox: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
+    property string current_Sampling_Rate: "1 sec"
 
     property var instrumentBatteryTypes: ["Lithium CR2", "Alkaline", "Rechargeable Li-Ion", "External"]
     property var samplingModes: ["Continuous", "Scheduled", "Event-Triggered"]
@@ -275,9 +281,9 @@ Item {
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
                         Layout.row: 5
-                        Layout.column: 2                            
+                        Layout.column: 2
                         onClicked: {
-                            var selection = "1";
+                            var selection = "0";
                             var selected_Instrument_Device = id_Instrument_Device_ComboBox.currentIndex;
                             var selected_Instrument_Serial_Number = input_Instrument_SerialNumber.text;
                             var arr = [selection, selected_Instrument_Device, selected_Instrument_Serial_Number];
@@ -465,10 +471,12 @@ Item {
                         Layout.row: 4
                         Layout.column: 2
                         onClicked: {
-                            var selected_Communication_Connection = current_Communication_Connection; //model_Communication_Connection_ComboBox.currentText;
-                            var selected_Communication_BaudRate = current_Communication_BaudRate; //model_Communication_BaudRate_ComboBox.currentText;
-                            var arr = [selected_Communication_Connection, selected_Communication_BaudRate];
+                            var selection = "1";
+                            var selected_Communication_Connection = id_Communication_Connection_ComboBox.currentIndex;
+                            var selected_Communication_BaudRate = id_Communication_BaudRate_ComboBox.currentIndex;
+                            var arr = [selection, selected_Communication_Connection, selected_Communication_BaudRate];
                             var obj = {
+                                Selection : selection,
                                 Communication_Connection: selected_Communication_Connection,
                                 Communication_BaudRate: selected_Communication_BaudRate
                             };
@@ -549,27 +557,42 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
+
+                    // Row : Battery Type        
                     Label {
-                        text: "  Battery Type  . ."
+                        text: "  Battery Type  . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: "Lithium CR2" // var_Power_BatteryType
+                        text: "Submersible Mini AZ"
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
                     }
-                    Label {
-                        text: ""  // don't think we need to fill it in with anything since we are reading from instrument, and no write is available
-                        font.pixelSize: generalFontSize * scaleFactor
+                    ComboBox {
+                        id: id_Power_BatteryType_ComboBox
+                        model: model_Power_BatteryType_ComboBox
+                        currentIndex: 0
+                        implicitHeight: 28 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 2
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.current_Power_BatteryType = currentText
                     }
 
+
+
+
+
+
+
+
+                    // Row : Duration
                     Label {
                         text: "  Duration  . ."
                         font.bold: true
@@ -591,6 +614,7 @@ Item {
                         Layout.fillWidth: true
                     }
 
+                    // Row : Power Remaining
                     Label {
                         text: "  Power Remaining  . ."
                         font.bold: true
@@ -612,8 +636,7 @@ Item {
                         Layout.fillWidth: true
                     }
 
-
-                    // Row 5: Empty spacer
+                    // Row 4: Empty spacer
                     Label {
                         text: ""
                         Layout.row: 4
@@ -663,14 +686,14 @@ Item {
                         Layout.row: 5
                         Layout.column: 2
                         onClicked: {
-                            var selectedModel = modelComboBox.currentText;
-                            var selectedBattery = batteryComboBox.currentText;
-                            var arr = [selectedModel, selectedBattery];
+                            var selection = "2";
+                            var selected_Power_BatteryType = id_Power_BatteryType_ComboBox.currentIndex;
+                            var arr = [selection, selected_Power_BatteryType];
                             var obj = {
-                                model: selectedModel,
-                                battery: selectedBattery
+                                Selection : selection,
+                                Power_Connection: selected_Power_BatteryType
                             };
-                            CppClass.passFromQmlToCpp(arr, obj);
+                            CppClass.passFromQmlToCpp3(arr, obj);
                         }
                     }
                 }
@@ -942,8 +965,8 @@ Item {
                         Layout.column: 1
                     }
                     ComboBox {
-                        id: samplingmodeComboBox
-                        model: samplingModes
+                        id: id_Sampling_Mode_ComboBox
+                        model: model_Sampling_Mode_ComboBox
                         currentIndex: 0
                         implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
@@ -969,8 +992,8 @@ Item {
                         Layout.column: 1
                     }
                     ComboBox {
-                        id: samplingrateComboBox
-                        model: samplingSamplingRate
+                        id: id_Sampling_Rate_ComboBox
+                        model: model_Sampling_Rate_ComboBox
                         currentIndex: 0
                         implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
@@ -1020,6 +1043,18 @@ Item {
                         font.pixelSize: 16 * scaleFactor
                         Layout.row: 5
                         Layout.column: 2
+                        onClicked: {
+                            var selection = "4";
+                            var selected_Sampling_Mode = id_Sampling_Mode_ComboBox.currentIndex;
+                            var selected_Sampling_Rate = id_Sampling_Rate_ComboBox.currentIndex;
+                            var arr = [selection, selected_Sampling_Mode, selected_Sampling_Rate];
+                            var obj = {
+                                Selection : selection,
+                                Sampling_Mode : selected_Sampling_Mode,
+                                Sampling_Rate : selected_Sampling_Rate
+                            };
+                            CppClass.passFromQmlToCpp3(arr, obj);
+                        }
                     }
                 }
             }
@@ -1131,13 +1166,13 @@ Item {
                             property int maxChars: 64
                             // Limit to 64 characters
                             Keys.onPressed: (event) =>
-                            {
-                                // Block new input if max length reached (but allow deletions/backspace)
-                                if (text.length >= maxChars && event.key !== Qt.Key_Backspace && event.key !== Qt.Key_Delete)
-                                {
-                                    event.accepted = true;  // Ignore key press
-                                }
-                            }
+                                            {
+                                                // Block new input if max length reached (but allow deletions/backspace)
+                                                if (text.length >= maxChars && event.key !== Qt.Key_Backspace && event.key !== Qt.Key_Delete)
+                                                {
+                                                    event.accepted = true;  // Ignore key press
+                                                }
+                                            }
                         }
                     }
 
@@ -1167,14 +1202,14 @@ Item {
                         Layout.row: 2
                         Layout.column: 1
                         onClicked: {
-                            var selectedModel = modelComboBox.currentText;
-                            var selectedBattery = batteryComboBox.currentText;
-                            var arr = [selectedModel, selectedBattery];
+                            var selection = "5";
+                            var selected_Notes_Text = id_Notes_Text_ComboBox.currentIndex;
+                            var arr = [selection, selected_Notes_Text];
                             var obj = {
-                                model: selectedModel,
-                                battery: selectedBattery
+                                Selection : selection,
+                                Sampling_Notes_Text : selected_Notes_Text,
                             };
-                            CppClass.passFromQmlToCpp(arr, obj);
+                            CppClass.passFromQmlToCpp3(arr, obj);
                         }
                         Layout.alignment: Qt.AlignCenter
                     }
@@ -1350,7 +1385,7 @@ Item {
             }
         }
 
-        // cell
+        // Cell H - Cloud
         CellBox {
             id: cellH
             Layout.row: 2
@@ -1443,8 +1478,8 @@ Item {
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        maximumLength: 13
-                        onEditingFinished: console.log("Entered:", text)
+                        maximumLength: aRRAY_IP_MAX
+                        onEditingFinished: console.log("Entered:", text)                                                                       
                     }
 
                     // Row 2:
@@ -1456,7 +1491,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "Manish" // current_Cloud_IP
+                        text: "Manish" // current_Cloud_Login
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
@@ -1469,7 +1504,7 @@ Item {
                         Layout.column: 2
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
-                        maximumLength: 13
+                        maximumLength: aRRAY_LOGIN_MAX
                         onEditingFinished: console.log("Entered:", text)
                     }
 
@@ -1482,7 +1517,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "Qwerty123" // current_Cloud_Password
+                        text: "Qwerty" // current_Cloud_Password
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3
                         Layout.column: 1
@@ -1541,9 +1576,21 @@ Item {
                     }
                 }
             }
+
+
+
+
+
+
+
+
+
+
+
         }
 
-        // Cell I - Activation
+
+        // Cell I - Miscellenous
         CellBox {
             id: cellI
             Layout.row: 2
@@ -1615,20 +1662,20 @@ Item {
 
                     // Row 1: Recording Mode
                     Label {
-                        text: "  Some Stuff  . . . . . . . . ."
+                        text: "  Some Stuff . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 0
                     }
                     Label {
-                        text: "Stuff"
+                        text: "ABC" // current_Miscellenous_SomeStuff
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
                     }
                     TextField {
-                        id: id_Miscelleneous_Stuff
+                        id: input_Miscellenous_SomeStuff
                         implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 1
@@ -1638,6 +1685,7 @@ Item {
                         maximumLength: 13
                         onEditingFinished: console.log("Entered:", text)
                     }
+
 
                     // Row : Empty spacer
                     Label {
@@ -1660,14 +1708,14 @@ Item {
                     }
 
                     // Row : Buttons
-                    Label { text: ""; Layout.row: 3; Layout.column: 0 }
+                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
                         id: button17Id
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 3
+                        Layout.row: 5
                         Layout.column: 1
                     }
                     Button {
@@ -1676,31 +1724,44 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 3
+                        Layout.row: 5
                         Layout.column: 2
+                        onClicked:
+                        {
+                            var selection = "8";
+                            var selected_Miscelleneous_SomeStuff = input_Miscellenous_SomeStuff.text;
+                            var arr = [selection, selected_Miscelleneous_SomeStuff];
+                            var obj = {
+                                Selection : selection,
+                                Miscelleneous_SomeStuff: selected_Miscelleneous_SomeStuff
+                            };
+                            CppClass.passFromQmlToCpp3(arr, obj);
+                        }
                     }
                 }
             }
         }
-    }
 
 
 
-    Popup {
-        id: normalPopup
-        ColumnLayout {
-            anchors.fill: parent
-            Label {
-                text: 'Normal Popup'
-            }
-            CheckBox {
-                text: 'E-mail'
-            }
-            CheckBox {
-                text: 'Calendar'
-            }
-            CheckBox {
-                text: 'Contacts'
+
+
+        Popup {
+            id: normalPopup
+            ColumnLayout {
+                anchors.fill: parent
+                Label {
+                    text: 'Normal Popup'
+                }
+                CheckBox {
+                    text: 'E-mail'
+                }
+                CheckBox {
+                    text: 'Calendar'
+                }
+                CheckBox {
+                    text: 'Contacts'
+                }
             }
         }
     }

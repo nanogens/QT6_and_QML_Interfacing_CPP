@@ -16,7 +16,7 @@ ApplicationWindow
 
   onCurrentViewIndexChanged: console.log("Current view index changed to:", currentViewIndex)
 
-  title: "QML Modern UI Samples By MT 1"
+  title: "Spectraware"
   visible: true
   width: 1920  // 1200
   height: 1050  // 500

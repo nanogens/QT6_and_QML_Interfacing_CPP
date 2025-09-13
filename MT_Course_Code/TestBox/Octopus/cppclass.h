@@ -156,7 +156,18 @@ struct Instrument
   uint8_t errorcode;
 };
 
+struct Communication
+{
+  uint8_t selection;
+  uint8_t connection;
+  uint8_t baudrate;
+};
 
+struct Power
+{
+  uint8_t selection;
+  uint8_t batterytype;
+};
 
 
 #endif // CPPCLASS_H

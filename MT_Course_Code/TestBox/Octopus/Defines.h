@@ -6,10 +6,13 @@
 
 // array sizes
 #define ARRAY_SERIALNUMBER_MAX 13
+#define ARRAY_IP_MAX 11
 
 // boxes
 #define INSTRUMENT 1
 #define COMMUNICATIONS 2
+#define POWER 3
+
 
 // message header
 #define DLE 0x10
