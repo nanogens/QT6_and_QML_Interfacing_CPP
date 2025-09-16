@@ -1,7 +1,11 @@
 import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick.Controls
 import QtQuick.Layouts 1.15
 import QtCharts 2.15
+
+import QtQuick.Controls.Basic
+import QtQuick.Controls.Material
+
 
 Item {
     id: listview2
@@ -10,6 +14,12 @@ Item {
     readonly property int iNSTRUMENT: 1
     readonly property int cOMMUNICATIONS: 2
     readonly property int pOWER: 3
+    readonly property int tIME: 4
+    readonly property int sAMPLING: 5
+    readonly property int aCTIVATION: 6
+    readonly property int nOTES: 7
+    readonly property int cLOUD: 8
+    readonly property int mISCELLENEOUS: 9
 
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
     readonly property int aRRAY_IP_MAX: 11
@@ -73,8 +83,8 @@ Item {
     property string current_Power_BatteryType: "Internal_Alkaline"
 
     // cellD - Sampling
-    property var model_Sampling_Mode_ComboBox: ["Continuous", "Scheduled", "Event-Triggered"]
-    property string current_Sampling_Mode: "Continuous"
+    property var model_Sampling_Mode_ComboBox: ["Scheduled_Continuous", "Scheduled_Fixed", "Event_Triggered"]
+    property string current_Sampling_Mode: "Scheduled_Continuous"
     property var model_Sampling_Rate_ComboBox: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
     property string current_Sampling_Rate: "1 sec"
 
@@ -558,7 +568,7 @@ Item {
                     }
 
 
-                    // Row : Battery Type        
+                    // Row : Battery Type
                     Label {
                         text: "  Battery Type  . . . . . . . ."
                         font.bold: true
@@ -584,13 +594,6 @@ Item {
                         Layout.preferredWidth: 200 * scaleFactor
                         onCurrentIndexChanged: listview2.current_Power_BatteryType = currentText
                     }
-
-
-
-
-
-
-
 
                     // Row : Duration
                     Label {
@@ -1060,11 +1063,871 @@ Item {
             }
         }
 
-        // Cell F - Notes
+        // Cell F - Activation
         CellBox {
             id: cellF
             Layout.row: 1
             Layout.column: 2
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumWidth: parent.width/3 - refSize/5
+            Layout.preferredWidth: parent.width/3 - refSize/5
+            Layout.preferredHeight: parent.height/3
+
+            property string fromDateTime: ""
+            property string toDateTime: ""
+            property var selectedEvents: []
+            property date currentFromDate: new Date()
+            property date currentToDate: new Date()
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                // Header (unchanged)
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: 0
+                    Image {
+                        source: "qrc:/Octopus/images/G_Activation.png"
+                        Layout.preferredWidth: refSize
+                        Layout.preferredHeight: refSize
+                    }
+                    Loader {
+                        sourceComponent: bannerComponent
+                        Layout.fillWidth: true
+                        onLoaded: item.text = "Activation"
+                    }
+                }
+
+                // Content Grid
+                GridLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    columns: 3
+                    rowSpacing: 5 * scaleFactor
+                    Layout.topMargin: 5 * scaleFactor
+
+                    // Row 0 - Headers
+                    Label { text: ""; Layout.row: 0; Layout.column: 0; Layout.fillWidth: true }
+                    Label {
+                        text: "READ"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0; Layout.column: 1
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: "WRITE"
+                        font.bold: true
+                        color: "lightgreen"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 0; Layout.column: 2
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    // Row 1: Scheduled Time - From
+                    Label {
+                        text: "  Scheduled Time  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1; Layout.column: 0
+                    }
+                    Label {
+                        text: "From: " + (fromDateTime || "Not set")
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1; Layout.column: 1
+                    }
+                    Button {
+                        text: "Set Date/Time Range"
+                        implicitHeight: 34 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 1; Layout.column: 2
+                        Layout.fillWidth: true
+                        onClicked: fromDateTimePopup.open()
+                    }
+
+                    // Row 2: Scheduled Time - To
+                    Label {
+                        text: "  Scheduled Time  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2; Layout.column: 0
+                    }
+                    Label {
+                        text: "To: " + (fromDateTime || "Not set")
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 2; Layout.column: 1
+                    }
+                    Button {
+                        text: "Set Date/Time Range"
+                        implicitHeight: 34 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 2; Layout.column: 2
+                        Layout.fillWidth: true
+                        onClicked: toDateTimePopup.open()
+                    }
+
+                    // Row 3: Event Checkboxes
+                    Label {
+                        text: "  Event  . . "
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3; Layout.column: 0
+                    }
+                    Column {
+                        Layout.row: 3; Layout.column: 1
+                        spacing: 2 * scaleFactor
+                        CheckBox {
+                            text: "Depth"
+                            font.pixelSize: generalFontSize * scaleFactor
+                            onCheckedChanged: updateSelectedEvents("Depth", checked)
+                        }
+                        CheckBox {
+                            text: "Temperature"
+                            font.pixelSize: generalFontSize * scaleFactor
+                            onCheckedChanged: updateSelectedEvents("Temperature", checked)
+                        }
+                        CheckBox {
+                            text: "Ring Switch"
+                            font.pixelSize: generalFontSize * scaleFactor
+                            onCheckedChanged: updateSelectedEvents("Ring Switch", checked)
+                        }
+                    }
+                    Label {
+                        text: selectedEvents.join(", ") || "None selected"
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3; Layout.column: 2
+                        wrapMode: Text.Wrap
+                    }
+
+                    // Spacer rows and buttons (unchanged)
+                    Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 4; Layout.column: 1; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 4; Layout.column: 2; Layout.fillHeight: true }
+
+                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
+                    Button {
+                        id: button13d
+                        text: "Read Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5; Layout.column: 1
+                    }
+                    Button {
+                        id: button14Id
+                        text: "Write Instrument"
+                        implicitHeight: 40 * scaleFactor
+                        implicitWidth: 200 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        Layout.row: 5; Layout.column: 2
+                    }
+                }
+            }
+
+
+            function updateSelectedEvents(event, isChecked) {
+                if (isChecked) {
+                    if (!selectedEvents.includes(event)) {
+                        selectedEvents.push(event)
+                    }
+                } else {
+                    selectedEvents = selectedEvents.filter(e => e !== event)
+                }
+                selectedEventsChanged()
+            }
+        }
+
+        // DateTime Popup for From
+        Popup {
+            id: fromDateTimePopup
+            modal: true
+            focus: true
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            width: 600 * scaleFactor
+            height: 520 * scaleFactor
+            padding: 10 * scaleFactor
+            x: (parent.width - width) / 2
+            y: (parent.height - height) / 2
+
+            property date selectedDate: new Date()
+            property string fromDateTime: ""
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 5 * scaleFactor  // Reduced from 10 to 5
+
+                // Header with current selection
+                Label {
+                    text: "Select From Date"
+                    font.bold: true
+                    font.pixelSize: 18 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 5 * scaleFactor  // Added bottom margin
+                    color: "lightgreen"
+                }
+
+                // Calendar navigation
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 5 * scaleFactor
+
+                    Button {
+                        text: "Previous"
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        onClicked: {
+                            var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth - 1, 1)
+                            datesGrid.currentMonth = newDate.getMonth()
+                            datesGrid.currentYear = newDate.getFullYear()
+                            datesGrid.updateCalendar()
+                        }
+                    }
+
+                    Label {
+                        text: Qt.locale().monthName(datesGrid.currentMonth) + " " + datesGrid.currentYear
+                        font.bold: true
+                        font.pixelSize: 15 * scaleFactor
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Button {
+                        text: "Next"
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        onClicked: {
+                            var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth + 1, 1)
+                            datesGrid.currentMonth = newDate.getMonth()
+                            datesGrid.currentYear = newDate.getFullYear()
+                            datesGrid.updateCalendar()
+                        }
+                    }
+                }
+
+                // Calendar view
+                Column {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 250 * scaleFactor
+                    spacing: 0
+
+                    // Day of week headers
+                    Row {
+                        width: parent.width
+                        height: 30 * scaleFactor
+                        spacing: 0
+
+                        Repeater {
+                            model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                            Label {
+                                width: parent.width / 7
+                                height: parent.height
+                                text: modelData
+                                font.bold: true
+                                font.pixelSize: 12 * scaleFactor
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
+
+                    // Dates grid
+                    Grid {
+                        id: datesGrid
+                        width: parent.width
+                        height: parent.height - 30 * scaleFactor
+                        columns: 7
+                        rows: 6
+                        spacing: 0
+
+                        property int currentYear: selectedDate.getFullYear()
+                        property int currentMonth: selectedDate.getMonth()
+                        property int selectedDay: selectedDate.getDate()
+                        property var calendarDays: []
+                        property int visibleRows: 5
+
+                        Repeater {
+                            model: datesGrid.visibleRows * 7
+
+                            Rectangle {
+                                width: datesGrid.width / 7
+                                height: datesGrid.height / datesGrid.visibleRows
+                                property int day: index < datesGrid.calendarDays.length ? datesGrid.calendarDays[index] : 0
+                                property bool isCurrentMonth: day > 0
+                                property bool isSelected: isCurrentMonth && day === datesGrid.selectedDay
+                                property bool isToday: isCurrentMonth && day === new Date().getDate() &&
+                                                      datesGrid.currentMonth === new Date().getMonth() &&
+                                                      datesGrid.currentYear === new Date().getFullYear()
+
+                                color: isSelected ? Material.primary : (isToday ? "#e3f2fd" : "transparent")
+                                border.color: "#eeeeee"
+                                border.width: 1
+
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: isCurrentMonth ? day : ""
+                                    font.pixelSize: 14 * scaleFactor
+                                    font.bold: isSelected || isToday
+                                    color: isSelected ? "white" : (isCurrentMonth ? "black" : "#cccccc")
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: isCurrentMonth
+                                    onClicked: {
+                                        datesGrid.selectedDay = day
+                                        selectedDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, day)
+                                    }
+                                }
+                            }
+                        }
+
+                        function updateCalendar() {
+                            var daysArray = []
+                            var firstOfMonth = new Date(currentYear, currentMonth, 1)
+                            var lastOfMonth = new Date(currentYear, currentMonth + 1, 0)
+                            var firstDay = firstOfMonth.getDay()
+                            var daysInMonth = lastOfMonth.getDate()
+
+                            for (var i = 0; i < firstDay; i++) {
+                                daysArray.push(0)
+                            }
+
+                            for (var j = 1; j <= daysInMonth; j++) {
+                                daysArray.push(j)
+                            }
+
+                            var totalCellsNeeded = firstDay + daysInMonth
+                            var rowsNeeded = Math.ceil(totalCellsNeeded / 7)
+                            visibleRows = Math.max(5, rowsNeeded)
+
+                            var totalCells = visibleRows * 7
+                            while (daysArray.length < totalCells) {
+                                daysArray.push(0)
+                            }
+
+                            calendarDays = daysArray
+                        }
+
+                        Component.onCompleted: {
+                            currentYear = new Date().getFullYear()
+                            currentMonth = new Date().getMonth()
+                            selectedDay = new Date().getDate()
+                            updateCalendar()
+                        }
+                    }
+                }
+
+                // Time selection with AM/PM
+                GridLayout {
+                    columns: 8
+                    rowSpacing: 5 * scaleFactor
+                    columnSpacing: 5 * scaleFactor
+                    Layout.fillWidth: true
+
+                    Label {
+                        text: ""
+                        font.pixelSize: 6 * scaleFactor
+                        font.bold: true
+                        Layout.row: 0; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Label {
+                        text: "Select From Time"
+                        font.pixelSize: 18 * scaleFactor
+                        font.bold: true
+                        Layout.row: 1; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                        color: "lightgreen"
+                    }
+
+                    Label {
+                        text: ""
+                        font.pixelSize: 6 * scaleFactor
+                        font.bold: true
+                        Layout.row: 2; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Label {
+                        text: "Hour:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 0
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: hourSpin
+                        from: 1; to: 12; value: (selectedDate.getHours() % 12) || 12
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 1
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Minute:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 2
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: minuteSpin
+                        from: 0; to: 59; value: selectedDate.getMinutes()
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 3
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Second:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 4
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: secondSpin
+                        from: 0; to: 59; value: selectedDate.getSeconds()
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 5
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "AM/PM:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 6
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    ComboBox {
+                        id: amPmCombo
+                        model: ["AM", "PM"]
+                        currentIndex: selectedDate.getHours() >= 12 ? 1 : 0
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 7
+                        Layout.fillWidth: true
+                    }
+                }
+
+                // Selected date display
+                Label {
+                    text: "Selected: " + selectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
+                          " " + getFormattedTime()
+                    font.pixelSize: 12 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 5 * scaleFactor  // Added top margin
+
+                    function getFormattedTime() {
+                        var hour = hourSpin.value
+                        var minute = minuteSpin.value.toString().padStart(2, '0')
+                        var second = secondSpin.value.toString().padStart(2, '0')
+                        var ampm = amPmCombo.currentText
+                        return hour + ":" + minute + ":" + second + " " + ampm
+                    }
+                }
+
+                // Buttons Row - Centered
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 15 * scaleFactor
+                    Layout.topMargin: 0 * scaleFactor  // Added top margin
+
+                    Button {
+                        text: "Cancel"
+                        implicitWidth: 100 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        onClicked: fromDateTimePopup.close()
+                    }
+
+                    Button {
+                        text: "Set From Date and Time"
+                        implicitWidth: 230 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        onClicked: {
+                            var hour24 = hourSpin.value
+                            if (amPmCombo.currentIndex === 1 && hour24 < 12) {
+                                hour24 += 12
+                            } else if (amPmCombo.currentIndex === 0 && hour24 === 12) {
+                                hour24 = 0
+                            }
+
+                            var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, datesGrid.selectedDay,
+                                                 hour24, minuteSpin.value, secondSpin.value)
+                            selectedDate = newDate
+
+                            fromDateTime = newDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") + " " +
+                                         hour24.toString().padStart(2, '0') + ":" +
+                                         minuteSpin.value.toString().padStart(2, '0') + ":" +
+                                         secondSpin.value.toString().padStart(2, '0')
+
+                            fromDateTimePopup.close()
+                        }
+                    }
+                }
+            }
+        }
+
+        // DateTime Popup for To
+        Popup {
+            id: toDateTimePopup
+            modal: true
+            focus: true
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            width: 600 * scaleFactor
+            height: 520 * scaleFactor
+            padding: 10 * scaleFactor
+            x: (parent.width - width) / 2
+            y: (parent.height - height) / 2
+
+            property date selectedDate: new Date()
+            property string toDateTime: ""
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 5 * scaleFactor
+
+                // Header with current selection
+                Label {
+                    text: "Select To Date"
+                    font.bold: true
+                    font.pixelSize: 18 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 5 * scaleFactor
+                    color: "lightgreen"
+                }
+
+                // Calendar navigation
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 5 * scaleFactor
+
+                    Button {
+                        text: "Previous"
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        onClicked: {
+                            var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth - 1, 1)
+                            datesGridTo.currentMonth = newDate.getMonth()
+                            datesGridTo.currentYear = newDate.getFullYear()
+                            datesGridTo.updateCalendar()
+                        }
+                    }
+
+                    Label {
+                        text: Qt.locale().monthName(datesGridTo.currentMonth) + " " + datesGridTo.currentYear
+                        font.bold: true
+                        font.pixelSize: 15 * scaleFactor
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Button {
+                        text: "Next"
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        onClicked: {
+                            var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth + 1, 1)
+                            datesGridTo.currentMonth = newDate.getMonth()
+                            datesGridTo.currentYear = new Date().getFullYear()
+                            datesGridTo.updateCalendar()
+                        }
+                    }
+                }
+
+                // Calendar view
+                Column {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 250 * scaleFactor
+                    spacing: 0
+
+                    // Day of week headers
+                    Row {
+                        width: parent.width
+                        height: 30 * scaleFactor
+                        spacing: 0
+
+                        Repeater {
+                            model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                            Label {
+                                width: parent.width / 7
+                                height: parent.height
+                                text: modelData
+                                font.bold: true
+                                font.pixelSize: 12 * scaleFactor
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
+
+                    // Dates grid
+                    Grid {
+                        id: datesGridTo
+                        width: parent.width
+                        height: parent.height - 30 * scaleFactor
+                        columns: 7
+                        rows: 6
+                        spacing: 0
+
+                        property int currentYear: selectedDate.getFullYear()
+                        property int currentMonth: selectedDate.getMonth()
+                        property int selectedDay: selectedDate.getDate()
+                        property var calendarDays: []
+                        property int visibleRows: 5
+
+                        Repeater {
+                            model: datesGridTo.visibleRows * 7
+
+                            Rectangle {
+                                width: datesGridTo.width / 7
+                                height: datesGridTo.height / datesGridTo.visibleRows
+                                property int day: index < datesGridTo.calendarDays.length ? datesGridTo.calendarDays[index] : 0
+                                property bool isCurrentMonth: day > 0
+                                property bool isSelected: isCurrentMonth && day === datesGridTo.selectedDay
+                                property bool isToday: isCurrentMonth && day === new Date().getDate() &&
+                                                      datesGridTo.currentMonth === new Date().getMonth() &&
+                                                      datesGridTo.currentYear === new Date().getFullYear()
+
+                                color: isSelected ? Material.primary : (isToday ? "#e3f2fd" : "transparent")
+                                border.color: "#eeeeee"
+                                border.width: 1
+
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: isCurrentMonth ? day : ""
+                                    font.pixelSize: 14 * scaleFactor
+                                    font.bold: isSelected || isToday
+                                    color: isSelected ? "white" : (isCurrentMonth ? "black" : "#cccccc")
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: isCurrentMonth
+                                    onClicked: {
+                                        datesGridTo.selectedDay = day
+                                        selectedDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, day)
+                                    }
+                                }
+                            }
+                        }
+
+                        function updateCalendar() {
+                            var daysArray = []
+                            var firstOfMonth = new Date(currentYear, currentMonth, 1)
+                            var lastOfMonth = new Date(currentYear, currentMonth + 1, 0)
+                            var firstDay = firstOfMonth.getDay()
+                            var daysInMonth = lastOfMonth.getDate()
+
+                            for (var i = 0; i < firstDay; i++) {
+                                daysArray.push(0)
+                            }
+
+                            for (var j = 1; j <= daysInMonth; j++) {
+                                daysArray.push(j)
+                            }
+
+                            var totalCellsNeeded = firstDay + daysInMonth
+                            var rowsNeeded = Math.ceil(totalCellsNeeded / 7)
+                            visibleRows = Math.max(5, rowsNeeded)
+
+                            var totalCells = visibleRows * 7
+                            while (daysArray.length < totalCells) {
+                                daysArray.push(0)
+                            }
+
+                            calendarDays = daysArray
+                        }
+
+                        Component.onCompleted: {
+                            currentYear = new Date().getFullYear()
+                            currentMonth = new Date().getMonth()
+                            selectedDay = new Date().getDate()
+                            updateCalendar()
+                        }
+                    }
+                }
+
+                // Time selection with AM/PM
+                GridLayout {
+                    columns: 8
+                    rowSpacing: 5 * scaleFactor
+                    columnSpacing: 5 * scaleFactor
+                    Layout.fillWidth: true
+
+                    Label {
+                        text: ""
+                        font.pixelSize: 6 * scaleFactor
+                        font.bold: true
+                        Layout.row: 0; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Label {
+                        text: "Select To Time"
+                        font.pixelSize: 18 * scaleFactor
+                        font.bold: true
+                        Layout.row: 1; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                        color: "lightgreen"
+                    }
+
+                    Label {
+                        text: ""
+                        font.pixelSize: 6 * scaleFactor
+                        font.bold: true
+                        Layout.row: 2; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Label {
+                        text: "Hour:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 0
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: hourSpinTo
+                        from: 1; to: 12; value: (selectedDate.getHours() % 12) || 12
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 1
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Minute:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 2
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: minuteSpinTo
+                        from: 0; to: 59; value: selectedDate.getMinutes()
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 3
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Second:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 4
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: secondSpinTo
+                        from: 0; to: 59; value: selectedDate.getSeconds()
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 5
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "AM/PM:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 6
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    ComboBox {
+                        id: amPmComboTo
+                        model: ["AM", "PM"]
+                        currentIndex: selectedDate.getHours() >= 12 ? 1 : 0
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 7
+                        Layout.fillWidth: true
+                    }
+                }
+
+                // Selected date display
+                Label {
+                    text: "Selected: " + selectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
+                          " " + getFormattedTime()
+                    font.pixelSize: 12 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 5 * scaleFactor
+
+                    function getFormattedTime() {
+                        var hour = hourSpinTo.value
+                        var minute = minuteSpinTo.value.toString().padStart(2, '0')
+                        var second = secondSpinTo.value.toString().padStart(2, '0')
+                        var ampm = amPmComboTo.currentText
+                        return hour + ":" + minute + ":" + second + " " + ampm
+                    }
+                }
+
+                // Buttons Row - Centered
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 15 * scaleFactor
+                    Layout.topMargin: 0 * scaleFactor
+
+                    Button {
+                        text: "Cancel"
+                        implicitWidth: 100 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        onClicked: toDateTimePopup.close()
+                    }
+
+                    Button {
+                        text: "Set To Date and Time"
+                        implicitWidth: 210 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        onClicked: {
+                            var hour24 = hourSpinTo.value
+                            if (amPmComboTo.currentIndex === 1 && hour24 < 12) {
+                                hour24 += 12
+                            } else if (amPmComboTo.currentIndex === 0 && hour24 === 12) {
+                                hour24 = 0
+                            }
+
+                            var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, datesGridTo.selectedDay,
+                                                 hour24, minuteSpinTo.value, secondSpinTo.value)
+                            selectedDate = newDate
+
+                            toDateTime = newDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") + " " +
+                                       hour24.toString().padStart(2, '0') + ":" +
+                                       minuteSpinTo.value.toString().padStart(2, '0') + ":" +
+                                       secondSpinTo.value.toString().padStart(2, '0')
+
+                            toDateTimePopup.close()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Cell G - Notes
+        CellBox {
+            id: cellG
+            Layout.row: 2
+            Layout.column: 0
             Layout.fillWidth: true
             Layout.fillHeight: true  // Critical for equal height
             Layout.minimumWidth: parent.width/3 - refSize/5
@@ -1217,173 +2080,6 @@ Item {
             }
         }
 
-        // Cell G - Activation
-        CellBox {
-            id: cellG
-            Layout.row: 2
-            Layout.column: 0
-            Layout.fillWidth: true
-            Layout.fillHeight: true  // Critical for equal height
-            Layout.minimumWidth: parent.width/3 - refSize/5
-            Layout.preferredWidth: parent.width/3 - refSize/5
-            Layout.preferredHeight: parent.height/3
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // Header
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: 2
-                    columnSpacing: 0
-
-                    Image {
-                        source: "qrc:/Octopus/images/G_Activation.png"
-                        Layout.preferredWidth: refSize
-                        Layout.preferredHeight: refSize
-                    }
-                    Loader {
-                        sourceComponent: bannerComponent
-                        Layout.fillWidth: true
-                        onLoaded: item.text = "Activation"
-                    }
-                }
-
-                // Content Grid
-                GridLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    columns: 3
-                    rowSpacing: 5 * scaleFactor
-                    Layout.columnSpan: parent.width/3
-                    Layout.topMargin: 5 * scaleFactor
-
-                    // Row 0
-                    Label {
-                        text: "";
-                        Layout.row: 0;
-                        Layout.column: 0
-                        Layout.fillWidth: true
-                    }
-                    Label {
-                        text: "READ"
-                        font.bold: true
-                        color: "lightgreen"
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 0
-                        Layout.column: 1
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    Label {
-                        text: "WRITE"
-                        font.bold: true
-                        color: "lightgreen"
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 0
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    // Row 1: Recording Mode
-                    Label {
-                        text: "  Activation Method  . . "
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 1
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: currentActivationMethod
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 1
-                        Layout.column: 1
-                    }
-                    ComboBox {
-                        id: activationmethodComboBox
-                        model: activationMethod
-                        currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
-                        font.pixelSize: dropdownFontSize * scaleFactor
-                        Layout.row: 1
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.activationMethod = currentText
-                    }
-
-                    // Temporary
-                    Label {
-                        text: "  Activation Method  . . "
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: currentActivationMethod
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 1
-                    }
-                    ComboBox {
-                        id: activationmetxhodComboBox
-                        model: activationMethod
-                        currentIndex: 0
-                        implicitHeight: 26 * scaleFactor
-                        font.pixelSize: dropdownFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 200 * scaleFactor
-                        onCurrentIndexChanged: listview2.activationMethod = currentText
-                    }
-
-                    // Row : Empty spacer
-                    Label {
-                        text: ""
-                        Layout.row: 3
-                        Layout.column: 0
-                        Layout.fillHeight: true  // Pushes buttons to bottom
-                    }
-                    Label {
-                        text: ""
-                        Layout.row: 3
-                        Layout.column: 1
-                        Layout.fillHeight: true
-                    }
-                    Label {
-                        text: ""
-                        Layout.row: 3
-                        Layout.column: 2
-                        Layout.fillHeight: true
-                    }
-
-                    // Row : Buttons
-                    Label { text: ""; Layout.row: 4; Layout.column: 0 }
-                    Button {
-                        id: button13d
-                        text: "Read Instrument"
-                        implicitHeight: 40 * scaleFactor
-                        implicitWidth: 200 * scaleFactor
-                        font.pixelSize: 16 * scaleFactor
-                        Layout.row: 4
-                        Layout.column: 1
-                    }
-                    Button {
-                        id: button14Id
-                        text: "Write Instrument"
-                        implicitHeight: 40 * scaleFactor
-                        implicitWidth: 200 * scaleFactor
-                        font.pixelSize: 16 * scaleFactor
-                        Layout.row: 4
-                        Layout.column: 2
-                    }
-                }
-            }
-        }
 
         // Cell H - Cloud
         CellBox {
@@ -1479,7 +2175,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
                         maximumLength: aRRAY_IP_MAX
-                        onEditingFinished: console.log("Entered:", text)                                                                       
+                        onEditingFinished: console.log("Entered:", text)
                     }
 
                     // Row 2:
@@ -1576,17 +2272,6 @@ Item {
                     }
                 }
             }
-
-
-
-
-
-
-
-
-
-
-
         }
 
 
@@ -1742,10 +2427,6 @@ Item {
             }
         }
 
-
-
-
-
         Popup {
             id: normalPopup
             ColumnLayout {
@@ -1762,26 +2443,6 @@ Item {
                 CheckBox {
                     text: 'Contacts'
                 }
-            }
-        }
-    }
-
-    Popup {
-        id: modalPopup
-        modal: true
-        ColumnLayout {
-            anchors.fill: parent
-            Label {
-                text: 'Modal Popup'
-            }
-            CheckBox {
-                text: 'E-mail'
-            }
-            CheckBox {
-                text: 'Calendar'
-            }
-            CheckBox {
-                text: 'Contacts'
             }
         }
     }

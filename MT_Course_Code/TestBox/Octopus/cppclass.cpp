@@ -12,7 +12,7 @@ Power Power1;
 
 CppClass::CppClass(QObject *parent) : QObject(parent)
 {
-  m_serialData.running = false;
+    m_serialData.running = false;
 }
 
 CppClass::~CppClass() {
@@ -207,10 +207,10 @@ bool CppClass::startCommunication(const char* portName)
 
     if(m_serialData.running == false)
     {
-      m_serialData.running = true;
-      //m_readThread = std::thread(&CppClass::readThread, this);
-      //m_writeThread = std::thread(&CppClass::writeThread, this);
-      m_readwriteThread = std::thread(&CppClass::readwriteThread, this);
+        m_serialData.running = true;
+        //m_readThread = std::thread(&CppClass::readThread, this);
+        //m_writeThread = std::thread(&CppClass::writeThread, this);
+        m_readwriteThread = std::thread(&CppClass::readwriteThread, this);
     }
     return true;
 }
@@ -293,28 +293,28 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
         //qDebug() << "List item :" << list.at(i).toString();
         //if(i < 5) // protection max
         //{
-            //qDebug() << "List item :" << list.at(i).toString().toUtf8();
+        //qDebug() << "List item :" << list.at(i).toString().toUtf8();
 
 
 
-            // The first string is the selection string.
-            // Use it to determine what category the information came from
-            // and what therefore needs to be processed.
-            if(i == 0)
+        // The first string is the selection string.
+        // Use it to determine what category the information came from
+        // and what therefore needs to be processed.
+        if(i == 0)
+        {
+            // Convert QString to char array
+            byteArray = list.at(i).toString().toUtf8();
+
+            x = byteArray.toInt();
+
+            if (x == 1)
             {
-                // Convert QString to char array
-                byteArray = list.at(i).toString().toUtf8();
-
-                x = byteArray.toInt();
-
-                if (x == 1)
-                {
-                  qDebug() << "MT ";
-                }
+                qDebug() << "MT ";
             }
-            else
-            {
-                /*
+        }
+        else
+        {
+            /*
                 for (char c : byteArray)
                 {
                     writeBuffer[writePos_temp] = c;
@@ -322,48 +322,48 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                 }
                 */
 
-                switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
-                {
-                    case INSTRUMENT:
-                      // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
-                      //           - it should be zero i think?  maybe not
-                      Instrument1.selection = INSTRUMENT;
+            switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
+            {
+                case INSTRUMENT:
+                    // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
+                    //           - it should be zero i think?  maybe not
+                    Instrument1.selection = INSTRUMENT;
 
-                      // Device
-                      if(i == 1)
-                      {
+                    // Device
+                    if(i == 1)
+                    {
                         Instrument1.device = ((list.at(i).toString().toUtf8()).toInt());
                         qDebug() << "Instrument.device : " << Instrument1.device;
-                      }
-                      // Serial Number
-                      else if(i == 2)
-                      {
+                    }
+                    // Serial Number
+                    else if(i == 2)
+                    {
                         byteArray = list.at(i).toString().toUtf8();
                         bytePos_index = 0;
                         for (char c : byteArray)
                         {
-                          if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
-                          {
-                            Instrument1.serialnumber[bytePos_index] = c;
-                            bytePos_index++;
-                            //writeBuffer[writePos_temp] = c;
-                            //writePos_temp++;
-                          }
+                            if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                            {
+                                Instrument1.serialnumber[bytePos_index] = c;
+                                bytePos_index++;
+                                //writeBuffer[writePos_temp] = c;
+                                //writePos_temp++;
+                            }
                         }
 
                         // Check if insufficient number of characters
                         if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
                         {
-                          qDebug() << "Insufficient number of serial characters";
-                          Instrument1.errorcode = 0;
+                            qDebug() << "Insufficient number of serial characters";
+                            Instrument1.errorcode = 0;
                         }
                         else  // print it out
                         {
-                          for(int s=0; s < bytePos_index; s++)
-                          {
-                            //qDebug() << Instrument1.serialnumber[s];
-                          }
-                          Instrument1.errorcode = 0;
+                            for(int s=0; s < bytePos_index; s++)
+                            {
+                                //qDebug() << Instrument1.serialnumber[s];
+                            }
+                            Instrument1.errorcode = 0;
                         }
 
                         // if everything is alright, we can send it
@@ -383,14 +383,14 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 
                             for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
                             {
-                              AddByteToSend(Instrument1.serialnumber[r], false);
+                                AddByteToSend(Instrument1.serialnumber[r], false);
                             }
 
 
 
                             for(int m=0; m < Send1.writepos; m++)
                             {
-                              qDebug() << writeBuffer[m];
+                                qDebug() << writeBuffer[m];
                             }
 
                             qDebug() << "here2: " << Send1.writepos;
@@ -411,45 +411,63 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 
                             qDebug() << "Bytes sent!";
                         }
-                      }
-                      break;
+                    }
+                    break;
 
-                    case COMMUNICATIONS:
-                      Communication1.selection = COMMUNICATIONS;
+                case COMMUNICATIONS:
+                    Communication1.selection = COMMUNICATIONS;
 
-                      // Communications
-                      if(i == 1)
-                      {
-                          Communication1.connection = ((list.at(i).toString().toUtf8()).toInt());
-                          qDebug() << "Communication.connection : " << Communication1.connection;
-                      }
-                      else if(i == 2)
-                      {
-                          Communication1.baudrate = ((list.at(i).toString().toUtf8()).toInt());
-                          qDebug() << "Communication.baudrate : " << Communication1.baudrate;
-                      }
-                      qDebug() << "2";
-                      break;
+                    // Communications
+                    if(i == 1)
+                    {
+                        Communication1.connection = ((list.at(i).toString().toUtf8()).toInt());
+                        qDebug() << "Communication.connection : " << Communication1.connection;
+                    }
+                    else if(i == 2)
+                    {
+                        Communication1.baudrate = ((list.at(i).toString().toUtf8()).toInt());
+                        qDebug() << "Communication.baudrate : " << Communication1.baudrate;
+                    }
+                    qDebug() << "2";
+                    break;
 
-                    case POWER:
-                        Power1.selection = POWER;
+                case POWER:
+                    Power1.selection = POWER;
 
-                        // Power
-                        if(i == 1)
-                        {
-                            Power1.batterytype = ((list.at(i).toString().toUtf8()).toInt());
-                            qDebug() << "Power.batterytype : " << Power1.batterytype;
-                        }
-                        qDebug() << "3";
-                        break;
+                    // Power
+                    if(i == 1)
+                    {
+                        Power1.batterytype = ((list.at(i).toString().toUtf8()).toInt());
+                        qDebug() << "Power.batterytype : " << Power1.batterytype;
+                    }
+                    qDebug() << "3";
+                    break;
 
-                    default:
-                      qDebug() << "Error : x should have a value";
-                      break;
+                case TIME:
+                    break;
+
+                case SAMPLING:
+                    break;
+
+                case NOTES:
+                    break;
+
+                case ACTIVATION:
+                    break;
+
+                case CLOUD:
+                    break;
+
+                case MISCELLENEOUS:
+                    break;
+
+                default:
+                    qDebug() << "Error : x should have a value";
+                    break;
 
 
-                }
             }
+        }
         //}
     }
     //writePos = writePos_temp;
@@ -469,21 +487,21 @@ void CppClass::AddByteToSend(uint8_t data, bool crc_yesno)
     writeBuffer[Send1.writepos] = data;
     if(crc_yesno == false)
     {
-      Send1.crcsend += writeBuffer[Send1.writepos];
+        Send1.crcsend += writeBuffer[Send1.writepos];
     }
     Send1.writepos += 1;
 }
 
 void CppClass::SendHeader(uint8_t msg_length, uint8_t msg_id)
 {
-  Send1.writepos = 0;
-  Send1.crcsend = 0;
-  AddByteToSend(DLE, false);
-  AddByteToSend(STX, false);
-  AddByteToSend(SOURCE, false); // 0x00
-  AddByteToSend(DEST, false);   // 0x88  // note : source and dest are opposite on receiving end
-  AddByteToSend(msg_length, false);
-  AddByteToSend(msg_id, false);
+    Send1.writepos = 0;
+    Send1.crcsend = 0;
+    AddByteToSend(DLE, false);
+    AddByteToSend(STX, false);
+    AddByteToSend(SOURCE, false); // 0x00
+    AddByteToSend(DEST, false);   // 0x88  // note : source and dest are opposite on receiving end
+    AddByteToSend(msg_length, false);
+    AddByteToSend(msg_id, false);
 }
 
 void CppClass::passFromQmlToCpp3prev(QVariantList list, QVariantMap map)
@@ -816,26 +834,26 @@ void CppClass::stopFileMonitoring() {
 
 void CppClass::startComm()
 {
-  setPortName("COM3");
-  if(startCommunication(m_portName.toUtf8().constData()) == true)
-  {
-    emit runningChanged();  // Emit signal when status changes
-  }
+    setPortName("COM3");
+    if(startCommunication(m_portName.toUtf8().constData()) == true)
+    {
+        emit runningChanged();  // Emit signal when status changes
+    }
 }
 
 void CppClass::stopComm()
 {
-  stopCommunication();
-  if (m_hPort != INVALID_HANDLE_VALUE)
-  {
-    CloseHandle(m_hPort);
-    emit runningChanged();  // Emit signal when status changes
-  }
+    stopCommunication();
+    if (m_hPort != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(m_hPort);
+        emit runningChanged();  // Emit signal when status changes
+    }
 }
 
 bool CppClass::isRunning()
 {
-  return m_serialData.running;
+    return m_serialData.running;
 }
 
 
