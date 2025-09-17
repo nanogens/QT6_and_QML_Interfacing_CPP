@@ -169,6 +169,11 @@ struct Power
   uint8_t batterytype;
 };
 
+struct Activation
+{
+  uint8_t selection;
+};
+
 
 #endif // CPPCLASS_H
 

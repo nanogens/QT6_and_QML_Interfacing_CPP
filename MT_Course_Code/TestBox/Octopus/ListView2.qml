@@ -6,20 +6,19 @@ import QtCharts 2.15
 import QtQuick.Controls.Basic
 import QtQuick.Controls.Material
 
-
 Item {
     id: listview2
 
     // Define statements (must match Defines.h)
-    readonly property int iNSTRUMENT: 1
-    readonly property int cOMMUNICATIONS: 2
-    readonly property int pOWER: 3
-    readonly property int tIME: 4
-    readonly property int sAMPLING: 5
-    readonly property int aCTIVATION: 6
-    readonly property int nOTES: 7
-    readonly property int cLOUD: 8
-    readonly property int mISCELLENEOUS: 9
+    readonly property int iNSTRUMENT: 1      // Cell A
+    readonly property int cOMMUNICATIONS: 2  // B
+    readonly property int pOWER: 3           // C
+    readonly property int tIME: 4            // D
+    readonly property int sAMPLING: 5        // E
+    readonly property int aCTIVATION: 6      // F
+    readonly property int nOTES: 7           // G
+    readonly property int cLOUD: 8           // H
+    readonly property int mISCELLENEOUS: 9   // I
 
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
     readonly property int aRRAY_IP_MAX: 11
@@ -33,6 +32,7 @@ Item {
     property real refSize: Math.max(40 * listview2.scaleFactor, 30)
     property real generalFontSize: 16 * scaleFactor
     property real dropdownFontSize: 12 * scaleFactor
+
 
     // Banner Component (unchanged)
     Component {
@@ -88,6 +88,15 @@ Item {
     property var model_Sampling_Rate_ComboBox: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
     property string current_Sampling_Rate: "1 sec"
 
+    // cellH - Activation
+    property var model_Activation_Event_ComboBox: ["Depth", "Temperature", "Ring Switch"]
+    property string current_Activation_Power: "Depth"
+
+    // we make sure its the same so we know the user has not set either -- which he has to do.
+    property date startDateTime: new Date()
+    property date endDateTime: startDateTime
+
+
     property var instrumentBatteryTypes: ["Lithium CR2", "Alkaline", "Rechargeable Li-Ion", "External"]
     property var samplingModes: ["Continuous", "Scheduled", "Event-Triggered"]
     property var samplingSamplingRate: ["1 sec", "5 sec", "30 sec", "1 min", "5 min", "15 min", "30 min", "1 hour"]
@@ -98,7 +107,7 @@ Item {
 
     property string currentinstrumentBatteryTypes: "Alkaline"
     property string currentRecordingModes: "Continuous"
-    property string currentSamplingRate: "1 sec"
+
     property string currentActivationMethod: "Switch"
 
 
@@ -817,7 +826,7 @@ Item {
                         Layout.fillWidth: true
                     }
 
-                    // Row : Time Zone
+                    // Row 3 : Time Zone
                     Label {
                         text: "  Time Zone "
                         font.bold: true
@@ -839,7 +848,7 @@ Item {
                         Layout.fillWidth: true
                     }
 
-                    // Row : Empty spacer
+                    // Row 4 : Empty spacer
                     Label {
                         text: ""
                         Layout.row: 4
@@ -859,7 +868,7 @@ Item {
                         Layout.fillHeight: true
                     }
 
-                    // Row 3: Buttons
+                    // Row 5: Buttons
                     Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
                         id: button7Id
@@ -962,7 +971,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: currentSamplingModes
+                        text: current_Sampling_Mode
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
@@ -989,7 +998,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: currentSamplingRate
+                        text: current_Sampling_Rate
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
@@ -1074,11 +1083,11 @@ Item {
             Layout.preferredWidth: parent.width/3 - refSize/5
             Layout.preferredHeight: parent.height/3
 
-            property string fromDateTime: ""
-            property string toDateTime: ""
+            property string startDateTime: ""
+            property string endDateTime: ""
             property var selectedEvents: []
-            property date currentFromDate: new Date()
-            property date currentToDate: new Date()
+            property date currentStartDate: new Date()
+            property date currentEndDate: new Date()
 
             ColumnLayout {
                 anchors.fill: parent
@@ -1130,94 +1139,118 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
-                    // Row 1: Scheduled Time - From
+                    // Row 1: Scheduled Time - Start
                     Label {
-                        text: "  Scheduled Time  . . "
+                        text: "  Scheduled (Start) . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1; Layout.column: 0
                     }
                     Label {
-                        text: "From: " + (fromDateTime || "Not set")
+                        id: startDateTimeLabel
+                        text: (startDateTime ? startDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP") : "Not set")
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1; Layout.column: 1
                     }
                     Button {
-                        text: "Set Date/Time Range"
+                        text: "Set Date/Time (Start)"
                         implicitHeight: 34 * scaleFactor
-                        font.pixelSize: 12 * scaleFactor
+                        font.pixelSize: 14 * scaleFactor
                         Layout.row: 1; Layout.column: 2
                         Layout.fillWidth: true
-                        onClicked: fromDateTimePopup.open()
+                        onClicked: startDateTimePopup.open()
                     }
 
-                    // Row 2: Scheduled Time - To
+                    // Row 2: Scheduled Time - End
                     Label {
-                        text: "  Scheduled Time  . . "
+                        text: "  Scheduled (End) . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2; Layout.column: 0
                     }
                     Label {
-                        text: "To: " + (fromDateTime || "Not set")
+                        id: endDateTimeLabel
+                        text: (endDateTime ? endDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP") : "Not set")
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2; Layout.column: 1
                     }
                     Button {
-                        text: "Set Date/Time Range"
+                        text: "Set Date/Time (End)"
                         implicitHeight: 34 * scaleFactor
-                        font.pixelSize: 12 * scaleFactor
+                        font.pixelSize: 14 * scaleFactor
                         Layout.row: 2; Layout.column: 2
                         Layout.fillWidth: true
-                        onClicked: toDateTimePopup.open()
+                        onClicked: endDateTimePopup.open()
                     }
 
-                    // Row 3: Event Checkboxes
+                    // Row 3: Event
                     Label {
-                        text: "  Event  . . "
+                        text: "  Event . . . . . . . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3; Layout.column: 0
                     }
-                    Column {
-                        Layout.row: 3; Layout.column: 1
-                        spacing: 2 * scaleFactor
-                        CheckBox {
-                            text: "Depth"
-                            font.pixelSize: generalFontSize * scaleFactor
-                            onCheckedChanged: updateSelectedEvents("Depth", checked)
-                        }
-                        CheckBox {
-                            text: "Temperature"
-                            font.pixelSize: generalFontSize * scaleFactor
-                            onCheckedChanged: updateSelectedEvents("Temperature", checked)
-                        }
-                        CheckBox {
-                            text: "Ring Switch"
-                            font.pixelSize: generalFontSize * scaleFactor
-                            onCheckedChanged: updateSelectedEvents("Ring Switch", checked)
-                        }
+                    Label {
+                        text: currentActivationEvent
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: id_Activation_Event
+                        model: model_Activation_Event_ComboBox
+                        currentIndex: 0
+                        implicitHeight: 28 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 3
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.activationEvent = currentText
+                    }
+
+                    // Row 4 : Event Trigger
+                    Label {
+                        text: "  Event Trigger . . . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 0
                     }
                     Label {
-                        text: selectedEvents.join(", ") || "None selected"
+                        text: "SZM-AZ-000001"
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3; Layout.column: 2
-                        wrapMode: Text.Wrap
+                        Layout.row: 4
+                        Layout.column: 1
+                    }
+                    ComboBox {
+                        id: id_Activation_EventTrigger
+                        //model: model_Activation_EventTrigger_ComboBox
+                        model: 71 // Values from 0 to 70
+                        currentIndex: 0
+                        implicitHeight: 28 * scaleFactor
+                        font.pixelSize: dropdownFontSize * scaleFactor
+                        Layout.row: 4
+                        Layout.column: 2
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 200 * scaleFactor
+                        onCurrentIndexChanged: listview2.activationEventTrigger = currentText
+                        popup.contentItem.implicitHeight: Math.min(200, popup.contentItem.contentHeight)
                     }
 
                     // Spacer rows and buttons (unchanged)
-                    Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
-                    Label { text: ""; Layout.row: 4; Layout.column: 1; Layout.fillHeight: true }
-                    Label { text: ""; Layout.row: 4; Layout.column: 2; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 5; Layout.column: 0; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 5; Layout.column: 1; Layout.fillHeight: true }
+                    Label { text: ""; Layout.row: 5; Layout.column: 2; Layout.fillHeight: true }
 
-                    Label { text: ""; Layout.row: 5; Layout.column: 0 }
+                    Label { text: ""; Layout.row: 6; Layout.column: 0 }
                     Button {
                         id: button13d
                         text: "Read Instrument"
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 5; Layout.column: 1
+                        Layout.row: 6; Layout.column: 1
                     }
                     Button {
                         id: button14Id
@@ -1225,27 +1258,50 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         implicitWidth: 200 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        Layout.row: 5; Layout.column: 2
+                        Layout.row: 6; Layout.column: 2
+                        onClicked: {
+                            var selection = "6";
+
+                            // Convert Date objects to strings for transmission
+                            var startDateTimeStr = startDateTime ?
+                                startDateTime.toISOString() : "";
+                            var endDateTimeStr = endDateTime ?
+                                endDateTime.toISOString() : "";
+
+                            // Or if you prefer timestamps (milliseconds since epoch)
+                            var startTimestamp = startDateTime ?
+                                startDateTime.getTime() : 0;
+                            var endTimestamp = endDateTime ?
+                                endDateTime.getTime() : 0;
+
+                            // Send as array
+                            var arr = [selection, startDateTimeStr, endDateTimeStr];
+
+                            // Send as object with more detailed properties
+                            var obj = {
+                                Selection : selection,
+                                StartDateTime: startDateTimeStr,
+                                EndDateTime: endDateTimeStr,
+                                StartTimestamp: startTimestamp,
+                                EndTimestamp: endTimestamp,
+                                StartYear: startDateTime ? startDateTime.getFullYear() : 0,
+                                StartMonth: startDateTime ? startDateTime.getMonth() + 1 : 0, // Months are 0-indexed in JS
+                                StartDay: startDateTime ? startDateTime.getDate() : 0,
+                                StartHour: startDateTime ? startDateTime.getHours() : 0,
+                                StartMinute: startDateTime ? startDateTime.getMinutes() : 0,
+                                StartSecond: startDateTime ? startDateTime.getSeconds() : 0
+                                // Add similar properties for end date if needed
+                            };
+                            CppClass.passFromQmlToCpp3(arr, obj);
+                        }
                     }
                 }
-            }
-
-
-            function updateSelectedEvents(event, isChecked) {
-                if (isChecked) {
-                    if (!selectedEvents.includes(event)) {
-                        selectedEvents.push(event)
-                    }
-                } else {
-                    selectedEvents = selectedEvents.filter(e => e !== event)
-                }
-                selectedEventsChanged()
             }
         }
 
-        // DateTime Popup for From
+        // Date and Time Popup for Start
         Popup {
-            id: fromDateTimePopup
+            id: startDateTimePopup
             modal: true
             focus: true
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -1255,20 +1311,20 @@ Item {
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
 
-            property date selectedDate: new Date()
-            property string fromDateTime: ""
+            // Store the currently selected date as a property
+            property date currentSelectedDate: new Date()
 
             ColumnLayout {
                 anchors.fill: parent
-                spacing: 5 * scaleFactor  // Reduced from 10 to 5
+                spacing: 5 * scaleFactor
 
                 // Header with current selection
                 Label {
-                    text: "Select From Date"
+                    text: "Select Start Date"
                     font.bold: true
                     font.pixelSize: 18 * scaleFactor
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.bottomMargin: 5 * scaleFactor  // Added bottom margin
+                    Layout.bottomMargin: 5 * scaleFactor
                     color: "lightgreen"
                 }
 
@@ -1345,9 +1401,9 @@ Item {
                         rows: 6
                         spacing: 0
 
-                        property int currentYear: selectedDate.getFullYear()
-                        property int currentMonth: selectedDate.getMonth()
-                        property int selectedDay: selectedDate.getDate()
+                        property int currentYear: currentSelectedDate.getFullYear()
+                        property int currentMonth: currentSelectedDate.getMonth()
+                        property int selectedDay: currentSelectedDate.getDate()
                         property var calendarDays: []
                         property int visibleRows: 5
 
@@ -1381,7 +1437,8 @@ Item {
                                     enabled: isCurrentMonth
                                     onClicked: {
                                         datesGrid.selectedDay = day
-                                        selectedDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, day)
+                                        // Update the popup's currentSelectedDate property
+                                        startDateTimePopup.currentSelectedDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, day)
                                     }
                                 }
                             }
@@ -1440,7 +1497,7 @@ Item {
                     }
 
                     Label {
-                        text: "Select From Time"
+                        text: "Select Start Time"
                         font.pixelSize: 18 * scaleFactor
                         font.bold: true
                         Layout.row: 1; Layout.column: 2
@@ -1466,7 +1523,7 @@ Item {
                     }
                     SpinBox {
                         id: hourSpin
-                        from: 1; to: 12; value: (selectedDate.getHours() % 12) || 12
+                        from: 1; to: 12; value: (currentSelectedDate.getHours() % 12) || 12
                         editable: true
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
@@ -1482,7 +1539,7 @@ Item {
                     }
                     SpinBox {
                         id: minuteSpin
-                        from: 0; to: 59; value: selectedDate.getMinutes()
+                        from: 0; to: 59; value: currentSelectedDate.getMinutes()
                         editable: true
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
@@ -1498,7 +1555,7 @@ Item {
                     }
                     SpinBox {
                         id: secondSpin
-                        from: 0; to: 59; value: selectedDate.getSeconds()
+                        from: 0; to: 59; value: currentSelectedDate.getSeconds()
                         editable: true
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
@@ -1515,7 +1572,7 @@ Item {
                     ComboBox {
                         id: amPmCombo
                         model: ["AM", "PM"]
-                        currentIndex: selectedDate.getHours() >= 12 ? 1 : 0
+                        currentIndex: currentSelectedDate.getHours() >= 12 ? 1 : 0
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
                         Layout.row: 3; Layout.column: 7
@@ -1525,11 +1582,11 @@ Item {
 
                 // Selected date display
                 Label {
-                    text: "Selected: " + selectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
+                    text: "Selected: " + currentSelectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
                           " " + getFormattedTime()
                     font.pixelSize: 12 * scaleFactor
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 5 * scaleFactor  // Added top margin
+                    Layout.topMargin: 5 * scaleFactor
 
                     function getFormattedTime() {
                         var hour = hourSpin.value
@@ -1544,18 +1601,18 @@ Item {
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: 15 * scaleFactor
-                    Layout.topMargin: 0 * scaleFactor  // Added top margin
+                    Layout.topMargin: 0 * scaleFactor
 
                     Button {
                         text: "Cancel"
                         implicitWidth: 100 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        onClicked: fromDateTimePopup.close()
+                        onClicked: startDateTimePopup.close()
                     }
 
                     Button {
-                        text: "Set From Date and Time"
+                        text: "Set Start Date and Time"
                         implicitWidth: 230 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
@@ -1569,23 +1626,26 @@ Item {
 
                             var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, datesGrid.selectedDay,
                                                  hour24, minuteSpin.value, secondSpin.value)
-                            selectedDate = newDate
 
-                            fromDateTime = newDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") + " " +
-                                         hour24.toString().padStart(2, '0') + ":" +
-                                         minuteSpin.value.toString().padStart(2, '0') + ":" +
-                                         secondSpin.value.toString().padStart(2, '0')
+                            // Store the selected date/time in startDateTime
+                            startDateTime = newDate
 
-                            fromDateTimePopup.close()
+                            // Update the label text
+                            startDateTimeLabel.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
+
+                            // You can also log or process the date here
+                            console.log("Start date/time set to:", startDateTime)
+
+                            startDateTimePopup.close()
                         }
                     }
                 }
             }
         }
 
-        // DateTime Popup for To
+        // Date and Time Popup for End
         Popup {
-            id: toDateTimePopup
+            id: endDateTimePopup
             modal: true
             focus: true
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -1595,8 +1655,8 @@ Item {
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
 
-            property date selectedDate: new Date()
-            property string toDateTime: ""
+            // Store the currently selected date as a property
+            property date currentSelectedDate: new Date()
 
             ColumnLayout {
                 anchors.fill: parent
@@ -1604,7 +1664,7 @@ Item {
 
                 // Header with current selection
                 Label {
-                    text: "Select To Date"
+                    text: "Select End Date"
                     font.bold: true
                     font.pixelSize: 18 * scaleFactor
                     Layout.alignment: Qt.AlignHCenter
@@ -1644,7 +1704,7 @@ Item {
                         onClicked: {
                             var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth + 1, 1)
                             datesGridTo.currentMonth = newDate.getMonth()
-                            datesGridTo.currentYear = new Date().getFullYear()
+                            datesGridTo.currentYear = newDate.getFullYear()
                             datesGridTo.updateCalendar()
                         }
                     }
@@ -1685,9 +1745,9 @@ Item {
                         rows: 6
                         spacing: 0
 
-                        property int currentYear: selectedDate.getFullYear()
-                        property int currentMonth: selectedDate.getMonth()
-                        property int selectedDay: selectedDate.getDate()
+                        property int currentYear: currentSelectedDate.getFullYear()
+                        property int currentMonth: currentSelectedDate.getMonth()
+                        property int selectedDay: currentSelectedDate.getDate()
                         property var calendarDays: []
                         property int visibleRows: 5
 
@@ -1721,7 +1781,8 @@ Item {
                                     enabled: isCurrentMonth
                                     onClicked: {
                                         datesGridTo.selectedDay = day
-                                        selectedDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, day)
+                                        // Update the popup's currentSelectedDate property
+                                        endDateTimePopup.currentSelectedDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, day)
                                     }
                                 }
                             }
@@ -1780,7 +1841,7 @@ Item {
                     }
 
                     Label {
-                        text: "Select To Time"
+                        text: "Select End Time"
                         font.pixelSize: 18 * scaleFactor
                         font.bold: true
                         Layout.row: 1; Layout.column: 2
@@ -1806,7 +1867,7 @@ Item {
                     }
                     SpinBox {
                         id: hourSpinTo
-                        from: 1; to: 12; value: (selectedDate.getHours() % 12) || 12
+                        from: 1; to: 12; value: (currentSelectedDate.getHours() % 12) || 12
                         editable: true
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
@@ -1822,7 +1883,7 @@ Item {
                     }
                     SpinBox {
                         id: minuteSpinTo
-                        from: 0; to: 59; value: selectedDate.getMinutes()
+                        from: 0; to: 59; value: currentSelectedDate.getMinutes()
                         editable: true
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
@@ -1838,7 +1899,7 @@ Item {
                     }
                     SpinBox {
                         id: secondSpinTo
-                        from: 0; to: 59; value: selectedDate.getSeconds()
+                        from: 0; to: 59; value: currentSelectedDate.getSeconds()
                         editable: true
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
@@ -1855,7 +1916,7 @@ Item {
                     ComboBox {
                         id: amPmComboTo
                         model: ["AM", "PM"]
-                        currentIndex: selectedDate.getHours() >= 12 ? 1 : 0
+                        currentIndex: currentSelectedDate.getHours() >= 12 ? 1 : 0
                         implicitHeight: 30 * scaleFactor
                         font.pixelSize: 12 * scaleFactor
                         Layout.row: 3; Layout.column: 7
@@ -1865,7 +1926,7 @@ Item {
 
                 // Selected date display
                 Label {
-                    text: "Selected: " + selectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
+                    text: "Selected: " + currentSelectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
                           " " + getFormattedTime()
                     font.pixelSize: 12 * scaleFactor
                     Layout.alignment: Qt.AlignHCenter
@@ -1891,11 +1952,11 @@ Item {
                         implicitWidth: 100 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
-                        onClicked: toDateTimePopup.close()
+                        onClicked: endDateTimePopup.close()
                     }
 
                     Button {
-                        text: "Set To Date and Time"
+                        text: "Set End Date and Time"
                         implicitWidth: 210 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
@@ -1909,14 +1970,17 @@ Item {
 
                             var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, datesGridTo.selectedDay,
                                                  hour24, minuteSpinTo.value, secondSpinTo.value)
-                            selectedDate = newDate
 
-                            toDateTime = newDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") + " " +
-                                       hour24.toString().padStart(2, '0') + ":" +
-                                       minuteSpinTo.value.toString().padStart(2, '0') + ":" +
-                                       secondSpinTo.value.toString().padStart(2, '0')
+                            // Store the selected date/time in endDateTime
+                            endDateTime = newDate
 
-                            toDateTimePopup.close()
+                            // Update the label text
+                            endDateTimeLabel.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
+
+                            // You can also log or process the date here
+                            console.log("End date/time set to:", endDateTime)
+
+                            endDateTimePopup.close()
                         }
                     }
                 }

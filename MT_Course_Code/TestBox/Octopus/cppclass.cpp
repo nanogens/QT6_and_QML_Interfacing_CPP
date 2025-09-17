@@ -9,6 +9,7 @@ Send Send1;
 Instrument Instrument1;
 Communication Communication1;
 Power Power1;
+Activation Activation1;
 
 CppClass::CppClass(QObject *parent) : QObject(parent)
 {
@@ -304,13 +305,8 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
         {
             // Convert QString to char array
             byteArray = list.at(i).toString().toUtf8();
-
             x = byteArray.toInt();
-
-            if (x == 1)
-            {
-                qDebug() << "MT ";
-            }
+            qDebug() << "Selection detected:" << x;
         }
         else
         {
@@ -324,146 +320,168 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 
             switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
             {
-                case INSTRUMENT:
-                    // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
-                    //           - it should be zero i think?  maybe not
-                    Instrument1.selection = INSTRUMENT;
+            case INSTRUMENT:
+                // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
+                //           - it should be zero i think?  maybe not
+                Instrument1.selection = INSTRUMENT;
 
-                    // Device
-                    if(i == 1)
+                // Device
+                if(i == 1)
+                {
+                    Instrument1.device = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Instrument.device : " << Instrument1.device;
+                }
+                // Serial Number
+                else if(i == 2)
+                {
+                    byteArray = list.at(i).toString().toUtf8();
+                    bytePos_index = 0;
+                    for (char c : byteArray)
                     {
-                        Instrument1.device = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Instrument.device : " << Instrument1.device;
-                    }
-                    // Serial Number
-                    else if(i == 2)
-                    {
-                        byteArray = list.at(i).toString().toUtf8();
-                        bytePos_index = 0;
-                        for (char c : byteArray)
-                        {
-                            if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
-                            {
-                                Instrument1.serialnumber[bytePos_index] = c;
-                                bytePos_index++;
-                                //writeBuffer[writePos_temp] = c;
-                                //writePos_temp++;
-                            }
-                        }
-
-                        // Check if insufficient number of characters
                         if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
                         {
-                            qDebug() << "Insufficient number of serial characters";
-                            Instrument1.errorcode = 0;
+                            Instrument1.serialnumber[bytePos_index] = c;
+                            bytePos_index++;
+                            //writeBuffer[writePos_temp] = c;
+                            //writePos_temp++;
                         }
-                        else  // print it out
+                    }
+
+                    // Check if insufficient number of characters
+                    if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                    {
+                        qDebug() << "Insufficient number of serial characters";
+                        Instrument1.errorcode = 0;
+                    }
+                    else  // print it out
+                    {
+                        for(int s=0; s < bytePos_index; s++)
                         {
-                            for(int s=0; s < bytePos_index; s++)
-                            {
-                                //qDebug() << Instrument1.serialnumber[s];
-                            }
-                            Instrument1.errorcode = 0;
+                            //qDebug() << Instrument1.serialnumber[s];
                         }
+                        Instrument1.errorcode = 0;
+                    }
 
-                        // if everything is alright, we can send it
-                        if((Instrument1.errorcode == 0) && (writePos == 0))
+                    // if everything is alright, we can send it
+                    if((Instrument1.errorcode == 0) && (writePos == 0))
+                    {
+                        SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
+
+                        AddByteToSend(0x00, false); // Reserved
+
+                        AddByteToSend(Instrument1.selection, false); // Box Selection
+
+                        qDebug() << "here0: " << Send1.writepos;
+
+                        AddByteToSend(Instrument1.device, false); // Devices
+
+                        qDebug() << "here1: " << Send1.writepos;
+
+                        for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
                         {
-                            SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
-
-                            AddByteToSend(0x00, false); // Reserved
-
-                            AddByteToSend(Instrument1.selection, false); // Box Selection
-
-                            qDebug() << "here0: " << Send1.writepos;
-
-                            AddByteToSend(Instrument1.device, false); // Devices
-
-                            qDebug() << "here1: " << Send1.writepos;
-
-                            for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
-                            {
-                                AddByteToSend(Instrument1.serialnumber[r], false);
-                            }
-
-
-
-                            for(int m=0; m < Send1.writepos; m++)
-                            {
-                                qDebug() << writeBuffer[m];
-                            }
-
-                            qDebug() << "here2: " << Send1.writepos;
-
-                            qDebug() << "crc: " << Send1.crcsend;
-
-                            AddByteToSend(Send1.crcsend, true);
-
-                            std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
-                            writePos = Send1.writepos; // triggers send
-
-
-
-
-                            // Send raw byte array
-                            //static const char response[] = {0x31, 0x32, 0x33, 0x34};
-                            //sendData(QByteArray(response, sizeof(response)));
-
-                            qDebug() << "Bytes sent!";
+                            AddByteToSend(Instrument1.serialnumber[r], false);
                         }
+
+
+
+                        for(int m=0; m < Send1.writepos; m++)
+                        {
+                            qDebug() << writeBuffer[m];
+                        }
+
+                        qDebug() << "here2: " << Send1.writepos;
+
+                        qDebug() << "crc: " << Send1.crcsend;
+
+                        AddByteToSend(Send1.crcsend, true);
+
+                        std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+                        writePos = Send1.writepos; // triggers send
+
+
+
+
+                        // Send raw byte array
+                        //static const char response[] = {0x31, 0x32, 0x33, 0x34};
+                        //sendData(QByteArray(response, sizeof(response)));
+
+                        qDebug() << "Bytes sent!";
                     }
-                    break;
+                }
 
-                case COMMUNICATIONS:
-                    Communication1.selection = COMMUNICATIONS;
+                break;
 
-                    // Communications
-                    if(i == 1)
-                    {
-                        Communication1.connection = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Communication.connection : " << Communication1.connection;
-                    }
-                    else if(i == 2)
-                    {
-                        Communication1.baudrate = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Communication.baudrate : " << Communication1.baudrate;
-                    }
-                    qDebug() << "2";
-                    break;
+            case COMMUNICATIONS:
+                Communication1.selection = COMMUNICATIONS;
 
-                case POWER:
-                    Power1.selection = POWER;
+                // Communications
+                if(i == 1)
+                {
+                    Communication1.connection = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Communication.connection : " << Communication1.connection;
+                }
+                else if(i == 2)
+                {
+                    Communication1.baudrate = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Communication.baudrate : " << Communication1.baudrate;
+                }
+                qDebug() << "2";
+                break;
 
-                    // Power
-                    if(i == 1)
-                    {
-                        Power1.batterytype = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Power.batterytype : " << Power1.batterytype;
-                    }
-                    qDebug() << "3";
-                    break;
+            case POWER:
+                Power1.selection = POWER;
 
-                case TIME:
-                    break;
+                // Power
+                if(i == 1)
+                {
+                    Power1.batterytype = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Power.batterytype : " << Power1.batterytype;
+                }
+                qDebug() << "3";
+                break;
 
-                case SAMPLING:
-                    break;
+            case TIME:
+                break;
 
-                case NOTES:
-                    break;
+            case SAMPLING:
+                break;
 
-                case ACTIVATION:
-                    break;
+            case ACTIVATION:
+                if(i == 1) {
+                    // Process startDateTime
+                    QString startDateTimeStr = list.at(i).toString();
+                    qDebug() << "Start DateTime:" << startDateTimeStr;
+                    // Add your date parsing logic here
 
-                case CLOUD:
-                    break;
+                    QDateTime utcTime = QDateTime::fromString(startDateTimeStr, Qt::ISODate);
+                    QDateTime localTime = utcTime.toLocalTime();
+                    qDebug() << "Start DateTime (UTC):" << startDateTimeStr;
+                    qDebug() << "Start DateTime (Local):" << localTime.toString("yyyy-MM-dd hh:mm:ss AP");
+                }
+                else if(i == 2) {
+                    // Process endDateTime
+                    QString endDateTimeStr = list.at(i).toString();
+                    qDebug() << "End DateTime:" << endDateTimeStr;
+                    // Add your date parsing logic here
+                    QDateTime utcTime = QDateTime::fromString(endDateTimeStr, Qt::ISODate);
+                    QDateTime localTime = utcTime.toLocalTime();
+                    qDebug() << "End DateTime (UTC):" << endDateTimeStr;
+                    qDebug() << "End DateTime (Local):" << localTime.toString("yyyy-MM-dd hh:mm:ss AP");
+                }
+                break;
 
-                case MISCELLENEOUS:
-                    break;
+            case NOTES:
+                break;
 
-                default:
-                    qDebug() << "Error : x should have a value";
-                    break;
+            case CLOUD:
+                break;
+
+            case MISCELLENEOUS:
+                break;
+
+            default:
+                qDebug() << "Error : x should have a value";
+                break;
 
 
             }
