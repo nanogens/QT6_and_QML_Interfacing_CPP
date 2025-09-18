@@ -1,3 +1,6 @@
+// MT reworked for _instrument, _start, _end.  Calendar shows up correctly
+
+
 import QtQuick 2.15
 import QtQuick.Controls
 import QtQuick.Layouts 1.15
@@ -91,11 +94,13 @@ Item {
     // cellH - Activation
     property var model_Activation_Event_ComboBox: ["Depth", "Temperature", "Ring Switch"]
     property string current_Activation_Power: "Depth"
-
     // we make sure its the same so we know the user has not set either -- which he has to do.
     property date startDateTime: new Date()
     property date endDateTime: startDateTime
 
+    // cellD - Time
+    property date syncDateTime : new Date()
+    property date instrumentDateTime : new Date()
 
     property var instrumentBatteryTypes: ["Lithium CR2", "Alkaline", "Rechargeable Li-Ion", "External"]
     property var samplingModes: ["Continuous", "Scheduled", "Event-Triggered"]
@@ -219,7 +224,7 @@ Item {
                         onCurrentIndexChanged: listview2.current_Instrument_Device = currentText
                     }
 
-                    // Row : Serial number
+                    // Row 2 : Serial number
                     Label {
                         text: "  Serial Number  . . . . ."
                         font.bold: true
@@ -228,13 +233,13 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "SZM-AZ-000001"
+                        text: label_Instrument_SerialNumber
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
                     }
                     TextField {
-                        id: input_Instrument_SerialNumber
+                        id: text_Instrument_SerialNumber
                         implicitHeight: 28 * scaleFactor
                         font.pixelSize: dropdownFontSize * scaleFactor
                         Layout.row: 2
@@ -245,17 +250,8 @@ Item {
                         onEditingFinished: console.log("Entered:", text)
                         placeholderText: "XXX-XX-XXXXXX"
                     }
-                    /*
-                    Label {
-                        text: Instrument_SerialNumber
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                    }
-                    */
 
-                    // Row : Usage
+                    // Row 3 : Usage
                     Label {
                         text: "  Usage  . . . . . . . . . . . . ."
                         font.bold: true
@@ -264,7 +260,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "52 Hours"
+                        text: label_Instrument_Usage
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3
                         Layout.column: 1
@@ -277,12 +273,12 @@ Item {
                         Layout.fillWidth: true
                     }
 
-                    // Spacer
+                    // Row 4 : Spacer
                     Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
                     Label { text: ""; Layout.row: 4; Layout.column: 1; Layout.fillHeight: true }
                     Label { text: ""; Layout.row: 4; Layout.column: 2; Layout.fillHeight: true }
 
-                    // Row : Buttons
+                    // Row 5 : Buttons
                     Label { text: ""; Layout.row: 5; Layout.column: 0 }
                     Button {
                         id: button1Id
@@ -303,8 +299,8 @@ Item {
                         Layout.column: 2
                         onClicked: {
                             var selection = "0";
-                            var selected_Instrument_Device = id_Instrument_Device_ComboBox.currentIndex;
-                            var selected_Instrument_Serial_Number = input_Instrument_SerialNumber.text;
+                            var selected_Instrument_Device = text_Instrument_Device_ComboBox.currentIndex;
+                            var selected_Instrument_Serial_Number = text_Instrument_SerialNumber.text;
                             var arr = [selection, selected_Instrument_Device, selected_Instrument_Serial_Number];
                             var obj = {
                                 Selection : selection,
@@ -397,7 +393,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "RS-485" //var_Communication_Connection
+                        text: label_Communication_Connection
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
@@ -423,7 +419,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "115200" //var_Communication_BaudRate
+                        text: label_Communication_BaudRate
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
@@ -586,7 +582,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "Submersible Mini AZ"
+                        text: label_Power_BatteryType
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
@@ -613,7 +609,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "28 days at current usage"
+                        text: label_Power_Duration // "28 days at current usage"
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
@@ -635,7 +631,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "75% Remaining"
+                        text: label_Power_PowerRemaining
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3
                         Layout.column: 1
@@ -782,70 +778,70 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
-                    // Row 1: Instrument Clock
+                    // Row 1 : Computer Time
+                    Label {
+                        text: "  Computer Time . . . . ."
+                        font.bold: true
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1
+                        Layout.column: 0
+                    }
+                    Label {
+                        id: label_Time_ComputerTime
+                        text: (startDateTime ? startDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP") : "Not set")
+                        font.pixelSize: generalFontSize * scaleFactor
+                        Layout.row: 1; Layout.column: 1
+                    }
+
+
+                    // Row 2: Instrument Clock
                     Label {
                         text: "  Instrument Clock  . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 1
-                        Layout.column: 0
-                    }
-                    Label {
-                        text: "03:15:45"  // replace with variable
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 1
-                        Layout.column: 1
-                    }
-                    Label {
-                        text: Time_instrumentClock  // replace with variable
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 1
-                        Layout.column: 2
-                        Layout.fillWidth: true
-                    }
-
-                    // Row 2: Sync with Computer
-                    Label {
-                        text: "  Sync with Computer "
-                        font.bold: true
-                        font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 0
                     }
                     Label {
-                        text: "05:15:45"
+                        id: label_Time_SynctoComputerClock
+                        text: (syncDateTime ? syncDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP") : "Not set")
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 1
+                        Layout.row: 2; Layout.column: 1
                     }
-                    Label {
-                        text: Time_syncwithComputer  // replace with variable
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 2
-                        Layout.column: 2
+                    Button {
+                        text: "Sync to Computer Clock"
+                        implicitHeight: 34 * scaleFactor
+                        font.pixelSize: 14 * scaleFactor
+                        Layout.row: 2; Layout.column: 2
                         Layout.fillWidth: true
+                        onClicked:
+                        {
+                            syncDateTime = new Date();
+                            label_Time_SynctoComputerClock.text = syncDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+                        }
                     }
 
-                    // Row 3 : Time Zone
+                    // Row 3: Set Date/Time (Instrument)
                     Label {
-                        text: "  Time Zone "
+                        text: ""
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3
                         Layout.column: 0
                     }
                     Label {
-                        text: "UTC-4"
+                        id: label_Time_SetDateTimeInstrument
+                        text: ""
                         font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 1
+                        Layout.row: 3; Layout.column: 1
                     }
-                    Label {
-                        text: Time_timeZone  // replace with variable
-                        font.pixelSize: generalFontSize * scaleFactor
-                        Layout.row: 3
-                        Layout.column: 2
+                    Button {
+                        text: "Set Date/Time (Instrument)"
+                        implicitHeight: 34 * scaleFactor
+                        font.pixelSize: 14 * scaleFactor
+                        Layout.row: 3; Layout.column: 2
                         Layout.fillWidth: true
+                        onClicked: instrumentDateTimePopup.open()
                     }
 
                     // Row 4 : Empty spacer
@@ -891,6 +887,357 @@ Item {
                 }
             }
         }
+
+        // instrumentDateTimePopup
+        // Date and Time Popup for setting custom time for the instrument
+        Popup {
+            id: instrumentDateTimePopup
+            modal: true
+            focus: true
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            width: 600 * scaleFactor
+            height: 520 * scaleFactor
+            padding: 10 * scaleFactor
+            x: (parent.width - width) / 2
+            y: (parent.height - height) / 2
+
+            // Store the currently selected date as a property
+            property date currentSelectedDate: new Date()
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 5 * scaleFactor
+
+                // Header with current selection
+                Label {
+                    text: "Select Instrument Date"
+                    font.bold: true
+                    font.pixelSize: 18 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 5 * scaleFactor
+                    color: "lightgreen"
+                }
+
+                // Calendar navigation
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 5 * scaleFactor
+
+                    Button {
+                        text: "Previous"
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        onClicked: {
+                            var newDate = new Date(datesGrid_instrument.currentYear, datesGrid_instrument.currentMonth - 1, 1)
+                            datesGrid_instrument.currentMonth = newDate.getMonth()
+                            datesGrid_instrument.currentYear = newDate.getFullYear()
+                            datesGrid_instrument.updateCalendar()
+                        }
+                    }
+
+                    Label {
+                        text: Qt.locale().monthName(datesGrid_instrument.currentMonth) + " " + datesGrid_instrument.currentYear
+                        font.bold: true
+                        font.pixelSize: 15 * scaleFactor
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Button {
+                        text: "Next"
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        onClicked: {
+                            var newDate = new Date(datesGrid_instrument.currentYear, datesGrid_instrument.currentMonth + 1, 1)
+                            datesGrid_instrument.currentMonth = newDate.getMonth()
+                            datesGrid_instrument.currentYear = newDate.getFullYear()
+                            datesGrid_instrument.updateCalendar()
+                        }
+                    }
+                }
+
+                // Calendar view
+                Column {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 250 * scaleFactor
+                    spacing: 0
+
+                    // Day of week headers
+                    Row {
+                        width: parent.width
+                        height: 30 * scaleFactor
+                        spacing: 0
+
+                        Repeater {
+                            model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                            Label {
+                                width: parent.width / 7
+                                height: parent.height
+                                text: modelData
+                                font.bold: true
+                                font.pixelSize: 12 * scaleFactor
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
+
+                    // Dates grid
+                    Grid {
+                        id: datesGrid_instrument
+                        width: parent.width
+                        height: parent.height - 30 * scaleFactor
+                        columns: 7
+                        rows: 6
+                        spacing: 0
+
+                        // FIX: reference currentSelectedDate from popup
+                        property int currentYear: instrumentDateTimePopup.currentSelectedDate.getFullYear()
+                        property int currentMonth: instrumentDateTimePopup.currentSelectedDate.getMonth()
+                        property int selectedDay: instrumentDateTimePopup.currentSelectedDate.getDate()
+                        property var calendarDays: []
+                        property int visibleRows: 5
+
+                        Repeater {
+                            model: datesGrid_instrument.visibleRows * 7
+
+                            Rectangle {
+                                width: datesGrid_instrument.width / 7
+                                height: datesGrid_instrument.height / datesGrid_instrument.visibleRows
+                                property int day: index < datesGrid_instrument.calendarDays.length ? datesGrid_instrument.calendarDays[index] : 0
+                                property bool isCurrentMonth: day > 0
+                                property bool isSelected: isCurrentMonth && day === datesGrid_instrument.selectedDay
+                                property bool isToday: isCurrentMonth && day === new Date().getDate() &&
+                                                      datesGrid_instrument.currentMonth === new Date().getMonth() &&
+                                                      datesGrid_instrument.currentYear === new Date().getFullYear()
+
+                                color: isSelected ? Material.primary : (isToday ? "#e3f2fd" : "transparent")
+                                border.color: "#eeeeee"
+                                border.width: 1
+
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: isCurrentMonth ? day : ""
+                                    font.pixelSize: 14 * scaleFactor
+                                    font.bold: isSelected || isToday
+                                    color: isSelected ? "white" : (isCurrentMonth ? "black" : "#cccccc")
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: isCurrentMonth
+                                    onClicked: {
+                                        datesGrid_instrument.selectedDay = day
+                                        instrumentDateTimePopup.currentSelectedDate =
+                                            new Date(datesGrid_instrument.currentYear,
+                                                     datesGrid_instrument.currentMonth,
+                                                     day)
+                                    }
+                                }
+                            }
+                        }
+
+                        function updateCalendar() {
+                            var daysArray = []
+                            var firstOfMonth = new Date(currentYear, currentMonth, 1)
+                            var lastOfMonth = new Date(currentYear, currentMonth + 1, 0)
+                            var firstDay = firstOfMonth.getDay()
+                            var daysInMonth = lastOfMonth.getDate()
+
+                            for (var i = 0; i < firstDay; i++) {
+                                daysArray.push(0)
+                            }
+
+                            for (var j = 1; j <= daysInMonth; j++) {
+                                daysArray.push(j)
+                            }
+
+                            var totalCellsNeeded = firstDay + daysInMonth
+                            var rowsNeeded = Math.ceil(totalCellsNeeded / 7)
+                            visibleRows = Math.max(5, rowsNeeded)
+
+                            var totalCells = visibleRows * 7
+                            while (daysArray.length < totalCells) {
+                                daysArray.push(0)
+                            }
+
+                            calendarDays = daysArray
+                        }
+
+                        Component.onCompleted: {
+                            currentYear = new Date().getFullYear()
+                            currentMonth = new Date().getMonth()
+                            selectedDay = new Date().getDate()
+                            updateCalendar()
+                        }
+                    }
+
+                }
+
+                // Time selection with AM/PM
+                GridLayout {
+                    columns: 8
+                    rowSpacing: 5 * scaleFactor
+                    columnSpacing: 5 * scaleFactor
+                    Layout.fillWidth: true
+
+                    Label {
+                        text: ""
+                        font.pixelSize: 6 * scaleFactor
+                        font.bold: true
+                        Layout.row: 0; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Label {
+                        text: "Select Instrument Time"
+                        font.pixelSize: 18 * scaleFactor
+                        font.bold: true
+                        Layout.row: 1; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                        color: "lightgreen"
+                    }
+
+                    Label {
+                        text: ""
+                        font.pixelSize: 6 * scaleFactor
+                        font.bold: true
+                        Layout.row: 2; Layout.column: 2
+                        Layout.columnSpan: 4
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Label {
+                        text: "Hour:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 0
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: hourSpin_instrument
+                        from: 1; to: 12; value: (currentSelectedDate.getHours() % 12) || 12
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 1
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Minute:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 2
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: minuteSpin_instrument
+                        from: 0; to: 59; value: currentSelectedDate.getMinutes()
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 3
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Second:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 4
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    SpinBox {
+                        id: secondSpin_instrument
+                        from: 0; to: 59; value: currentSelectedDate.getSeconds()
+                        editable: true
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 5
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "AM/PM:"
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 6
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
+                    ComboBox {
+                        id: amPmCombo_instrument
+                        model: ["AM", "PM"]
+                        currentIndex: currentSelectedDate.getHours() >= 12 ? 1 : 0
+                        implicitHeight: 30 * scaleFactor
+                        font.pixelSize: 12 * scaleFactor
+                        Layout.row: 3; Layout.column: 7
+                        Layout.fillWidth: true
+                    }
+                }
+
+                // Selected date display
+                Label {
+                    text: "Selected: " + currentSelectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") +
+                          " " + getFormattedTime()
+                    font.pixelSize: 12 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 5 * scaleFactor
+
+                    function getFormattedTime() {
+                        var hour = hourSpin_instrument.value
+                        var minute = minuteSpin_instrument.value.toString().padStart(2, '0')
+                        var second = secondSpin_instrument.value.toString().padStart(2, '0')
+                        var ampm = amPmCombo_instrument.currentText
+                        return hour + ":" + minute + ":" + second + " " + ampm
+                    }
+                }
+
+                // Buttons Row - Centered
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 15 * scaleFactor
+                    Layout.topMargin: 0 * scaleFactor
+
+                    Button {
+                        text: "Cancel"
+                        implicitWidth: 100 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        onClicked: instrumentDateTimePopup.close()
+                    }
+
+                    Button {
+                        text: "Set Instr. Date and Time"
+                        implicitWidth: 230 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: 16 * scaleFactor
+                        onClicked: {
+                            var hour24 = hourSpin_instrument.value
+                            if (amPmCombo_instrument.currentIndex === 1 && hour24 < 12) {
+                                hour24 += 12
+                            } else if (amPmCombo_instrument.currentIndex === 0 && hour24 === 12) {
+                                hour24 = 0
+                            }
+
+                            var newDate = new Date(datesGrid_instrument.currentYear, datesGrid_instrument.currentMonth, datesGrid_instrument.selectedDay,
+                                                 hour24, minuteSpin_instrument.value, secondSpin_instrument.value)
+
+                            // Store the selected date/time in startDateTime
+                            instrumentDateTime = newDate
+
+                            // Update the label text
+                            label_Time_SetDateTimeInstrument.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
+
+                            // You can also log or process the date here
+                            console.log("Instrument date/time set to:", instrumentDateTime)
+
+                            instrumentDateTimePopup.close()
+                        }
+                    }
+                }
+            }
+        }
+
+
 
         // Cell E - Sampling (same structure)
         CellBox {
@@ -971,7 +1318,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: current_Sampling_Mode
+                        text: label_Sampling_Mode
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
                         Layout.column: 1
@@ -998,7 +1345,7 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: current_Sampling_Rate
+                        text: label_Sampling_Rate
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
                         Layout.column: 1
@@ -1147,7 +1494,7 @@ Item {
                         Layout.row: 1; Layout.column: 0
                     }
                     Label {
-                        id: startDateTimeLabel
+                        id: label_Activation_ScheduledStart
                         text: (startDateTime ? startDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP") : "Not set")
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1; Layout.column: 1
@@ -1169,7 +1516,7 @@ Item {
                         Layout.row: 2; Layout.column: 0
                     }
                     Label {
-                        id: endDateTimeLabel
+                        id: label_Activation_ScheduledEnd
                         text: (endDateTime ? endDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP") : "Not set")
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2; Layout.column: 1
@@ -1191,7 +1538,7 @@ Item {
                         Layout.row: 3; Layout.column: 0
                     }
                     Label {
-                        text: currentActivationEvent
+                        text: label_Activation_Event
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3
                         Layout.column: 1
@@ -1218,14 +1565,14 @@ Item {
                         Layout.column: 0
                     }
                     Label {
-                        text: "SZM-AZ-000001"
+                        text: text_Activation_EventTrigger
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 4
                         Layout.column: 1
                     }
                     ComboBox {
                         id: id_Activation_EventTrigger
-                        //model: model_Activation_EventTrigger_ComboBox
+                        //model: model_Activation_EventTrigger_ComboBox  // look at line below
                         model: 71 // Values from 0 to 70
                         currentIndex: 0
                         implicitHeight: 28 * scaleFactor
@@ -1235,7 +1582,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 200 * scaleFactor
                         onCurrentIndexChanged: listview2.activationEventTrigger = currentText
-                        popup.contentItem.implicitHeight: Math.min(200, popup.contentItem.contentHeight)
+                        popup.contentItem.implicitHeight: Math.min(200, popup.contentItem.contentHeight)  // to constrain texbox size
                     }
 
                     // Spacer rows and buttons (unchanged)
@@ -1338,15 +1685,15 @@ Item {
                         implicitWidth: 120 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         onClicked: {
-                            var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth - 1, 1)
-                            datesGrid.currentMonth = newDate.getMonth()
-                            datesGrid.currentYear = newDate.getFullYear()
-                            datesGrid.updateCalendar()
+                            var newDate = new Date(datesGrid_start.currentYear, datesGrid_start.currentMonth - 1, 1)
+                            datesGrid_start.currentMonth = newDate.getMonth()
+                            datesGrid_start.currentYear = newDate.getFullYear()
+                            datesGrid_start.updateCalendar()
                         }
                     }
 
                     Label {
-                        text: Qt.locale().monthName(datesGrid.currentMonth) + " " + datesGrid.currentYear
+                        text: Qt.locale().monthName(datesGrid_start.currentMonth) + " " + datesGrid_start.currentYear
                         font.bold: true
                         font.pixelSize: 15 * scaleFactor
                         Layout.fillWidth: true
@@ -1358,10 +1705,10 @@ Item {
                         implicitWidth: 120 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         onClicked: {
-                            var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth + 1, 1)
-                            datesGrid.currentMonth = newDate.getMonth()
-                            datesGrid.currentYear = newDate.getFullYear()
-                            datesGrid.updateCalendar()
+                            var newDate = new Date(datesGrid_start.currentYear, datesGrid_start.currentMonth + 1, 1)
+                            datesGrid_start.currentMonth = newDate.getMonth()
+                            datesGrid_start.currentYear = newDate.getFullYear()
+                            datesGrid_start.updateCalendar()
                         }
                     }
                 }
@@ -1394,31 +1741,32 @@ Item {
 
                     // Dates grid
                     Grid {
-                        id: datesGrid
+                        id: datesGrid_start
                         width: parent.width
                         height: parent.height - 30 * scaleFactor
                         columns: 7
                         rows: 6
                         spacing: 0
 
-                        property int currentYear: currentSelectedDate.getFullYear()
-                        property int currentMonth: currentSelectedDate.getMonth()
-                        property int selectedDay: currentSelectedDate.getDate()
+                        // FIX: reference currentSelectedDate from popup
+                        property int currentYear: startDateTimePopup.currentSelectedDate.getFullYear()
+                        property int currentMonth: startDateTimePopup.currentSelectedDate.getMonth()
+                        property int selectedDay: startDateTimePopup.currentSelectedDate.getDate()
                         property var calendarDays: []
                         property int visibleRows: 5
 
                         Repeater {
-                            model: datesGrid.visibleRows * 7
+                            model: datesGrid_start.visibleRows * 7
 
                             Rectangle {
-                                width: datesGrid.width / 7
-                                height: datesGrid.height / datesGrid.visibleRows
-                                property int day: index < datesGrid.calendarDays.length ? datesGrid.calendarDays[index] : 0
+                                width: datesGrid_start.width / 7
+                                height: datesGrid_start.height / datesGrid_start.visibleRows
+                                property int day: index < datesGrid_start.calendarDays.length ? datesGrid_start.calendarDays[index] : 0
                                 property bool isCurrentMonth: day > 0
-                                property bool isSelected: isCurrentMonth && day === datesGrid.selectedDay
+                                property bool isSelected: isCurrentMonth && day === datesGrid_start.selectedDay
                                 property bool isToday: isCurrentMonth && day === new Date().getDate() &&
-                                                      datesGrid.currentMonth === new Date().getMonth() &&
-                                                      datesGrid.currentYear === new Date().getFullYear()
+                                                      datesGrid_start.currentMonth === new Date().getMonth() &&
+                                                      datesGrid_start.currentYear === new Date().getFullYear()
 
                                 color: isSelected ? Material.primary : (isToday ? "#e3f2fd" : "transparent")
                                 border.color: "#eeeeee"
@@ -1436,9 +1784,11 @@ Item {
                                     anchors.fill: parent
                                     enabled: isCurrentMonth
                                     onClicked: {
-                                        datesGrid.selectedDay = day
-                                        // Update the popup's currentSelectedDate property
-                                        startDateTimePopup.currentSelectedDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, day)
+                                        datesGrid_start.selectedDay = day
+                                        startDateTimePopup.currentSelectedDate =
+                                            new Date(datesGrid_start.currentYear,
+                                                     datesGrid_start.currentMonth,
+                                                     day)
                                     }
                                 }
                             }
@@ -1478,6 +1828,7 @@ Item {
                             updateCalendar()
                         }
                     }
+
                 }
 
                 // Time selection with AM/PM
@@ -1522,7 +1873,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     SpinBox {
-                        id: hourSpin
+                        id: hourSpin_start
                         from: 1; to: 12; value: (currentSelectedDate.getHours() % 12) || 12
                         editable: true
                         implicitHeight: 30 * scaleFactor
@@ -1538,7 +1889,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     SpinBox {
-                        id: minuteSpin
+                        id: minuteSpin_start
                         from: 0; to: 59; value: currentSelectedDate.getMinutes()
                         editable: true
                         implicitHeight: 30 * scaleFactor
@@ -1554,7 +1905,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     SpinBox {
-                        id: secondSpin
+                        id: secondSpin_start
                         from: 0; to: 59; value: currentSelectedDate.getSeconds()
                         editable: true
                         implicitHeight: 30 * scaleFactor
@@ -1570,7 +1921,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     ComboBox {
-                        id: amPmCombo
+                        id: amPmCombo_start
                         model: ["AM", "PM"]
                         currentIndex: currentSelectedDate.getHours() >= 12 ? 1 : 0
                         implicitHeight: 30 * scaleFactor
@@ -1589,10 +1940,10 @@ Item {
                     Layout.topMargin: 5 * scaleFactor
 
                     function getFormattedTime() {
-                        var hour = hourSpin.value
-                        var minute = minuteSpin.value.toString().padStart(2, '0')
-                        var second = secondSpin.value.toString().padStart(2, '0')
-                        var ampm = amPmCombo.currentText
+                        var hour = hourSpin_start.value
+                        var minute = minuteSpin_start.value.toString().padStart(2, '0')
+                        var second = secondSpin_start.value.toString().padStart(2, '0')
+                        var ampm = amPmCombo_start.currentText
                         return hour + ":" + minute + ":" + second + " " + ampm
                     }
                 }
@@ -1617,21 +1968,21 @@ Item {
                         implicitHeight: 40 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
                         onClicked: {
-                            var hour24 = hourSpin.value
-                            if (amPmCombo.currentIndex === 1 && hour24 < 12) {
+                            var hour24 = hourSpin_start.value
+                            if (amPmCombo_start.currentIndex === 1 && hour24 < 12) {
                                 hour24 += 12
-                            } else if (amPmCombo.currentIndex === 0 && hour24 === 12) {
+                            } else if (amPmCombo_start.currentIndex === 0 && hour24 === 12) {
                                 hour24 = 0
                             }
 
-                            var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth, datesGrid.selectedDay,
-                                                 hour24, minuteSpin.value, secondSpin.value)
+                            var newDate = new Date(datesGrid_start.currentYear, datesGrid_start.currentMonth, datesGrid_start.selectedDay,
+                                                 hour24, minuteSpin_start.value, secondSpin_start.value)
 
                             // Store the selected date/time in startDateTime
                             startDateTime = newDate
 
                             // Update the label text
-                            startDateTimeLabel.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
+                            label_Activation_ScheduledStart.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
 
                             // You can also log or process the date here
                             console.log("Start date/time set to:", startDateTime)
@@ -1682,15 +2033,15 @@ Item {
                         implicitWidth: 120 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         onClicked: {
-                            var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth - 1, 1)
-                            datesGridTo.currentMonth = newDate.getMonth()
-                            datesGridTo.currentYear = newDate.getFullYear()
-                            datesGridTo.updateCalendar()
+                            var newDate = new Date(datesGrid_end.currentYear, datesGrid_end.currentMonth - 1, 1)
+                            datesGrid_end.currentMonth = newDate.getMonth()
+                            datesGrid_end.currentYear = newDate.getFullYear()
+                            datesGrid_end.updateCalendar()
                         }
                     }
 
                     Label {
-                        text: Qt.locale().monthName(datesGridTo.currentMonth) + " " + datesGridTo.currentYear
+                        text: Qt.locale().monthName(datesGrid_end.currentMonth) + " " + datesGrid_end.currentYear
                         font.bold: true
                         font.pixelSize: 15 * scaleFactor
                         Layout.fillWidth: true
@@ -1702,10 +2053,10 @@ Item {
                         implicitWidth: 120 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         onClicked: {
-                            var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth + 1, 1)
-                            datesGridTo.currentMonth = newDate.getMonth()
-                            datesGridTo.currentYear = newDate.getFullYear()
-                            datesGridTo.updateCalendar()
+                            var newDate = new Date(datesGrid_end.currentYear, datesGrid_end.currentMonth + 1, 1)
+                            datesGrid_end.currentMonth = newDate.getMonth()
+                            datesGrid_end.currentYear = newDate.getFullYear()
+                            datesGrid_end.updateCalendar()
                         }
                     }
                 }
@@ -1738,31 +2089,32 @@ Item {
 
                     // Dates grid
                     Grid {
-                        id: datesGridTo
+                        id: datesGrid_end
                         width: parent.width
                         height: parent.height - 30 * scaleFactor
                         columns: 7
                         rows: 6
                         spacing: 0
 
-                        property int currentYear: currentSelectedDate.getFullYear()
-                        property int currentMonth: currentSelectedDate.getMonth()
-                        property int selectedDay: currentSelectedDate.getDate()
+                        // FIX: reference currentSelectedDate from popup
+                        property int currentYear: endDateTimePopup.currentSelectedDate.getFullYear()
+                        property int currentMonth: endDateTimePopup.currentSelectedDate.getMonth()
+                        property int selectedDay: endDateTimePopup.currentSelectedDate.getDate()
                         property var calendarDays: []
                         property int visibleRows: 5
 
                         Repeater {
-                            model: datesGridTo.visibleRows * 7
+                            model: datesGrid_end.visibleRows * 7
 
                             Rectangle {
-                                width: datesGridTo.width / 7
-                                height: datesGridTo.height / datesGridTo.visibleRows
-                                property int day: index < datesGridTo.calendarDays.length ? datesGridTo.calendarDays[index] : 0
+                                width: datesGrid_end.width / 7
+                                height: datesGrid_end.height / datesGrid_end.visibleRows
+                                property int day: index < datesGrid_end.calendarDays.length ? datesGrid_end.calendarDays[index] : 0
                                 property bool isCurrentMonth: day > 0
-                                property bool isSelected: isCurrentMonth && day === datesGridTo.selectedDay
+                                property bool isSelected: isCurrentMonth && day === datesGrid_end.selectedDay
                                 property bool isToday: isCurrentMonth && day === new Date().getDate() &&
-                                                      datesGridTo.currentMonth === new Date().getMonth() &&
-                                                      datesGridTo.currentYear === new Date().getFullYear()
+                                                      datesGrid_end.currentMonth === new Date().getMonth() &&
+                                                      datesGrid_end.currentYear === new Date().getFullYear()
 
                                 color: isSelected ? Material.primary : (isToday ? "#e3f2fd" : "transparent")
                                 border.color: "#eeeeee"
@@ -1780,9 +2132,11 @@ Item {
                                     anchors.fill: parent
                                     enabled: isCurrentMonth
                                     onClicked: {
-                                        datesGridTo.selectedDay = day
-                                        // Update the popup's currentSelectedDate property
-                                        endDateTimePopup.currentSelectedDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, day)
+                                        datesGrid_end.selectedDay = day
+                                        endDateTimePopup.currentSelectedDate =
+                                            new Date(datesGrid_end.currentYear,
+                                                     datesGrid_end.currentMonth,
+                                                     day)
                                     }
                                 }
                             }
@@ -1822,6 +2176,7 @@ Item {
                             updateCalendar()
                         }
                     }
+
                 }
 
                 // Time selection with AM/PM
@@ -1866,7 +2221,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     SpinBox {
-                        id: hourSpinTo
+                        id: hourSpin_end
                         from: 1; to: 12; value: (currentSelectedDate.getHours() % 12) || 12
                         editable: true
                         implicitHeight: 30 * scaleFactor
@@ -1882,7 +2237,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     SpinBox {
-                        id: minuteSpinTo
+                        id: minuteSpin_end
                         from: 0; to: 59; value: currentSelectedDate.getMinutes()
                         editable: true
                         implicitHeight: 30 * scaleFactor
@@ -1898,7 +2253,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     SpinBox {
-                        id: secondSpinTo
+                        id: secondSpin_end
                         from: 0; to: 59; value: currentSelectedDate.getSeconds()
                         editable: true
                         implicitHeight: 30 * scaleFactor
@@ -1914,7 +2269,7 @@ Item {
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
                     ComboBox {
-                        id: amPmComboTo
+                        id: amPmCombo_end
                         model: ["AM", "PM"]
                         currentIndex: currentSelectedDate.getHours() >= 12 ? 1 : 0
                         implicitHeight: 30 * scaleFactor
@@ -1933,10 +2288,10 @@ Item {
                     Layout.topMargin: 5 * scaleFactor
 
                     function getFormattedTime() {
-                        var hour = hourSpinTo.value
-                        var minute = minuteSpinTo.value.toString().padStart(2, '0')
-                        var second = secondSpinTo.value.toString().padStart(2, '0')
-                        var ampm = amPmComboTo.currentText
+                        var hour = hourSpin_end.value
+                        var minute = minuteSpin_end.value.toString().padStart(2, '0')
+                        var second = secondSpin_end.value.toString().padStart(2, '0')
+                        var ampm = amPmCombo_end.currentText
                         return hour + ":" + minute + ":" + second + " " + ampm
                     }
                 }
@@ -1957,25 +2312,25 @@ Item {
 
                     Button {
                         text: "Set End Date and Time"
-                        implicitWidth: 210 * scaleFactor
+                        implicitWidth: 230 * scaleFactor
                         implicitHeight: 40 * scaleFactor
                         font.pixelSize: 16 * scaleFactor
                         onClicked: {
-                            var hour24 = hourSpinTo.value
-                            if (amPmComboTo.currentIndex === 1 && hour24 < 12) {
+                            var hour24 = hourSpin_end.value
+                            if (amPmCombo_end.currentIndex === 1 && hour24 < 12) {
                                 hour24 += 12
-                            } else if (amPmComboTo.currentIndex === 0 && hour24 === 12) {
+                            } else if (amPmCombo_end.currentIndex === 0 && hour24 === 12) {
                                 hour24 = 0
                             }
 
-                            var newDate = new Date(datesGridTo.currentYear, datesGridTo.currentMonth, datesGridTo.selectedDay,
-                                                 hour24, minuteSpinTo.value, secondSpinTo.value)
+                            var newDate = new Date(datesGrid_end.currentYear, datesGrid_end.currentMonth, datesGrid_end.selectedDay,
+                                                 hour24, minuteSpin_end.value, secondSpin_end.value)
 
                             // Store the selected date/time in endDateTime
                             endDateTime = newDate
 
                             // Update the label text
-                            endDateTimeLabel.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
+                            label_Activation_ScheduledEnd.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
 
                             // You can also log or process the date here
                             console.log("End date/time set to:", endDateTime)
@@ -1986,6 +2341,10 @@ Item {
                 }
             }
         }
+
+
+
+
 
         // Cell G - Notes
         CellBox {
@@ -2077,19 +2436,20 @@ Item {
                         //ScrollBar.vertical: ScrollBar {} // Optional scrollbar
                     }
                     ScrollView {
+                        id: scrollView  // ← Add this ID
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredWidth: parent.width * 0.5
                         Layout.row: 1
                         Layout.column: 1
                         TextArea {
-                            id: id_Notes_ScrollView
-                            anchors.fill: parent
+                            id: scroll_Notes_ScrollView
+                            width: scrollView.width  // Match ScrollView's width
                             placeholderText: 'Multi-line text editor...'
                             selectByMouse: true
                             persistentSelection: true
                             wrapMode: Text.Wrap   // Ensures text wraps to next line
-                            width: scrollView.width  // Match ScrollView's width
+
                             property int maxChars: 64
                             // Limit to 64 characters
                             Keys.onPressed: (event) =>
@@ -2510,18 +2870,6 @@ Item {
             }
         }
     }
-
-    Dialog {
-        id: dialog
-        title: 'Dialog'
-        Label {
-            text: 'The standard dialog.'
-        }
-        footer: DialogButtonBox {
-            standardButtons: DialogButtonBox.Ok | DialogButtonBox.Cancel
-        }
-    }
-
 }
 
 
