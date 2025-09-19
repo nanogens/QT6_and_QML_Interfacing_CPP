@@ -6,6 +6,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlEngine>
 #include <QQuickView>
+#include <QQuickWindow> // Add this include
 
 #include <QDebug>
 #include <QQuickStyle> // Required for setting the style
@@ -54,6 +55,12 @@ int main(int argc, char *argv[])
         return -1;
     } else {
         cppclass.setQmlRootObject(engine.rootObjects().first());
+
+        // Get the window and maximize it
+        QQuickWindow* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+        if (window) {
+            window->showMaximized(); // This is the key line to maximize
+        }
     }
 
     return app.exec();

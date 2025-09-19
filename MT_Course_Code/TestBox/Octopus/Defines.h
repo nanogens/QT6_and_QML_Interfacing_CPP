@@ -9,15 +9,15 @@
 #define ARRAY_IP_MAX 11
 
 // boxes
-#define INSTRUMENT 1     // Cell A
-#define COMMUNICATIONS 2 // Cell B
-#define POWER 3          // Cell C
-#define TIME 4           // Cell D
-#define SAMPLING 5       // Cell E
-#define ACTIVATION 6     // Cell F
-#define NOTES 7          // Cell G
-#define CLOUD 8          // Cell H
-#define MISCELLENEOUS 9  // Cell I
+#define INSTRUMENT 0     // Cell A
+#define COMMUNICATIONS 1 // Cell B
+#define POWER 2          // Cell C
+#define TIME 3           // Cell D
+#define SAMPLING 4       // Cell E
+#define ACTIVATION 5     // Cell F
+#define NOTES 6          // Cell G
+#define CLOUD 7          // Cell H
+#define MISCELLENEOUS 8  // Cell I
 
 // message header
 #define DLE 0x10

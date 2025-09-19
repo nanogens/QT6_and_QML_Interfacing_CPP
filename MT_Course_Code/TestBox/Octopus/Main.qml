@@ -107,38 +107,38 @@ ApplicationWindow
               }
               ToolButton
               {
-                text: 'Connect'
+                  text: 'Connect'
+                  enabled: !CppClass.running  // Disable Connect when already connected
 
-                contentItem: Text {
-                    text: parent.text
-                    font.pixelSize: CppClass.running ? 18 : 16
-                    font.bold: CppClass.running
-                    color: CppClass.running ? "#36454F" : "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    CppClass.startComm();
-                }
+                  contentItem: Text {
+                      text: parent.text
+                      font.pixelSize: CppClass.running ? 18 : 16
+                      font.bold: CppClass.running
+                      color: parent.enabled ? (CppClass.running ? "#36454F" : "white") : "gray"
+                      horizontalAlignment: Text.AlignHCenter
+                      verticalAlignment: Text.AlignVCenter
+                  }
+                  onClicked: {
+                      CppClass.startComm();
+                  }
               }
               ToolSeparator {}
               ToolButton
               {
-                text: 'Disconnect'
+                  text: 'Disconnect'
+                  enabled: CppClass.running  // Disable Disconnect when not connected
 
-                contentItem: Text {
-                    text: parent.text
-                    font.pixelSize: !CppClass.running ? 18 : 16
-                    font.bold: !CppClass.running
-                    color: !CppClass.running ? "#36454F" : "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    CppClass.stopComm();
-                }
+                  contentItem: Text {
+                      text: parent.text
+                      font.pixelSize: !CppClass.running ? 18 : 16
+                      font.bold: !CppClass.running
+                      color: parent.enabled ? (!CppClass.running ? "#36454F" : "white") : "gray"
+                      horizontalAlignment: Text.AlignHCenter
+                      verticalAlignment: Text.AlignVCenter
+                  }
+                  onClicked: {
+                      CppClass.stopComm();
+                  }
               }
               ToolButton {
                   icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
