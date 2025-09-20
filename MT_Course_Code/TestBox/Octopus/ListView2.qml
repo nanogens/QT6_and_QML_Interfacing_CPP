@@ -101,7 +101,11 @@ Item {
 
     // cellD - Time
     property date syncDateTime : new Date()
+    property bool syncEnabled : false
     property date instrumentDateTime : new Date()
+
+
+
 
     property var instrumentBatteryTypes: ["Lithium CR2", "Alkaline", "Rechargeable Li-Ion", "External"]
     property var samplingModes: ["Continuous", "Scheduled", "Event-Triggered"]
@@ -249,8 +253,21 @@ Item {
                         Layout.preferredWidth: 200 * scaleFactor
                         maximumLength: aRRAY_SERIALNUMBER_MAX
                         onEditingFinished: console.log("Entered:", text)
-                        placeholderText: "XXX-XX-XXXXXX"
+                        placeholderText: {
+                            if (id_Instrument_Device_ComboBox.currentIndex === 0) {
+                                return "SZM-AZ-XXXXXX"
+                            } else if (id_Instrument_Device_ComboBox.currentIndex === 1) {
+                                return "SZM-BZ-XXXXXX"
+                            } else if (id_Instrument_Device_ComboBox.currentIndex === 2) {
+                                return "SZM-CZ-XXXXXX"
+                            } else {
+                                return "XXX-XX-XXXXXX"
+                            }
+                        }
                     }
+
+
+
 
                     // Row 3 : Usage
                     Label {
@@ -809,6 +826,7 @@ Item {
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2; Layout.column: 1
                     }
+                    /*
                     Button {
                         text: "Sync to Computer Clock"
                         implicitHeight: 34 * scaleFactor
@@ -819,6 +837,26 @@ Item {
                         {
                             syncDateTime = new Date();
                             label_Time_SetDateTimeInstrument.text = syncDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+                        }
+                    }
+                    */
+                    CheckBox {
+                        id: syncCheckBox
+                        text: "Sync to Computer Clock"
+                        implicitHeight: 34 * scaleFactor
+                        font.pixelSize: 14 * scaleFactor
+                        Layout.row: 2; Layout.column: 2
+                        Layout.fillWidth: true
+                        checked: syncEnabled  // Bind to the global property
+
+                        onCheckedChanged: {
+                            // Update the global property when user interacts with checkbox
+                            syncEnabled = checked;
+
+                            if (checked) {
+                                syncDateTime = new Date();
+                                label_Time_SetDateTimeInstrument.text = syncDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+                            }
                         }
                     }
 
@@ -2155,6 +2193,10 @@ Item {
                                 endDateTime = newDate
                                 label_Activation_ScheduledEnd.text = newDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP")
                             }
+
+                            // set the "Sync to Computer Clock" checkbox to false
+                            // since we are using a custom time (i.e. Set Date/Time (Instrument))
+                            syncEnabled = false;
 
                             console.log(genericDateTimePopup.mode + " date/time set to:", newDate)
                             genericDateTimePopup.close() // FIXED: was genericTimePopup
