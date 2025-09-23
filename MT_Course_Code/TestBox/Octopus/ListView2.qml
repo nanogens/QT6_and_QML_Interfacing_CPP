@@ -593,7 +593,7 @@ Item {
 
                     // Row : Battery Type
                     Label {
-                        text: "  Battery Type  . . . . . . . ."
+                        text: "  Battery Type  . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 1
@@ -620,7 +620,7 @@ Item {
 
                     // Row : Duration
                     Label {
-                        text: "  Duration  . ."
+                        text: "  Duration  . . . . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 2
@@ -642,7 +642,7 @@ Item {
 
                     // Row : Power Remaining
                     Label {
-                        text: "  Power Remaining  . ."
+                        text: "  Power Remaining  . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 3
@@ -1260,7 +1260,7 @@ Item {
 
                     // Row 4 : Event Trigger
                     Label {
-                        text: "  Event Trigger . . . . . . ."
+                        text: "  Event Trigger . . . . . . . ."
                         font.bold: true
                         font.pixelSize: generalFontSize * scaleFactor
                         Layout.row: 4
@@ -1982,7 +1982,7 @@ Item {
                                     text: isCurrentMonth ? day : ""
                                     font.pixelSize: 14 * scaleFactor
                                     font.bold: isSelected || isToday
-                                    color: isSelected ? "white" : (isCurrentMonth ? "black" : "#cccccc")
+                                    color: isSelected ? "white" : (isCurrentMonth ? "#BFBFBF" : "#cccccc")
                                 }
 
                                 MouseArea {
@@ -2139,9 +2139,12 @@ Item {
                 Label {
                     text: "Selected: " + genericDateTimePopup.currentSelectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") + // FIXED
                           " " + getFormattedTime()
-                    font.pixelSize: 12 * scaleFactor
+                    font.pixelSize: 16 * scaleFactor
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 5 * scaleFactor
+                    Layout.topMargin: 7 * scaleFactor
+                    Layout.bottomMargin: 7 * scaleFactor
+                    font.bold: true
+                    color: "red"
 
                     function getFormattedTime() {
                         var hour = hourSpin.value
@@ -2157,6 +2160,7 @@ Item {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: 15 * scaleFactor
                     Layout.topMargin: 0 * scaleFactor
+                    Layout.bottomMargin: 10 * scaleFactor
 
                     Button {
                         text: "Cancel"
