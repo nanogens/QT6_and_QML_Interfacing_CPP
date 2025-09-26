@@ -174,6 +174,5 @@ struct Activation
   uint8_t selection;
 };
 
-
 #endif // CPPCLASS_H
 

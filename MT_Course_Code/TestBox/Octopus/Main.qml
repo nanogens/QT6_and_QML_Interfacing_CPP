@@ -197,6 +197,7 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
+          ListView4 {}  // Guages
           ListView3 {}  // New simple view
           ListView2 {}
           ListView0 {}  // Your original grid content
