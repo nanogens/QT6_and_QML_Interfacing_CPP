@@ -6,13 +6,11 @@ import QtCharts 2.2
 
 import Octopus
 
-
-
 ApplicationWindow
 {
+  id: mainWindow
   // ... existing properties ...
   property int currentViewIndex: 0 // Used by the various ListViewX
-
 
   onCurrentViewIndexChanged: console.log("Current view index changed to:", currentViewIndex)
 
@@ -27,17 +25,9 @@ ApplicationWindow
   font.family: "Segoe UI Variable"
   font.pixelSize: 16
 
-
-  //Universal.theme: Universal[subTheme.currentText]
-  //Universal.accent: Universal[accentColor.currentText]
-
-  //Material.theme: Material[subTheme.currentText] // MT removed this to fix it to Dark
-  //Material.accent: Material[accentColor.currentText]
-  //Material.primary: Material[primaryColor.currentText]
   Material.theme: Material.Dark
   Material.accent: Material.Red
   Material.primary: Material.DeepOrange
-
 
   function arrayObjectFunc(array, object)
   {
@@ -54,28 +44,6 @@ ApplicationWindow
       }
   }
 
-
-  menuBar: MenuBar {
-    Menu {
-      title: '&File'
-      Action { text: '&New...' }
-      Action { text: '&Open...' }
-      Action { text: '&Save' }
-      Action { text: 'Save &As...' }
-      MenuSeparator {}
-      Action { text: '&Quit' }
-    }
-    Menu {
-      title: '&Edit'
-      Action { text: 'Cu&t' }
-      Action { text: '&Copy' }
-      Action { text: '&Paste' }
-    }
-    Menu {
-      title: '&Help'
-      Action { text: '&About' }
-    }
-  }
   header: ToolBar {
       contentItem: Rectangle {
           // Gradient fill for the toolbar
@@ -86,74 +54,87 @@ ApplicationWindow
               GradientStop { position: 1.0; color: "#FFBF00" }  // Bright Golden Yellow
           }
 
-          RowLayout {
+          // Container for absolute positioning
+          Item {
               anchors.fill: parent
+
+              // Left side items
               ToolButton {
+                  id: menuButton
                   icon.source: "qrc:/Octopus/images/baseline-menu-24px.svg"
                   onClicked: sideNav.open()
+                  anchors.left: parent.left
+                  anchors.verticalCenter: parent.verticalCenter
               }
-              Label {
-                  text: 'Octopus - Submersible Application ver 1.00 beta'
-                  color: "black"  // Keeps text readable against the gradient
-                  font {
-                      bold: true
-                      pixelSize: 18
-                      family: "Arial"
-                  }
-                  elide: Label.ElideRight
-                  horizontalAlignment: Qt.AlignHCenter
-                  verticalAlignment: Qt.AlignVCenter
-                  Layout.fillWidth: true
-              }
-              ToolButton
-              {
-                  text: 'Connect'
-                  enabled: !CppClass.running  // Disable Connect when already connected
 
-                  contentItem: Text {
-                      text: parent.text
-                      font.pixelSize: CppClass.running ? 18 : 16
-                      font.bold: CppClass.running
-                      color: parent.enabled ? (CppClass.running ? "#36454F" : "white") : "gray"
-                      horizontalAlignment: Text.AlignHCenter
-                      verticalAlignment: Text.AlignVCenter
-                  }
-                  onClicked: {
-                      CppClass.startComm();
-                  }
-              }
-              ToolSeparator {}
-              ToolButton
-              {
-                  text: 'Disconnect'
-                  enabled: CppClass.running  // Disable Disconnect when not connected
+              // Right side items container
+              Row {
+                  id: rightButtons
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: 5
 
-                  contentItem: Text {
-                      text: parent.text
-                      font.pixelSize: !CppClass.running ? 18 : 16
-                      font.bold: !CppClass.running
-                      color: parent.enabled ? (!CppClass.running ? "#36454F" : "white") : "gray"
-                      horizontalAlignment: Text.AlignHCenter
-                      verticalAlignment: Text.AlignVCenter
+                  ToolButton
+                  {
+                      text: 'Connect'
+                      enabled: !CppClass.running
+
+                      contentItem: Text {
+                          text: parent.text
+                          font.pixelSize: CppClass.running ? 18 : 16
+                          font.bold: CppClass.running
+                          color: parent.enabled ? (CppClass.running ? "#36454F" : "white") : "gray"
+                          horizontalAlignment: Text.AlignHCenter
+                          verticalAlignment: Text.AlignVCenter
+                      }
+                      onClicked: {
+                          CppClass.startComm();
+                      }
                   }
-                  onClicked: {
-                      CppClass.stopComm();
+                  ToolSeparator {}
+                  ToolButton
+                  {
+                      text: 'Disconnect'
+                      enabled: CppClass.running
+
+                      contentItem: Text {
+                          text: parent.text
+                          font.pixelSize: !CppClass.running ? 18 : 16
+                          font.bold: !CppClass.running
+                          color: parent.enabled ? (!CppClass.running ? "#36454F" : "white") : "gray"
+                          horizontalAlignment: Text.AlignHCenter
+                          verticalAlignment: Text.AlignVCenter
+                      }
+                      onClicked: {
+                          CppClass.stopComm();
+                      }
+                  }
+                  ToolButton {
+                      icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
+                      onClicked: menu.open()
+                      Menu {
+                          id: menu
+                          y: parent.height
+                          MenuItem { text: 'New...' }
+                          MenuItem { text: 'Open...' }
+                          MenuItem { text: 'Save' }
+                      }
                   }
               }
-              ToolButton {
-                  icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
-                  onClicked: menu.open()
-                  Menu {
-                      id: menu
-                      y: parent.height
-                      MenuItem { text: 'New...' }
-                      MenuItem { text: 'Open...' }
-                      MenuItem { text: 'Save' }
-                  }
+
+              // Centered Image - absolutely positioned in the true center
+              Image {
+                  id: logoImage
+                  source: "qrc:/Octopus/images/Spectraware_C1.png"
+                  fillMode: Image.PreserveAspectFit
+                  anchors.centerIn: parent
+                  height: 40 // Adjust height as needed
+                  width: 1195 // Fixed width matching image dimensions
               }
           }
       }
   }
+
   Drawer
   {
     id: sideNav
@@ -172,19 +153,17 @@ ApplicationWindow
             model: 5
             SideNavButton {
                 icon.source: "qrc:/Octopus/images/baseline-category-24px.svg"
-                text: 'List ' + (index + 1)  // Changed to show List 1, List 2, etc.
+                text: 'List ' + (index + 1)
                 Layout.fillWidth: true
-                // Add click handler
                 onClicked: {
                     currentViewIndex = index
                     sideNav.close()
-                    console.log("Switched to view", index)  // Debug output
+                    console.log("Switched to view", index)
                 }
             }
         }
     }
   }
-
 
   Pane
   {
@@ -197,97 +176,11 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
+          ListView2 {}
           ListView4 {}  // Guages
           ListView3 {}  // New simple view
-          ListView2 {}
           ListView0 {}  // Your original grid content
           ListView1 {}  // New simple view
-
-
-          // Add more views as needed
       }
   }
-
-
-
-
-
-
-  /*
-  footer: RowLayout
-  {
-    width: parent.width
-    RowLayout
-    {
-      Layout.margins: 10
-      Layout.alignment: Qt.AlignHCenter
-      Label { text: 'QtQuick Charts Themes: ' }
-      ComboBox {
-        id: qtquickChartsThemes
-        model: [
-          'ChartThemeLight', 'ChartThemeBlueCerulean',
-          'ChartThemeDark', 'ChartThemeBrownSand',
-          'ChartThemeBlueNcs', 'ChartThemeHighContrast',
-          'ChartThemeBlueIcy', 'ChartThemeQt'
-        ]
-        Layout.fillWidth: true
-      }
-    }
-    RowLayout {
-      Layout.margins: 10
-      Layout.alignment: Qt.AlignHCenter
-      Label { text: 'QtQuick 2 Themes: ' }
-      Label {
-        id: qtquick2Themes
-        objectName: 'qtquick2Themes'
-        Layout.fillWidth: true
-      }
-    }
-    RowLayout {
-      Layout.margins: 10
-      Layout.alignment: Qt.AlignHCenter
-      Label { text: 'Sub-Theme: ' }
-      ComboBox {
-        id: subTheme
-        model: ['Dark', 'Light']  // MT swapped temporarily
-        Layout.fillWidth: true
-        enabled: true // MT Temporarily disabled as we cannot set Materials ..etc theme from main  //qtquick2Themes.text === 'Material' || qtquick2Themes.text === 'Universal'
-      }
-    }
-    RowLayout {
-      property var materialColors: [
-        'Red', 'Pink', 'Purple', 'DeepPurple', 'Indigo', 'Blue',
-        'LightBlue', 'Cyan', 'Teal', 'Green', 'LightGreen', 'Lime',
-        'Yellow', 'Amber', 'Orange', 'DeepOrange', 'Brown', 'Grey',
-        'BlueGrey'
-      ]
-      property var universalColors: [
-        'Lime', 'Green', 'Emerald', 'Teal', 'Cyan', 'Cobalt',
-        'Indigo', 'Violet', 'Pink', 'Magenta', 'Crimson', 'Red',
-        'Orange', 'Amber', 'Yellow', 'Brown', 'Olive', 'Steel', 'Mauve',
-        'Taupe'
-      ]
-      Layout.margins: 10
-      Layout.alignment: Qt.AlignHCenter
-      Label { text: 'Colors: ' }
-      Label { text: 'Accent' }
-      ComboBox {
-        id: accentColor
-        Layout.fillWidth: true
-        enabled: true // qtquick2Themes.text === 'Material' || qtquick2Themes.text === 'Universal'
-        model: {
-          if (qtquick2Themes.text === 'Universal') return parent.universalColors
-          return parent.materialColors
-        }
-      }
-      Label { text: 'Primary' }
-      ComboBox {
-        id: primaryColor
-        Layout.fillWidth: true
-        enabled: true // qtquick2Themes.text === 'Material'
-        model: parent.materialColors
-      }
-    }
-  }
-  */
 }

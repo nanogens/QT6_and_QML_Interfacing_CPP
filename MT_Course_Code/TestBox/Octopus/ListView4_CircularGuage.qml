@@ -40,7 +40,7 @@ Item {
 
     Behavior on value {
         SmoothedAnimation {
-            velocity: 100 // Adjust for your value range
+            velocity: 300 // Adjust for your value range
             duration: 300
         }
     }
@@ -48,7 +48,7 @@ Item {
     // Subtle glow effect
     layer.enabled: true
     layer.effect: Glow {
-        radius: 8
+        radius: 20
         samples: 16
         color: blendColors(progressStartColor, progressEndColor, normalizedValue)
         spread: 0.1

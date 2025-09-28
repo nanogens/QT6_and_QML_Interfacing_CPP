@@ -47,6 +47,11 @@ qt_add_qml_module(appOctopus
         QML_FILES ListView4.qml
         QML_FILES ListView4_CircularGuage.qml
         QML_FILES
+        RESOURCES
+        RESOURCES
+        RESOURCES
+        RESOURCES
+        RESOURCES images/Spectraware_C1.png
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
