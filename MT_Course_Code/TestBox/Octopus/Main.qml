@@ -125,7 +125,7 @@ ApplicationWindow
               // Centered Image - absolutely positioned in the true center
               Image {
                   id: logoImage
-                  source: "qrc:/Octopus/images/Spectraware_C1.png"
+                  source: "qrc:/Octopus/images/Spectraware_D1.png"
                   fillMode: Image.PreserveAspectFit
                   anchors.centerIn: parent
                   height: 40 // Adjust height as needed
@@ -176,8 +176,8 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
-          ListView2 {}
           ListView4 {}  // Guages
+          ListView2 {}
           ListView3 {}  // New simple view
           ListView0 {}  // Your original grid content
           ListView1 {}  // New simple view

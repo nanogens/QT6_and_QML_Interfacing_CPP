@@ -174,7 +174,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Instrument"
+                            onLoaded: item.text = "(A) Instrument"
                         }
                     }
 
@@ -384,7 +384,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Communications"
+                            onLoaded: item.text = "(B) Communications"
                         }
                     }
 
@@ -584,7 +584,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Power"
+                            onLoaded: item.text = "(C) Power"
                         }
                     }
 
@@ -801,7 +801,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Time"
+                            onLoaded: item.text = "(D) Time"
                         }
                     }
 
@@ -994,7 +994,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Sampling"
+                            onLoaded: item.text = "(E) Sampling"
                         }
                     }
 
@@ -1191,7 +1191,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Activation"
+                            onLoaded: item.text = "(F) Activation"
                         }
                     }
 
@@ -1418,7 +1418,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Notes"
+                            onLoaded: item.text = "(G) Notes"
                         }
                     }
 
@@ -1582,7 +1582,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Cloud"
+                            onLoaded: item.text = "(H) Cloud"
                         }
                     }
 
@@ -1786,7 +1786,7 @@ Item {
                         Loader {
                             sourceComponent: bannerComponent
                             Layout.fillWidth: true
-                            onLoaded: item.text = "Miscelleneous"
+                            onLoaded: item.text = "(I) Miscelleneous"
                         }
                     }
 
