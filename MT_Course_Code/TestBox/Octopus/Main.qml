@@ -83,7 +83,7 @@ ApplicationWindow
                           text: parent.text
                           font.pixelSize: CppClass.running ? 18 : 16
                           font.bold: CppClass.running
-                          color: parent.enabled ? (CppClass.running ? "#36454F" : "white") : "gray"
+                          color: parent.enabled ? (CppClass.running ? "#36454F" : "#36454F") : "gray"
                           horizontalAlignment: Text.AlignHCenter
                           verticalAlignment: Text.AlignVCenter
                       }

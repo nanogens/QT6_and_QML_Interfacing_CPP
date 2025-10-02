@@ -30,6 +30,10 @@ Item {
     property real lineFadeStart: 0.3
     property real lineFadeIntensity: 0.1
 
+
+    property bool selectMainControl: true // true for Option A, false for Option B
+
+
     Rectangle {
         anchors.fill: parent
         color: "black"
@@ -73,7 +77,7 @@ Item {
                 }
             }
 
-            // === Column 0: 3 rows (30% width) ===
+            // Column 0: 3 rows
             Rectangle {
                 id: col0row0
                 Layout.column: 0
@@ -215,7 +219,7 @@ Item {
                 }
             }
 
-            // Column 0, Row 1 - Ensure this also fills height properly
+            // Column 0, Row 1
             Rectangle {
                 id: col0row1
                 Layout.column: 0
@@ -357,7 +361,7 @@ Item {
                 }
             }
 
-            // Column 0, Row 2 - Ensure this also fills height properly
+            // Column 0, Row 2
             Rectangle {
                 id: col0row2
                 Layout.column: 0
@@ -500,8 +504,7 @@ Item {
             }
 
 
-
-            // Guage Cluster === Column 1: spans 3 rows (60% width) ===
+            // Column 1, Row 0 to 2  -- Guage Cluster
             Rectangle {
                 Layout.column: 1
                 Layout.row: 0
@@ -518,10 +521,11 @@ Item {
                     color: "white"
                 }
 
-                // Container for the gauge cluster
+                // Option A: Container for the gauge cluster
                 Item {
                     id: gaugeCluster
                     anchors.fill: parent
+                    visible: selectMainControl // Show when selectMainControl is true
 
                     /*
                     // Add temporary background and border
@@ -719,11 +723,142 @@ Item {
                         z: 2
                     }
                 }
+
+
+                // Option B: Experimental : Rotating carousel
+                Item {
+                    id: scalableWrapper
+                    visible: !selectMainControl // Show when selectMainControl is false
+                    // Control properties
+                    property real controlX: 150
+                    property real controlY: 250
+                    property real controlScale: 3.0
+                    property real baseWidth: 300
+                    property real baseHeight: 150
+
+                    // Center the control in the parent column
+                    //anchors.centerIn: parent
+
+                    // Scaled dimensions
+                    width: baseWidth * controlScale
+                    height: baseHeight * controlScale
+                    x: controlX
+                    y: controlY
+
+                    Rectangle {
+                        id: controlRoot
+                        anchors.fill: parent
+                        color: "black"
+
+                        ListModel {
+                            id: nameModel
+                            ListElement { file: "qrc:/Octopus/images/Spectra_Bladder_Mini.png"; name: "Mini" }
+                            ListElement { file: "qrc:/Octopus/images/Spectra_Bladder_Sil_1.png"; name: "Sil 1" }
+                            ListElement { file: "qrc:/Octopus/images/Spectra_Bladder_Sil_2.png"; name: "Sil 2" }
+                            ListElement { file: "qrc:/Octopus/images/Spectra_Hydro_Pro.png"; name: "Hydro Pro" }
+                        }
+
+                        Component {
+                            id: nameDelegate
+                            Column {
+                                opacity: PathView.opacity
+                                z: PathView.z
+                                scale: PathView.scale
+                                Image {
+                                    anchors.horizontalCenter: delegateText.horizontalCenter
+                                    source: model.file
+                                    width: controlRoot.height * 0.4  // Scale image size relative to container
+                                    height: controlRoot.height * 0.4
+                                    smooth: true
+                                    fillMode: Image.PreserveAspectFit
+                                    sourceSize.width: controlRoot.height * 0.8  // Better scaling for SVG
+                                    sourceSize.height: controlRoot.height * 0.8
+                                }
+                                Text {
+                                    id: delegateText
+                                    text: model.name
+                                    font.pixelSize: controlRoot.height * 0.06  // Scale text relative to container
+                                    font.bold: true
+                                    color: "lightgreen"
+                                }
+                            }
+                        }
+
+                        PathView {
+                            anchors.fill: parent
+                            model: nameModel
+                            delegate: nameDelegate
+                            focus: true
+
+                            path: Path {
+                                // Front - center bottom
+                                startX: controlRoot.width / 2
+                                startY: controlRoot.height * 2/3
+                                PathAttribute { name: "opacity"; value: 1.0 }
+                                PathAttribute { name: "scale"; value: 1.0 }
+                                PathAttribute { name: "z"; value: 0 }
+
+                                // Left curve
+                                PathCubic {
+                                    x: controlRoot.width / 6
+                                    y: controlRoot.height / 3
+                                    control1X: controlRoot.width / 3
+                                    control1Y: controlRoot.height * 2/3
+                                    control2X: controlRoot.width / 6
+                                    control2Y: controlRoot.height / 2
+                                }
+                                PathAttribute { name: "opacity"; value: 0.75 }
+                                PathAttribute { name: "scale"; value: 0.75 }
+                                PathAttribute { name: "z"; value: -1 }
+
+                                // Top curve
+                                PathCubic {
+                                    x: controlRoot.width / 2
+                                    y: controlRoot.height / 7
+                                    control1X: controlRoot.width / 6
+                                    control1Y: controlRoot.height / 4
+                                    control2X: controlRoot.width / 3
+                                    control2Y: controlRoot.height / 7
+                                }
+                                PathAttribute { name: "opacity"; value: 0.35 }
+                                PathAttribute { name: "scale"; value: 0.35 }
+                                PathAttribute { name: "z"; value: -2 }
+
+                                // Right curve
+                                PathCubic {
+                                    x: controlRoot.width * 5/6
+                                    y: controlRoot.height / 3
+                                    control1X: controlRoot.width * 2/3
+                                    control1Y: controlRoot.height / 7
+                                    control2X: controlRoot.width * 5/6
+                                    control2Y: controlRoot.height / 4
+                                }
+                                PathAttribute { name: "opacity"; value: 0.75 }
+                                PathAttribute { name: "scale"; value: 0.75 }
+                                PathAttribute { name: "z"; value: -1 }
+
+                                // Return to front
+                                PathCubic {
+                                    x: controlRoot.width / 2
+                                    y: controlRoot.height * 2/3
+                                    control1X: controlRoot.width * 5/6
+                                    control1Y: controlRoot.height / 2
+                                    control2X: controlRoot.width * 2/3
+                                    control2Y: controlRoot.height * 2/3
+                                }
+                            }
+
+                            Keys.onLeftPressed: decrementCurrentIndex()
+                            Keys.onRightPressed: incrementCurrentIndex()
+                        }
+                    }
+                }
+
+
             }
 
 
-
-
+            // Column 2, Row 0
             Rectangle {
                 id: col2row0
                 Layout.column: 2
@@ -865,6 +1000,7 @@ Item {
                 }
             }
 
+            // Column 2, Row 1
             Rectangle {
                 id: col2row1
                 Layout.column: 2
@@ -1006,6 +1142,7 @@ Item {
                 }
             }
 
+            // Column 2, Row 2
             Rectangle {
                 id: col2row2
                 Layout.column: 2
@@ -1164,6 +1301,6 @@ Item {
             x: parent.width * (col0Width + col1Width)
             color: "white"
             opacity: showDebugOutlines ? 0.5 : 0
-        }
+        }                        
     }
 }

@@ -54,6 +54,9 @@ qt_add_qml_module(appOctopus
         RESOURCES
         RESOURCES images/Spectraware_D1.png
         RESOURCES images/Spectraware_E1.png
+        RESOURCES images/arrow.svg images/book.svg images/clear.svg images/rocket.svg
+        RESOURCES images/Spectra_Bladder_Mini.png  images/Spectra_Bladder_Sil_1.png images/Spectra_Bladder_Sil_2.png
+        RESOURCES images/Spectra_Hydro_Pro.png
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

@@ -3,6 +3,7 @@
 
 // define statements
 #define BUFFER_SIZE 256
+#define ACCEPT_1BYTE_AT_A_TIME_ONLY 1
 
 // array sizes
 #define ARRAY_SERIALNUMBER_MAX 13

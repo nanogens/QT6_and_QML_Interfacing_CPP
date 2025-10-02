@@ -40,8 +40,8 @@ Item {
 
     Behavior on value {
         SmoothedAnimation {
-            velocity: 300 // Adjust for your value range
-            duration: 300
+            velocity: 200 // Adjust for your value range
+            duration: 200
         }
     }
 

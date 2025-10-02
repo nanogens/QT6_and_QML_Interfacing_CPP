@@ -134,44 +134,56 @@ private:
     FileData m_currentFileData;
     QTimer m_fileMonitorTimer;
     qint64 m_lastFileSize;
+
+private:
+    void ProcessMsg();
 };
 
 static char writeBuffer[BUFFER_SIZE];
 static int writePos = 0;
 static char readBuffer[BUFFER_SIZE];
 static DWORD bytesRead;
+static char readBufferShadow[BUFFER_SIZE];
+static DWORD bytesReadShadow;
+
+struct Counter
+{
+    uint8_t y0;
+
+    uint8_t yi;
+};
 
 struct Send
 {
-  uint8_t crcsend;
-  uint8_t writepos;
+    uint8_t crcsend;
+    uint8_t writepos;
 };
 
 struct Instrument
 {
-  uint8_t selection;
-  uint8_t device;
-  uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX];
-  uint8_t usage;
-  uint8_t errorcode;
+    uint8_t selection;
+    uint8_t device;
+    uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX];
+    uint8_t usage;
+    uint8_t errorcode;
 };
 
 struct Communication
 {
-  uint8_t selection;
-  uint8_t connection;
-  uint8_t baudrate;
+    uint8_t selection;
+    uint8_t connection;
+    uint8_t baudrate;
 };
 
 struct Power
 {
-  uint8_t selection;
-  uint8_t batterytype;
+    uint8_t selection;
+    uint8_t batterytype;
 };
 
 struct Activation
 {
-  uint8_t selection;
+    uint8_t selection;
 };
 
 #endif // CPPCLASS_H
