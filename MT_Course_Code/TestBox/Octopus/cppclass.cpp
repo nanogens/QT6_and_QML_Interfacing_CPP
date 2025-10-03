@@ -10,8 +10,9 @@ Instrument Instrument1;
 Communication Communication1;
 Power Power1;
 Activation Activation1;
-
 Counter Counter1;
+Uart Uart1;
+Uartshadow Uartshadow1;
 
 CppClass::CppClass(QObject *parent) : QObject(parent)
 {
@@ -172,15 +173,15 @@ void CppClass::readwriteThread()
                 //static const char response[] = {0x31, 0x32, 0x33, 0x34};
                 //sendData(QByteArray(response, sizeof(response)));
 
-                sendData(QByteArray(readBuffer, bytesRead));
+                //sendData(QByteArray(readBuffer, bytesRead));  // test the sending of data (to show what we have received)
 
                 // copy bytes to shadow buffer and get outta here
                 bytesReadShadow = bytesRead;
-                for(Counter1.yi; Counter1.yi < bytesReadShadow; Counter1.yi++)
+                for(Counter1.yi = 0; Counter1.yi < bytesReadShadow; Counter1.yi++)
                 {
                     readBufferShadow[Counter1.yi] = readBuffer[Counter1.yi];
                 }
-                //ProcessMsg();
+                ProcessMsg();
             }
         }
         else
@@ -198,27 +199,158 @@ void CppClass::readwriteThread()
     }
 }
 
-void CppClass::ProcessMsg(void)
+void CppClass::FalseHeader(void)
 {
-    /*
     if(readBufferShadow[0] == DLE)
     {
+        Uart1.got = 1;
+    }
+    else
+    {
+        Uart1.got = 0;
+        Uart1.crcmsg = 0;
+    }
+}
 
-    }
-    else if(readBufferShadow[1] == STX)
+void CppClass::IncomingByteCheck(void)
+{
+    if(Uart1.status != FILLED_UART)
     {
-    }
-    else if(readBufferShadow[2] == SOURCE)
-    {
-    }
-    else if(readBufferShadow[3] == DEST)
-    {
-    }
-    */
+        if(Uart1.got != DLE)
+        {
+            if(Uart1.got == 0)
+            {
+                FalseHeader();
+            }
+        }
+        else if(Uart1.got == 1)
+        {
+            if(readBufferShadow[0] == STX)
+            {
+                Uart1.got = 2;
+            }
+            else
+            {
+                FalseHeader();
+            }
+        }
+        else if(Uart1.got == 2)
+        {
+            if(readBufferShadow[0] == SOURCE)
+            {
+                Uart1.got = 3;
+            }
+            else
+            {
+                FalseHeader();
+            }
+        }
+        else if(Uart1.got == 3)
+        {
+            if(readBufferShadow[0] == DEST)
+            {
+                Uart1.got = 4;
+            }
+            else
+            {
+                FalseHeader();
+            }
+        }
+        else if(Uart1.got == 4)  // message length
+        {
+            // Make a function to check message length
+            Uart1.messagelength = readBufferShadow[0];
+            Uart1.got = 5;
+        }
+        else if(Uart1.got == 5)
+        {
+            // Make a function to check message id
+            Uart1.messageidglobal = readBufferShadow[0];
+            Uart1.got = 6;
+        }
 
-    //switch(Lpuart1shadow.messageid)
-    //{
-    //}
+        // Query
+        else if((Uart1.got == 6) && (Search_MsgID(QUERY, Uart1.messageidglobal) == true))
+        {
+            Uart1.crcmsg = readBufferShadow[0];
+
+            if(Uart1.crcmsg == (DLE + STX + DEST + SOURCE + Uart1.messagelength + Uart1.messageidglobal) % 256)
+            {
+                Uart1.status = FILLED_UART; // immediately block it from re-entering this receive interrupt until present request is processed in main loop
+                Uartshadow1.messageid = Uart1.messageidglobal;
+
+                // Some indicator it passed the CRC.
+            }
+            Uart1.got = 0;
+            Uart1.crcmsg = 0;
+        }
+    }
+}
+
+bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
+{
+    if(settingorquery == QUERY)
+    {
+        if(
+            (messageidglobal == VER_RESP_MSGID) ||
+            (messageidglobal == STATUS_RESP_MSGID) ||
+            (messageidglobal == INSTRUMENT_RESP_MSGID) ||
+            (messageidglobal == COMMUNICATIONS_RESP_MSGID) ||
+            (messageidglobal == POWER_RESP_MSGID) ||
+            (messageidglobal == TIME_RESP_MSGID) ||
+            (messageidglobal == SAMPLING_RESP_MSGID) ||
+            (messageidglobal == ACTIVITION_RESP_MSGID) ||
+            (messageidglobal == NOTES_RESP_MSGID) ||
+            (messageidglobal == CLOUD_RESP_MSGID) ||
+            (messageidglobal == MISC_RESP_MSGID) ||
+
+            (messageidglobal == PRESSURE_VARIABLES_RESP_MSGID) ||
+            (messageidglobal == PRESSURE_READINGS_RAW_RESP_MSGID) ||
+            (messageidglobal == PRESSURE_READINGS_PROCESSED_RESP_MSGID) ||
+
+            (messageidglobal == TEMPERATURE_VARIABLES_RESP_MSGID) ||
+            (messageidglobal == TEMPERATURE_READINGS_RAW_RESP_MSGID) ||
+            (messageidglobal == TEMPERATURE_READINGS_PROCESSED_RESP_MSGID) ||
+
+            (messageidglobal == CONDUCTIVITY_VARIABLES_SET_MSGID) ||
+            (messageidglobal == CONDUCTIVITY_READINGS_RAW_RESP_MSGID) ||
+            (messageidglobal == CONDUCTIVITY_READINGS_PROCESSED_RESP_MSGID)
+        )
+        {
+            return true;
+        }
+        return false;
+    }
+    else
+    {
+        if(
+            (messageidglobal == STATUS_SET_MSGID) ||
+            (messageidglobal == INSTRUMENT_SET_MSGID) ||
+            (messageidglobal == COMMUNICATIONS_SET_MSGID) ||
+            (messageidglobal == POWER_SET_MSGID) ||
+            (messageidglobal == TIME_SET_MSGID) ||
+            (messageidglobal == SAMPLING_SET_MSGID) ||
+            (messageidglobal == ACTIVITION_SET_MSGID) ||
+            (messageidglobal == NOTES_SET_MSGID) ||
+            (messageidglobal == CLOUD_SET_MSGID) ||
+            (messageidglobal == MISC_SET_MSGID) ||
+
+            (messageidglobal == PRESSURE_VARIABLES_SET_MSGID) ||
+            (messageidglobal == TEMPERATURE_VARIABLES_SET_MSGID) ||
+            (messageidglobal == CONDUCTIVITY_VARIABLES_SET_MSGID)
+        )
+        {
+            return true;
+        }
+        return false;
+    }
+}
+
+void CppClass::ProcessMsg(void)
+{
+
+
+
 }
 
 void CppClass::sendData(const QByteArray &data)

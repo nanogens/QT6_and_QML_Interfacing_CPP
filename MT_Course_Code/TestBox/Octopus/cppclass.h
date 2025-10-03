@@ -137,6 +137,9 @@ private:
 
 private:
     void ProcessMsg();
+    void IncomingByteCheck();
+    void FalseHeader();
+    bool Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal);
 };
 
 static char writeBuffer[BUFFER_SIZE];
@@ -184,6 +187,25 @@ struct Power
 struct Activation
 {
     uint8_t selection;
+};
+
+struct Uart
+{
+    uint8_t sent;
+    uint8_t crcsend;
+    uint8_t payload[MAX_UART_ARRAY];
+    uint8_t status;
+    uint8_t got;
+    uint8_t messagelength;
+    uint8_t messageidglobal;
+    uint8_t crcmsg;
+    uint8_t crcset;
+};
+
+struct Uartshadow
+{
+    uint8_t messageid;
+    uint8_t payload[MAX_UART_ARRAY];
 };
 
 #endif // CPPCLASS_H
