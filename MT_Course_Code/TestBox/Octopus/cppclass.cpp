@@ -41,15 +41,33 @@ void CppClass::Inits(void)
     send.crcsend = 0;
     send.writepos = 0;
 
+    // Initialize error structure
+    error.errorcode = 0;
+
+    // Initialize version structure
+    version.fw_version[0] = 0;
+    version.fw_version[1] = 0;
+    version.sw_version[0] = 0;
+    version.sw_version[1] = 0;
+
+    // Initialize status structure
+    status.reserved[0] = 0;
+    status.reserved[1] = 0;
+    status.reserved[2] = 0;
+    status.reserved[3] = 0;
+
     // Initialize instrument structure
-    instrument.selection = 0;
+    instrument.reserved = 0;
+    instrument.boxselection = 0;
     instrument.device = 0;
     for(int i = 0; i < ARRAY_SERIALNUMBER_MAX; i++)
     {
         instrument.serialnumber[i] = 0;
     }
-    instrument.usage = 0;
-    instrument.errorcode = 0;
+    for(int i = 0; i < ARRAY_USAGE_MAX; i++)
+    {
+        instrument.usage[i] = 0;
+    }
 
     // Initialize communication structure
     communication.selection = 0;
@@ -468,32 +486,6 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
     }
 }
 
-void CppClass::ProcessMsg(void)
-{
-    if(uart.status == FILLED_UART)
-    {
-        switch(uartshadow.messageid)
-        {
-        case VER_RESP_MSGID:
-            Ver_Resp();
-            uartshadow.messageid = 0;
-            break;
-        case INSTRUMENT_RESP_MSGID:
-            uartshadow.messageid = 0;
-            break;
-        default :
-            uartshadow.messageid = 0;
-            break;
-        }
-        uart.status = CLEAR_UART;
-    }
-}
-
-void CppClass::Ver_Resp(void)
-{
-    qDebug() << "Ver_Resp";
-}
-
 void CppClass::sendData(const QByteArray &data)
 {
     std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
@@ -576,7 +568,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
     QByteArray byteArray;
 
     // Reset all errorcodes for boxes
-    instrument.errorcode = 0;
+    error.errorcode = 0;
 
     qDebug() << "Received variant list and map from QML";
     qDebug() << "List :";
@@ -598,7 +590,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
             {
             case INSTRUMENT:
                 // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
-                instrument.selection = INSTRUMENT;
+                //instrument.selection = INSTRUMENT;
 
                 // Device
                 if(i == 1)
@@ -624,7 +616,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                     if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
                     {
                         qDebug() << "Insufficient number of serial characters";
-                        instrument.errorcode = 0;
+                        error.errorcode = 0;
                     }
                     else  // print it out
                     {
@@ -632,17 +624,17 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                         {
                             //qDebug() << instrument.serialnumber[s];
                         }
-                        instrument.errorcode = 0;
+                        error.errorcode = 0;
                     }
 
                     // if everything is alright, we can send it
-                    if((instrument.errorcode == 0) && (writePos == 0))
+                    if((error.errorcode == 0) && (writePos == 0))
                     {
                         SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
 
                         AddByteToSend(0x00, false); // Reserved
 
-                        AddByteToSend(instrument.selection, false); // Box Selection
+                        AddByteToSend(INSTRUMENT, false); // Box Selection
 
                         qDebug() << "here0: " << send.writepos;
 

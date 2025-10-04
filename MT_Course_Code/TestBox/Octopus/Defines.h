@@ -19,6 +19,7 @@
 
 // array sizes
 #define ARRAY_SERIALNUMBER_MAX 13
+#define ARRAY_USAGE_MAX 2
 #define ARRAY_IP_MAX 11
 
 // boxes
@@ -51,7 +52,7 @@
 #define STATUS_QUERY_MSGLGT 0x07
 #define STATUS_QUERY_MSGID 0x03
 
-#define STATUS_RESP_MSGLGT 0x07
+#define STATUS_RESP_MSGLGT 0x0B
 #define STATUS_RESP_MSGID 0x04
 
 #define STATUS_SET_MSGLGT 0x07

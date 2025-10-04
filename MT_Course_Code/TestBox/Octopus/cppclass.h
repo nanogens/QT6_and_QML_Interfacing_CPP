@@ -51,13 +51,31 @@ struct Send
     uint8_t writepos = 0;
 };
 
+struct Error
+{
+    uint8_t errorcode = 0;
+};
+
+
+// To store incoming Resp messages from MCU
+struct Version
+{
+    uint8_t fw_version[2] = {0};
+    uint8_t sw_version[2] = {0};
+};
+
+struct Status
+{
+    uint8_t reserved[4] = {0};
+};
+
 struct Instrument
 {
-    uint8_t selection = 0;
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
     uint8_t device = 0;
     uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX] = {0};
-    uint8_t usage = 0;
-    uint8_t errorcode = 0;
+    uint8_t usage[ARRAY_USAGE_MAX] = {0};
 };
 
 struct Communication
@@ -162,6 +180,10 @@ private:
     // Structure instances as member variables
     Counter counter;
     Send send;
+    Error error;
+
+    Version version;
+    Status status;
     Instrument instrument;
     Communication communication;
     Power power;
@@ -189,10 +211,16 @@ private:
     void FalseHeader();
     bool Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal);
     void Inits();
-    void Ver_Resp();
+
+private:
     void startFileMonitoring(const QString& filePath);
     void stopFileMonitoring();
     void readFileContents();
+
+private:
+    void Ver_Resp();
+    void Status_Resp();
+    void Instrument_Resp();
 };
 
 #endif // CPPCLASS_H
