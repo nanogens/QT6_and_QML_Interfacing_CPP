@@ -1,7 +1,6 @@
 #ifndef CPPCLASS_H
 #define CPPCLASS_H
 
-
 #include "Defines.h"
 
 #include <QObject>
@@ -15,12 +14,11 @@
 #include <atomic>
 #include <queue>
 #include <condition_variable>
-
-// Add to cppclass.h
 #include <QFile>
 #include <QTextStream>
 #include <QTimer>
 
+// Forward declarations instead of including full headers when possible:cite[6]
 struct DataPoint {
     QString time;
     double temperature;
@@ -40,59 +38,101 @@ struct FileData {
     QVector<DataPoint> dataPoints;
 };
 
+// Structures as proper class members rather than global variables
+struct Counter
+{
+    uint8_t y0 = 0;
+    uint8_t yi = 0;
+};
+
+struct Send
+{
+    uint8_t crcsend = 0;
+    uint8_t writepos = 0;
+};
+
+struct Instrument
+{
+    uint8_t selection = 0;
+    uint8_t device = 0;
+    uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX] = {0};
+    uint8_t usage = 0;
+    uint8_t errorcode = 0;
+};
+
+struct Communication
+{
+    uint8_t selection = 0;
+    uint8_t connection = 0;
+    uint8_t baudrate = 0;
+};
+
+struct Power
+{
+    uint8_t selection = 0;
+    uint8_t batterytype = 0;
+};
+
+struct Activation
+{
+    uint8_t selection = 0;
+};
+
+struct Uart
+{
+    uint8_t sent = 0;
+    uint8_t crcsend = 0;
+    uint8_t payload[MAX_UART_ARRAY] = {0};
+    uint8_t status = 0;
+    uint8_t got = 0;
+    uint8_t messagelength = 0;
+    uint8_t messageidglobal = 0;
+    uint8_t crcmsg = 0;
+    uint8_t crcset = 0;
+};
+
+struct Uartshadow
+{
+    uint8_t messageid = 0;
+    uint8_t payload[MAX_UART_ARRAY] = {0};
+};
 
 class CppClass : public QObject
 {
     Q_OBJECT
+
 public:
     explicit CppClass(QObject *parent = nullptr);
     ~CppClass();
-
-    Q_INVOKABLE void passFromQmlToCpp(QVariantList list, QVariantMap map);
-    Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
-
-    Q_INVOKABLE void passFromQmlToCpp3(QVariantList list, QVariantMap map);
-    Q_INVOKABLE void passFromQmlToCpp3prev(QVariantList list, QVariantMap map);
-
-
-    Q_INVOKABLE QVariantList getVariantListFromCpp();
-    Q_INVOKABLE QVariantMap getVariantMapFromCpp();
-    Q_INVOKABLE void openAndReadFile(const QString& filePath);
-
-    // MT recent additions
-    Q_INVOKABLE void startComm();
-    Q_INVOKABLE void stopComm();
-
-    // Property binding
-    Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)  // running property binding.
-                                                                   // isRunning return value changes and informs runningChanged which is linked via property binding to running
-
-    void setQmlRootObject(QObject *value);
 
     // Public interface
     bool startCommunication(const char* portName);
     void stopCommunication();
     void sendData(const QByteArray &data);
-    void setPortName(const QString& );
-
-    // Additions
+    void setPortName(const QString& portName);
     void setTransmitMode(bool transmitting);
-
-    // Helper functions
     void AddByteToSend(uint8_t data, bool crc_yesno);
     void SendHeader(uint8_t msg_length, uint8_t msg_id);
-
-    // Helper functions - Connect
     bool isRunning();
+
+    // Q_INVOKABLE methods
+    Q_INVOKABLE void passFromQmlToCpp(QVariantList list, QVariantMap map);
+    Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
+    Q_INVOKABLE void passFromQmlToCpp3(QVariantList list, QVariantMap map);
+    Q_INVOKABLE void passFromQmlToCpp3prev(QVariantList list, QVariantMap map);
+    Q_INVOKABLE QVariantList getVariantListFromCpp();
+    Q_INVOKABLE QVariantMap getVariantMapFromCpp();
+    Q_INVOKABLE void openAndReadFile(const QString& filePath);
+    Q_INVOKABLE void startComm();
+    Q_INVOKABLE void stopComm();
+
+    // Property binding
+    Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
+
+    void setQmlRootObject(QObject *value);
 
 signals:
     void runningChanged();
-
-private:
-    QString m_portName;
-
-
-signals:
     void dataReceived(const QByteArray &data);
     void fileDataReady(const QVariantMap &metadata, const QVariantList &dataPoints);
     void newDataPointsAdded(const QVariantList &newPoints);
@@ -111,102 +151,48 @@ private:
         std::atomic<bool> running{false};
     };
 
-    HANDLE openCommPort(const char* portName, DWORD baudRate = CBR_115200);
-    void readwriteThread();
-    void processReceivedData();
+    // Private member variables replacing globals:cite[4]
+    uint8_t  writeBuffer[BUFFER_SIZE] = {0};
+    int writePos = 0;
+    uint8_t  readBuffer[BUFFER_SIZE] = {0};
+    DWORD bytesRead = 0;
+    uint8_t  readBufferShadow[BUFFER_SIZE] = {0};
+    DWORD bytesReadShadow = 0;
 
-    // Member variables
+    // Structure instances as member variables
+    Counter counter;
+    Send send;
+    Instrument instrument;
+    Communication communication;
+    Power power;
+    Activation activation;
+    Uart uart;
+    Uartshadow uartshadow;
+
+    // Existing private members
     HANDLE m_hPort = INVALID_HANDLE_VALUE;
     SerialData m_serialData;
-    std::thread m_readThread;
-    std::thread m_writeThread;
     std::thread m_readwriteThread;
     std::mutex m_portMutex;
     QObject* qmlRootObject = nullptr;
-
-public:
-    void startFileMonitoring(const QString& filePath);
-    void stopFileMonitoring();
-    void readFileContents();
-
-private:
     QFile m_dataFile;
     FileData m_currentFileData;
     QTimer m_fileMonitorTimer;
-    qint64 m_lastFileSize;
+    qint64 m_lastFileSize = 0;
+    QString m_portName;
 
-private:
+    // Private methods
+    HANDLE openCommPort(const char* portName, DWORD baudRate = CBR_115200);
+    void readwriteThread();
     void ProcessMsg();
     void IncomingByteCheck();
     void FalseHeader();
     bool Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal);
-};
-
-static char writeBuffer[BUFFER_SIZE];
-static int writePos = 0;
-static char readBuffer[BUFFER_SIZE];
-static DWORD bytesRead;
-static char readBufferShadow[BUFFER_SIZE];
-static DWORD bytesReadShadow;
-
-struct Counter
-{
-    uint8_t y0;
-
-    uint8_t yi;
-};
-
-struct Send
-{
-    uint8_t crcsend;
-    uint8_t writepos;
-};
-
-struct Instrument
-{
-    uint8_t selection;
-    uint8_t device;
-    uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX];
-    uint8_t usage;
-    uint8_t errorcode;
-};
-
-struct Communication
-{
-    uint8_t selection;
-    uint8_t connection;
-    uint8_t baudrate;
-};
-
-struct Power
-{
-    uint8_t selection;
-    uint8_t batterytype;
-};
-
-struct Activation
-{
-    uint8_t selection;
-};
-
-struct Uart
-{
-    uint8_t sent;
-    uint8_t crcsend;
-    uint8_t payload[MAX_UART_ARRAY];
-    uint8_t status;
-    uint8_t got;
-    uint8_t messagelength;
-    uint8_t messageidglobal;
-    uint8_t crcmsg;
-    uint8_t crcset;
-};
-
-struct Uartshadow
-{
-    uint8_t messageid;
-    uint8_t payload[MAX_UART_ARRAY];
+    void Inits();
+    void Ver_Resp();
+    void startFileMonitoring(const QString& filePath);
+    void stopFileMonitoring();
+    void readFileContents();
 };
 
 #endif // CPPCLASS_H
-

@@ -2,21 +2,14 @@
 #include <QDebug>
 #include <QColor>
 #include <QDate>
-#include <QThread>  // Add this line
-
-// Structure Instantiation
-Send Send1;
-Instrument Instrument1;
-Communication Communication1;
-Power Power1;
-Activation Activation1;
-Counter Counter1;
-Uart Uart1;
-Uartshadow Uartshadow1;
+#include <QThread>
 
 CppClass::CppClass(QObject *parent) : QObject(parent)
 {
     m_serialData.running = false;
+
+    // Initialize all buffers and variables in constructor
+    Inits();
 }
 
 CppClass::~CppClass() {
@@ -26,9 +19,71 @@ CppClass::~CppClass() {
     }
 }
 
+void CppClass::Inits(void)
+{
+    // Initialize buffers using local loop variables, not global counter
+    for(int i = 0; i < BUFFER_SIZE; i++)
+    {
+        writeBuffer[i] = 0;
+        readBuffer[i] = 0;
+        readBufferShadow[i] = 0;
+    }
 
-// ---------------------
+    writePos = 0;
+    bytesRead = 0;
+    bytesReadShadow = 0;
 
+    // Initialize counter structure
+    counter.y0 = 0;
+    counter.yi = 0;
+
+    // Initialize send structure
+    send.crcsend = 0;
+    send.writepos = 0;
+
+    // Initialize instrument structure
+    instrument.selection = 0;
+    instrument.device = 0;
+    for(int i = 0; i < ARRAY_SERIALNUMBER_MAX; i++)
+    {
+        instrument.serialnumber[i] = 0;
+    }
+    instrument.usage = 0;
+    instrument.errorcode = 0;
+
+    // Initialize communication structure
+    communication.selection = 0;
+    communication.connection = 0;
+    communication.baudrate = 0;
+
+    // Initialize power structure
+    power.selection = 0;
+    power.batterytype = 0;
+
+    // Initialize activation structure
+    activation.selection = 0;
+
+    // Initialize uart structure
+    uart.sent = 0;
+    uart.crcsend = 0;
+    for(int i = 0; i < MAX_UART_ARRAY; i++)
+    {
+        uart.payload[i] = 0;
+    }
+    uart.status = CLEAR_UART;
+    uart.got = 0;
+    uart.messagelength = 0;
+    uart.messageidglobal = 0;
+    uart.crcmsg = 0;
+    uart.crcset = 0;
+
+    // Initialize uartshadow structure
+    uartshadow.messageid = 0;
+    for(int i = 0; i < MAX_UART_ARRAY; i++)
+    {
+        uartshadow.payload[i] = 0;
+    }
+}
 
 HANDLE CppClass::openCommPort(const char* portName, DWORD baudRate)
 {
@@ -86,6 +141,7 @@ HANDLE CppClass::openCommPort(const char* portName, DWORD baudRate)
         CloseHandle(hSerial);
         return INVALID_HANDLE_VALUE;
     }
+
     return hSerial;
 }
 
@@ -156,31 +212,27 @@ void CppClass::readwriteThread()
         timeouts.ReadTotalTimeoutConstant = 10;
         SetCommTimeouts(m_hPort, &timeouts);
 
-        DWORD bytesRead;
-        if (ReadFile(m_hPort, readBuffer, ACCEPT_1BYTE_AT_A_TIME_ONLY, &bytesRead, NULL))  // ACCEPT_1BYTE_AT_A_TIME_ONLY = 1, it was BUFFER_SIZE
+        DWORD bytesReadLocal;
+        if (ReadFile(m_hPort, readBuffer, ACCEPT_1BYTE_AT_A_TIME_ONLY, &bytesReadLocal, NULL))  // ACCEPT_1BYTE_AT_A_TIME_ONLY = 1, it was BUFFER_SIZE
         {
-            if (bytesRead > 0)
+            if (bytesReadLocal > 0)
             {
                 // Process received data...
                 std::lock_guard<std::mutex> lock(m_serialData.incomingMutex);
-                for (DWORD i = 0; i < bytesRead; i++)
+                for (DWORD i = 0; i < bytesReadLocal; i++)
                 {
                     m_serialData.incoming.push(readBuffer[i]);
                 }
-                emit dataReceived(QByteArray(readBuffer, bytesRead));
-
-                // Temporary test -- Send raw byte array in response
-                //static const char response[] = {0x31, 0x32, 0x33, 0x34};
-                //sendData(QByteArray(response, sizeof(response)));
-
-                //sendData(QByteArray(readBuffer, bytesRead));  // test the sending of data (to show what we have received)
+                emit dataReceived(QByteArray(reinterpret_cast<const char*>(readBuffer), bytesReadLocal));
 
                 // copy bytes to shadow buffer and get outta here
-                bytesReadShadow = bytesRead;
-                for(Counter1.yi = 0; Counter1.yi < bytesReadShadow; Counter1.yi++)
+                bytesReadShadow = bytesReadLocal;
+                for(counter.yi = 0; counter.yi < bytesReadShadow; counter.yi++)
                 {
-                    readBufferShadow[Counter1.yi] = readBuffer[Counter1.yi];
+                    readBufferShadow[counter.yi] = readBuffer[counter.yi];
                 }
+                //qDebug() << readBufferShadow[0]; // test printout of bytes received
+                IncomingByteCheck();
                 ProcessMsg();
             }
         }
@@ -203,87 +255,157 @@ void CppClass::FalseHeader(void)
 {
     if(readBufferShadow[0] == DLE)
     {
-        Uart1.got = 1;
+        uart.got = 1;
+        qDebug() << "DLE";
     }
     else
     {
-        Uart1.got = 0;
-        Uart1.crcmsg = 0;
+        uart.got = 0;
+        uart.crcmsg = 0;
     }
 }
 
 void CppClass::IncomingByteCheck(void)
 {
-    if(Uart1.status != FILLED_UART)
+    if(uart.status != FILLED_UART)
     {
-        if(Uart1.got != DLE)
+        if(uart.got == 0)
         {
-            if(Uart1.got == 0)
-            {
-                FalseHeader();
-            }
+            FalseHeader();
         }
-        else if(Uart1.got == 1)
+        else if(uart.got == 1)
         {
             if(readBufferShadow[0] == STX)
             {
-                Uart1.got = 2;
+                uart.got = 2;
+                qDebug() << "STX";
             }
             else
             {
-                FalseHeader();
+                //FalseHeader();
             }
         }
-        else if(Uart1.got == 2)
+        else if(uart.got == 2)
         {
-            if(readBufferShadow[0] == SOURCE)
-            {
-                Uart1.got = 3;
-            }
-            else
-            {
-                FalseHeader();
-            }
-        }
-        else if(Uart1.got == 3)
-        {
+            //qDebug() << "Just before checking DEST, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
             if(readBufferShadow[0] == DEST)
             {
-                Uart1.got = 4;
+                uart.got = 3;
+                qDebug() << "DEST";
             }
             else
             {
-                FalseHeader();
+                //FalseHeader();
             }
         }
-        else if(Uart1.got == 4)  // message length
+        else if(uart.got == 3)
         {
-            // Make a function to check message length
-            Uart1.messagelength = readBufferShadow[0];
-            Uart1.got = 5;
+            //qDebug() << "Just before checking SOURCE, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
+            if(readBufferShadow[0] == SOURCE)
+            {
+                uart.got = 4;
+                qDebug() << "SOURCE";
+            }
+            else
+            {
+                //FalseHeader();
+            }
         }
-        else if(Uart1.got == 5)
+        else if(uart.got == 4)  // message length
         {
+            //qDebug() << "Just before checking messagelength, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
+            // Make a function to check message length
+            uart.messagelength = readBufferShadow[0];
+            uart.got = 5;
+        }
+        else if(uart.got == 5)
+        {
+            //qDebug() << "Just before checking messageidglobal, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
             // Make a function to check message id
-            Uart1.messageidglobal = readBufferShadow[0];
-            Uart1.got = 6;
+            uart.messageidglobal = readBufferShadow[0];
+            uart.got = 6;
         }
 
         // Query
-        else if((Uart1.got == 6) && (Search_MsgID(QUERY, Uart1.messageidglobal) == true))
+        else if((uart.got == 6) && (Search_MsgID(QUERY, uart.messageidglobal) == true))
         {
-            Uart1.crcmsg = readBufferShadow[0];
+            uart.crcmsg = readBufferShadow[0];
 
-            if(Uart1.crcmsg == (DLE + STX + DEST + SOURCE + Uart1.messagelength + Uart1.messageidglobal) % 256)
+            if(uart.crcmsg == (DLE + STX + DEST + SOURCE + uart.messagelength + uart.messageidglobal) % 256)
             {
-                Uart1.status = FILLED_UART; // immediately block it from re-entering this receive interrupt until present request is processed in main loop
-                Uartshadow1.messageid = Uart1.messageidglobal;
+                uart.status = FILLED_UART; // immediately block it from re-entering this receive interrupt until present request is processed in main loop
+                uartshadow.messageid = uart.messageidglobal;
 
                 // Some indicator it passed the CRC.
+                qDebug() << "QUERY SUCCESSFULLY RECEIVED!";
             }
-            Uart1.got = 0;
-            Uart1.crcmsg = 0;
+            uart.got = 0;
+            uart.crcmsg = 0;
         }
+
+        // Setting - next 2 blocks
+        else if(
+            (Search_MsgID(SETTING, uart.messageidglobal) == true) &&
+            ((uart.got >= 6) && (uart.got < (uart.messagelength - 1)))
+            )
+        {
+            if(((uart.got - 6) < MAX_UART_ARRAY) && ((uart.got - 6) >= 0)) // protection
+            {
+                uart.payload[uart.got-6] = readBufferShadow[0];
+                uart.got++;
+            }
+            else
+            {
+                uart.got = 0;
+            }
+        }
+
+        else if(
+            (uart.got <= (uart.messagelength - 1)) &&
+            (Search_MsgID(SETTING, uart.messageidglobal) == true)
+            )
+        {
+
+            uart.crcmsg = readBufferShadow[0]; // the crc at the end of Set Working Parameters
+            // it is DEST + SOURCE and not SOURCE + DEST because dest & source values are in relation to what we send not receive.
+            uart.crcset = DLE + STX + DEST + SOURCE + uart.messagelength + uart.messageidglobal;
+
+            for(counter.yi=0; counter.yi < (uart.messagelength - 7); counter.yi++)  // add up the incoming bytes in the incomingbuffer0 to check it against the crc
+            {
+                if(counter.yi < MAX_UART_ARRAY) // protection
+                {
+                    uart.crcset += uart.payload[counter.yi];
+                }
+            }
+
+            if(uart.crcset == uart.crcmsg) //uart.crcmsg)  // if it equals the crc of the message packet
+            {
+                uart.status = FILLED_UART; // immediately block it from reentering uart0 rx until request is processed in main loop
+                // makes us reply host without making any setting if its outside range
+                uart.got = 0;
+
+                for(counter.yi=0; counter.yi < MAX_UART_ARRAY; counter.yi++)
+                {
+                    uartshadow.payload[counter.yi] = uart.payload[counter.yi];
+                }
+                uartshadow.messageid = uart.messageidglobal;
+                qDebug() << "SETTING SUCCESSFULLY RECEIVED!";
+            }
+            else
+            {
+                uart.got = 0;
+            }
+        }
+        else
+        {
+            uart.got = 0;
+            uart.crcmsg = 0;
+        }
+    }
+    else
+    {
+        uart.got = 0;
+        uart.crcmsg = 0;
     }
 }
 
@@ -312,10 +434,10 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == TEMPERATURE_READINGS_RAW_RESP_MSGID) ||
             (messageidglobal == TEMPERATURE_READINGS_PROCESSED_RESP_MSGID) ||
 
-            (messageidglobal == CONDUCTIVITY_VARIABLES_SET_MSGID) ||
+            (messageidglobal == CONDUCTIVITY_VARIABLES_RESP_MSGID) ||
             (messageidglobal == CONDUCTIVITY_READINGS_RAW_RESP_MSGID) ||
             (messageidglobal == CONDUCTIVITY_READINGS_PROCESSED_RESP_MSGID)
-        )
+            )
         {
             return true;
         }
@@ -338,7 +460,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == PRESSURE_VARIABLES_SET_MSGID) ||
             (messageidglobal == TEMPERATURE_VARIABLES_SET_MSGID) ||
             (messageidglobal == CONDUCTIVITY_VARIABLES_SET_MSGID)
-        )
+            )
         {
             return true;
         }
@@ -348,9 +470,28 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
 
 void CppClass::ProcessMsg(void)
 {
+    if(uart.status == FILLED_UART)
+    {
+        switch(uartshadow.messageid)
+        {
+        case VER_RESP_MSGID:
+            Ver_Resp();
+            uartshadow.messageid = 0;
+            break;
+        case INSTRUMENT_RESP_MSGID:
+            uartshadow.messageid = 0;
+            break;
+        default :
+            uartshadow.messageid = 0;
+            break;
+        }
+        uart.status = CLEAR_UART;
+    }
+}
 
-
-
+void CppClass::Ver_Resp(void)
+{
+    qDebug() << "Ver_Resp";
 }
 
 void CppClass::sendData(const QByteArray &data)
@@ -376,8 +517,6 @@ bool CppClass::startCommunication(const char* portName)
     if(m_serialData.running == false)
     {
         m_serialData.running = true;
-        //m_readThread = std::thread(&CppClass::readThread, this);
-        //m_writeThread = std::thread(&CppClass::writeThread, this);
         m_readwriteThread = std::thread(&CppClass::readwriteThread, this);
     }
     return true;
@@ -386,25 +525,11 @@ bool CppClass::startCommunication(const char* portName)
 void CppClass::stopCommunication() {
     m_serialData.running = false;
 
-    /*
-    if (m_readThread.joinable())
-    {
-        m_readThread.join();
-    }
-    if (m_writeThread.joinable())
-    {
-        m_writeThread.join();
-    }
-    */
     if (m_readwriteThread.joinable())
     {
         m_readwriteThread.join();
     }
 }
-
-
-
-// --------------
 
 void CppClass::passFromQmlToCpp(QVariantList list/*array*/, QVariantMap map /*object*/)
 {
@@ -421,7 +546,6 @@ void CppClass::passFromQmlToCpp(QVariantList list/*array*/, QVariantMap map /*ob
     if (!list.isEmpty()) {
         qDebug() << "First filename (from list):" << list[0].toString();
     }
-
 
     /*
     qDebug() << "Map :";
@@ -452,19 +576,12 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
     QByteArray byteArray;
 
     // Reset all errorcodes for boxes
-    Instrument1.errorcode = 0;
+    instrument.errorcode = 0;
 
     qDebug() << "Received variant list and map from QML";
     qDebug() << "List :";
     for( int i{0} ; i < list.size(); i++)
     {
-        //qDebug() << "List item :" << list.at(i).toString();
-        //if(i < 5) // protection max
-        //{
-        //qDebug() << "List item :" << list.at(i).toString().toUtf8();
-
-
-
         // The first string is the selection string.
         // Use it to determine what category the information came from
         // and what therefore needs to be processed.
@@ -477,209 +594,177 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
         }
         else
         {
-            /*
-                for (char c : byteArray)
-                {
-                    writeBuffer[writePos_temp] = c;
-                    writePos_temp++;
-                }
-                */
-
             switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
             {
-                case INSTRUMENT:
-                    // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
-                    //           - it should be zero i think?  maybe not
-                    Instrument1.selection = INSTRUMENT;
+            case INSTRUMENT:
+                // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
+                instrument.selection = INSTRUMENT;
 
-                    // Device
-                    if(i == 1)
+                // Device
+                if(i == 1)
+                {
+                    instrument.device = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Instrument.device : " << instrument.device;
+                }
+                // Serial Number
+                else if(i == 2)
+                {
+                    byteArray = list.at(i).toString().toUtf8();
+                    bytePos_index = 0;
+                    for (char c : byteArray)
                     {
-                        Instrument1.device = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Instrument.device : " << Instrument1.device;
-                    }
-                    // Serial Number
-                    else if(i == 2)
-                    {
-                        byteArray = list.at(i).toString().toUtf8();
-                        bytePos_index = 0;
-                        for (char c : byteArray)
-                        {
-                            if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
-                            {
-                                Instrument1.serialnumber[bytePos_index] = c;
-                                bytePos_index++;
-                                //writeBuffer[writePos_temp] = c;
-                                //writePos_temp++;
-                            }
-                        }
-
-                        // Check if insufficient number of characters
                         if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
                         {
-                            qDebug() << "Insufficient number of serial characters";
-                            Instrument1.errorcode = 0;
+                            instrument.serialnumber[bytePos_index] = c;
+                            bytePos_index++;
                         }
-                        else  // print it out
+                    }
+
+                    // Check if insufficient number of characters
+                    if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                    {
+                        qDebug() << "Insufficient number of serial characters";
+                        instrument.errorcode = 0;
+                    }
+                    else  // print it out
+                    {
+                        for(int s=0; s < bytePos_index; s++)
                         {
-                            for(int s=0; s < bytePos_index; s++)
-                            {
-                                //qDebug() << Instrument1.serialnumber[s];
-                            }
-                            Instrument1.errorcode = 0;
+                            //qDebug() << instrument.serialnumber[s];
                         }
+                        instrument.errorcode = 0;
+                    }
 
-                        // if everything is alright, we can send it
-                        if((Instrument1.errorcode == 0) && (writePos == 0))
+                    // if everything is alright, we can send it
+                    if((instrument.errorcode == 0) && (writePos == 0))
+                    {
+                        SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
+
+                        AddByteToSend(0x00, false); // Reserved
+
+                        AddByteToSend(instrument.selection, false); // Box Selection
+
+                        qDebug() << "here0: " << send.writepos;
+
+                        AddByteToSend(instrument.device, false); // Devices
+
+                        qDebug() << "here1: " << send.writepos;
+
+                        for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
                         {
-                            SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
-
-                            AddByteToSend(0x00, false); // Reserved
-
-                            AddByteToSend(Instrument1.selection, false); // Box Selection
-
-                            qDebug() << "here0: " << Send1.writepos;
-
-                            AddByteToSend(Instrument1.device, false); // Devices
-
-                            qDebug() << "here1: " << Send1.writepos;
-
-                            for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
-                            {
-                                AddByteToSend(Instrument1.serialnumber[r], false);
-                            }
-
-
-
-                            for(int m=0; m < Send1.writepos; m++)
-                            {
-                                qDebug() << writeBuffer[m];
-                            }
-
-                            qDebug() << "here2: " << Send1.writepos;
-
-                            qDebug() << "crc: " << Send1.crcsend;
-
-                            AddByteToSend(Send1.crcsend, true);
-
-                            std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
-                            writePos = Send1.writepos; // triggers send
-
-
-
-
-                            // Send raw byte array
-                            //static const char response[] = {0x31, 0x32, 0x33, 0x34};
-                            //sendData(QByteArray(response, sizeof(response)));
-
-                            qDebug() << "Bytes sent!";
+                            AddByteToSend(instrument.serialnumber[r], false);
                         }
+
+                        for(int m=0; m < send.writepos; m++)
+                        {
+                            qDebug() << writeBuffer[m];
+                        }
+
+                        qDebug() << "here2: " << send.writepos;
+
+                        qDebug() << "crc: " << send.crcsend;
+
+                        AddByteToSend(send.crcsend, true);
+
+                        std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+                        writePos = send.writepos; // triggers send
+
+                        qDebug() << "Bytes sent!";
                     }
-                    break;
+                }
+                break;
 
-                case COMMUNICATIONS:
-                    Communication1.selection = COMMUNICATIONS;
+            case COMMUNICATIONS:
+                communication.selection = COMMUNICATIONS;
 
-                    // Communications
-                    if(i == 1)
-                    {
-                        Communication1.connection = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Communication.connection : " << Communication1.connection;
-                    }
-                    else if(i == 2)
-                    {
-                        Communication1.baudrate = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Communication.baudrate : " << Communication1.baudrate;
-                    }
-                    qDebug() << "2";
-                    break;
+                // Communications
+                if(i == 1)
+                {
+                    communication.connection = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Communication.connection : " << communication.connection;
+                }
+                else if(i == 2)
+                {
+                    communication.baudrate = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Communication.baudrate : " << communication.baudrate;
+                }
+                qDebug() << "2";
+                break;
 
-                case POWER:
-                    Power1.selection = POWER;
+            case POWER:
+                power.selection = POWER;
 
-                    // Power
-                    if(i == 1)
-                    {
-                        Power1.batterytype = ((list.at(i).toString().toUtf8()).toInt());
-                        qDebug() << "Power.batterytype : " << Power1.batterytype;
-                    }
-                    qDebug() << "3";
-                    break;
+                // Power
+                if(i == 1)
+                {
+                    power.batterytype = ((list.at(i).toString().toUtf8()).toInt());
+                    qDebug() << "Power.batterytype : " << power.batterytype;
+                }
+                qDebug() << "3";
+                break;
 
-                case TIME:
-                    break;
+            case TIME:
+                break;
 
-                case SAMPLING:
-                    break;
+            case SAMPLING:
+                break;
 
-                case ACTIVATION:
-                    if(i == 1) {
-                        // Process startDateTime
-                        QString startDateTimeStr = list.at(i).toString();
-                        qDebug() << "Start DateTime:" << startDateTimeStr;
-                        // Add your date parsing logic here
+            case ACTIVATION:
+                if(i == 1) {
+                    // Process startDateTime
+                    QString startDateTimeStr = list.at(i).toString();
+                    qDebug() << "Start DateTime:" << startDateTimeStr;
+                    // Add your date parsing logic here
 
-                        QDateTime utcTime = QDateTime::fromString(startDateTimeStr, Qt::ISODate);
-                        QDateTime localTime = utcTime.toLocalTime();
-                        qDebug() << "Start DateTime (UTC):" << startDateTimeStr;
-                        qDebug() << "Start DateTime (Local):" << localTime.toString("yyyy-MM-dd hh:mm:ss AP");
-                    }
-                    else if(i == 2) {
-                        // Process endDateTime
-                        QString endDateTimeStr = list.at(i).toString();
-                        qDebug() << "End DateTime:" << endDateTimeStr;
-                        // Add your date parsing logic here
-                        QDateTime utcTime = QDateTime::fromString(endDateTimeStr, Qt::ISODate);
-                        QDateTime localTime = utcTime.toLocalTime();
-                        qDebug() << "End DateTime (UTC):" << endDateTimeStr;
-                        qDebug() << "End DateTime (Local):" << localTime.toString("yyyy-MM-dd hh:mm:ss AP");
-                    }
-                    break;
+                    QDateTime utcTime = QDateTime::fromString(startDateTimeStr, Qt::ISODate);
+                    QDateTime localTime = utcTime.toLocalTime();
+                    qDebug() << "Start DateTime (UTC):" << startDateTimeStr;
+                    qDebug() << "Start DateTime (Local):" << localTime.toString("yyyy-MM-dd hh:mm:ss AP");
+                }
+                else if(i == 2) {
+                    // Process endDateTime
+                    QString endDateTimeStr = list.at(i).toString();
+                    qDebug() << "End DateTime:" << endDateTimeStr;
+                    // Add your date parsing logic here
+                    QDateTime utcTime = QDateTime::fromString(endDateTimeStr, Qt::ISODate);
+                    QDateTime localTime = utcTime.toLocalTime();
+                    qDebug() << "End DateTime (UTC):" << endDateTimeStr;
+                    qDebug() << "End DateTime (Local):" << localTime.toString("yyyy-MM-dd hh:mm:ss AP");
+                }
+                break;
 
-                case NOTES:
-                    break;
+            case NOTES:
+                break;
 
-                case CLOUD:
-                    break;
+            case CLOUD:
+                break;
 
-                case MISCELLENEOUS:
-                    break;
+            case MISCELLENEOUS:
+                break;
 
-                default:
-                    qDebug() << "Error : x should have a value";
-                    break;
-
-
+            default:
+                qDebug() << "Error : x should have a value";
+                break;
             }
         }
-        //}
     }
-    //writePos = writePos_temp;
-
-    /*
-    qDebug() << "Map :";
-    for( int i{0} ; i < map.keys().size(); i++)
-    {
-        qDebug() << "Map item :" << map[map.keys().at(i)].toString();
-    }
-    */
 }
 
 // Helper functions
 void CppClass::AddByteToSend(uint8_t data, bool crc_yesno)
 {
-    writeBuffer[Send1.writepos] = data;
+    writeBuffer[send.writepos] = data;
     if(crc_yesno == false)
     {
-        Send1.crcsend += writeBuffer[Send1.writepos];
+        send.crcsend += writeBuffer[send.writepos];
     }
-    Send1.writepos += 1;
+    send.writepos += 1;
 }
 
 void CppClass::SendHeader(uint8_t msg_length, uint8_t msg_id)
 {
-    Send1.writepos = 0;
-    Send1.crcsend = 0;
+    send.writepos = 0;
+    send.crcsend = 0;
     AddByteToSend(DLE, false);
     AddByteToSend(STX, false);
     AddByteToSend(SOURCE, false); // 0x00
@@ -696,47 +781,30 @@ void CppClass::passFromQmlToCpp3prev(QVariantList list, QVariantMap map)
     qDebug() << "List :";
     for( int i{0} ; i < list.size(); i++)
     {
-        //qDebug() << "List item :" << list.at(i).toString();
-        //if(i < 5) // max
+        qDebug() << "List item :" << list.at(i).toString().toUtf8();
+
+        // Convert QString to char array
+        QByteArray byteArray = list.at(i).toString().toUtf8();
+
+        // The first string is the selection string.
+        // Use it to determine what category the information came from
+        // and what therefore needs to be processed.
+        if(i == 0)
         {
-            qDebug() << "List item :" << list.at(i).toString().toUtf8();
-
-            // Convert QString to char array
-            QByteArray byteArray = list.at(i).toString().toUtf8();
-
-            // The first string is the selection string.
-            // Use it to determine what category the information came from
-            // and what therefore needs to be processed.
-            if(i == 0)
+            int x = byteArray.toInt();
+            if(x == 1)
             {
-                int x = byteArray.toInt();
-                if(x == 1)
-                {
-                    qDebug() << "MT ";
-                }
+                qDebug() << "MT ";
             }
+        }
 
-            for (char c : byteArray)
-            {
-                writeBuffer[writePos_temp] = c;
-
-                //if(writePos_temp == 0)
-                //{
-                //qDebug() << c.toInt();
-                //}
-                writePos_temp++;
-            }
+        for (char c : byteArray)
+        {
+            writeBuffer[writePos_temp] = c;
+            writePos_temp++;
         }
     }
     writePos = writePos_temp;
-
-    /*
-    qDebug() << "Map :";
-    for( int i{0} ; i < map.keys().size(); i++)
-    {
-        qDebug() << "Map item :" << map[map.keys().at(i)].toString();
-    }
-    */
 }
 
 // Add a setter for the port name
@@ -774,24 +842,17 @@ void CppClass::triggerJSCall()
     QVariantList list;//array
     list << 123.3 << QColor(Qt::cyan) << "Qt is great" << 10;
 
-
     QVariantMap map;//object
     map.insert("movie","Game of Thrones");
     map.insert("names", "John Snow");
     map.insert("role","Main Character");
     map.insert("release", QDate(2011, 4, 17));
 
-
-
     QMetaObject::invokeMethod(qmlRootObject, "arrayObjectFunc",
                               Q_ARG(QVariant, QVariant::fromValue(list)),
                               Q_ARG(QVariant, QVariant::fromValue(map)));
     qDebug() << "Called JS";
-
 }
-
-
-// --------------
 
 void CppClass::openAndReadFile(const QString& filePath) {
     stopFileMonitoring();
@@ -1013,12 +1074,8 @@ void CppClass::stopFileMonitoring() {
     }
 }
 
-// ------------------
-
-
 void CppClass::startComm()
 {
-
     setPortName("COM3");
     if(startCommunication(m_portName.toUtf8().constData()) == true)
     {
@@ -1040,5 +1097,3 @@ bool CppClass::isRunning()
 {
     return m_serialData.running;
 }
-
-

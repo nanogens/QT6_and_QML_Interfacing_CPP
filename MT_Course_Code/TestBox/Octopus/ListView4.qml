@@ -30,7 +30,6 @@ Item {
     property real lineFadeStart: 0.3
     property real lineFadeIntensity: 0.1
 
-
     property bool selectMainControl: true // true for Option A, false for Option B
 
 
@@ -661,6 +660,24 @@ Item {
                         progressEndColor: "tomato"
                         z: 2
                     }
+                    /*
+                    Image {
+                        source: "qrc:/Octopus/images/Thermometer.png"
+
+                        // Set the desired X and Y position for the center of the image
+                        x: 220
+                        y: 540
+
+                        // Set the scaled width and height
+                        width: 46
+                        height: 79
+
+                        // Ensure smooth scaling
+                        smooth: true
+                        z: 3
+                    }
+                    */
+
 
                     // Depth gauge
                     Text {
@@ -724,7 +741,6 @@ Item {
                     }
                 }
 
-
                 // Option B: Experimental : Rotating carousel
                 Item {
                     id: scalableWrapper
@@ -764,22 +780,27 @@ Item {
                                 opacity: PathView.opacity
                                 z: PathView.z
                                 scale: PathView.scale
+
                                 Image {
-                                    anchors.horizontalCenter: delegateText.horizontalCenter
+                                    id: delegateImage
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                     source: model.file
-                                    width: controlRoot.height * 0.4  // Scale image size relative to container
+                                    width: controlRoot.height * 0.4
                                     height: controlRoot.height * 0.4
                                     smooth: true
+                                    mipmap: true
                                     fillMode: Image.PreserveAspectFit
-                                    sourceSize.width: controlRoot.height * 0.8  // Better scaling for SVG
+                                    sourceSize.width: controlRoot.height * 0.8
                                     sourceSize.height: controlRoot.height * 0.8
                                 }
+
                                 Text {
                                     id: delegateText
                                     text: model.name
-                                    font.pixelSize: controlRoot.height * 0.06  // Scale text relative to container
+                                    font.pixelSize: controlRoot.height * 0.03
                                     font.bold: true
                                     color: "lightgreen"
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                 }
                             }
                         }
@@ -795,7 +816,7 @@ Item {
                                 startX: controlRoot.width / 2
                                 startY: controlRoot.height * 2/3
                                 PathAttribute { name: "opacity"; value: 1.0 }
-                                PathAttribute { name: "scale"; value: 1.0 }
+                                PathAttribute { name: "scale"; value: 2.5 }  // Control front item size here
                                 PathAttribute { name: "z"; value: 0 }
 
                                 // Left curve
@@ -853,10 +874,7 @@ Item {
                         }
                     }
                 }
-
-
             }
-
 
             // Column 2, Row 0
             Rectangle {
