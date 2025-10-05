@@ -1,5 +1,6 @@
 #include "cppclass.h"
 
+// Incoming RESP messages are stored into structures here for display in QML
 void CppClass::ProcessMsg(void)
 {
     if(uart.status == FILLED_UART)

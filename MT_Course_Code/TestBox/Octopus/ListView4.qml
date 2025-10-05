@@ -32,6 +32,68 @@ Item {
 
     property bool selectMainControl: true // true for Option A, false for Option B
 
+    // ADD READING HISTORY PROPERTIES
+    property int maxReadings: 6
+    property ListModel tempReadings: ListModel {}
+    property ListModel depthReadings: ListModel {}
+    property ListModel condReadings: ListModel {}
+
+    // Track previous values to detect changes
+    property real prevTempValue: 0
+    property real prevDepthValue: 0
+    property real prevCondValue: 0
+
+    // Function to add new readings when gauge values change
+    function updateReadingLists() {
+        // Update temperature readings if value changed
+        if (tempGauge.value !== prevTempValue) {
+            addReading(tempReadings, tempGauge.value, tempGauge.unit);
+            prevTempValue = tempGauge.value;
+        }
+
+        // Update depth readings if value changed
+        if (depthGauge.value !== prevDepthValue) {
+            addReading(depthReadings, depthGauge.value, depthGauge.unit);
+            prevDepthValue = depthGauge.value;
+        }
+
+        // Update conductivity readings if value changed
+        if (condGauge.value !== prevCondValue) {
+            addReading(condReadings, condGauge.value, condGauge.unit);
+            prevCondValue = condGauge.value;
+        }
+    }
+
+    function addReading(model, value, unit) {
+        // Insert at beginning (most recent first)
+        model.insert(0, {"value": value, "unit": unit});
+
+        // Remove oldest if exceeds max
+        if (model.count > maxReadings) {
+            model.remove(maxReadings);
+        }
+    }
+
+    // Timer to periodically check for gauge value changes
+    Timer {
+        id: updateTimer
+        interval: 1000 // Check every 1000ms for gauge updates
+        running: true
+        repeat: true
+        onTriggered: updateReadingLists()
+    }
+
+    // Initialize with current gauge values
+    Component.onCompleted: {
+        // Add initial readings from current gauge values
+        addReading(tempReadings, tempGauge.value, tempGauge.unit);
+        addReading(depthReadings, depthGauge.value, depthGauge.unit);
+        addReading(condReadings, condGauge.value, condGauge.unit);
+
+        prevTempValue = tempGauge.value;
+        prevDepthValue = depthGauge.value;
+        prevCondValue = condGauge.value;
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -659,6 +721,33 @@ Item {
                         progressStartColor: "gold"
                         progressEndColor: "tomato"
                         z: 2
+                        aboveLimitThreshold: 60   // Warn when temperature exceeds 60°C
+                        belowLimitThreshold: 10   // Warn when temperature drops below 10°C
+                    }
+
+                    // Temperature readings list
+                    Column {
+                        id: tempReadingsList
+                        anchors {
+                            top: tempGauge.bottom
+                            topMargin: 10
+                            horizontalCenter: tempGauge.horizontalCenter
+                        }
+                        width: tempGauge.width * 0.8
+                        spacing: 2
+                        z: 2
+
+                        Repeater {
+                            model: tempReadings
+                            delegate: Text {
+                                text: value.toFixed(1) + " " + unit
+                                font.pixelSize: 18 // Increased by ~30% from 14
+                                font.bold: index === 0
+                                color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
+                                horizontalAlignment: Text.AlignHCenter
+                                width: parent.width
+                            }
+                        }
                     }
                     /*
                     Image {
@@ -706,6 +795,33 @@ Item {
                         progressStartColor: "springgreen"
                         progressEndColor: "deepskyblue"
                         z: 3
+                        aboveLimitThreshold: 130  // Warn when depth exceeds 130m
+                        belowLimitThreshold: 5    // Warn when depth is below 5m
+                    }
+
+                    // Depth readings list
+                    Column {
+                        id: depthReadingsList
+                        anchors {
+                            top: depthGauge.bottom
+                            topMargin: 10
+                            horizontalCenter: depthGauge.horizontalCenter
+                        }
+                        width: depthGauge.width * 0.8
+                        spacing: 2
+                        z: 3
+
+                        Repeater {
+                            model: depthReadings
+                            delegate: Text {
+                                text: value.toFixed(1) + " " + unit
+                                font.pixelSize: 18 // Increased by ~30% from 14
+                                font.bold: index === 0
+                                color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
+                                horizontalAlignment: Text.AlignHCenter
+                                width: parent.width
+                            }
+                        }
                     }
 
                     // Conductivity gauge
@@ -738,6 +854,33 @@ Item {
                         progressStartColor: "#FF6EC7"
                         progressEndColor: "#8A2BE2"
                         z: 2
+                        aboveLimitThreshold: 1800 // Warn when conductivity exceeds 1800 mS/cm
+                        belowLimitThreshold: 100  // Warn when conductivity drops below 100 mS/cm
+                    }
+
+                    // Conductivity readings list
+                    Column {
+                        id: condReadingsList
+                        anchors {
+                            top: condGauge.bottom
+                            topMargin: 10
+                            horizontalCenter: condGauge.horizontalCenter
+                        }
+                        width: condGauge.width * 0.8
+                        spacing: 2
+                        z: 2
+
+                        Repeater {
+                            model: condReadings
+                            delegate: Text {
+                                text: value.toFixed(1) + " " + unit
+                                font.pixelSize: 18 // Increased by ~30% from 14
+                                font.bold: index === 0
+                                color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
+                                horizontalAlignment: Text.AlignHCenter
+                                width: parent.width
+                            }
+                        }
                     }
                 }
 
@@ -1319,6 +1462,6 @@ Item {
             x: parent.width * (col0Width + col1Width)
             color: "white"
             opacity: showDebugOutlines ? 0.5 : 0
-        }                        
+        }
     }
 }

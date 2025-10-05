@@ -21,6 +21,10 @@ Item {
     property color progressStartColor: "springgreen"
     property color progressEndColor: "deepskyblue"
 
+    // Individual warning limit properties
+    property real aboveLimitThreshold: maxValue - 20  // Default, can be overridden
+    property real belowLimitThreshold: minValue + 20  // Default, can be overridden
+
     // Size properties that scale with parent
     width: 300
     height: 300
@@ -33,7 +37,7 @@ Item {
         id: testAnimation
         from: minValue
         to: maxValue
-        duration: 5000
+        duration: 16000
         loops: Animation.Infinite
         running: true
     }
@@ -255,44 +259,22 @@ Item {
 
         Text {
             id: valueText
-
             text: {
-                if (value > maxValue - 20) return "ABOVE LIMIT!"
-                else if (value < minValue + 20) return "BELOW LIMIT!"
+                if (value > aboveLimitThreshold) return "ABOVE LIMIT!"
+                else if (value < belowLimitThreshold) return "BELOW LIMIT!"
                 else return value.toFixed(1)
             }
             color: {
-                if (value > maxValue - 20) return progressEndColor
-                else if (value < minValue + 20) return progressStartColor
+                if (value > aboveLimitThreshold) return progressEndColor
+                else if (value < belowLimitThreshold) return progressStartColor
                 else return textColor
             }
             font.pixelSize: {
-                if ((value > maxValue - 20) || (value < minValue + 20))
-                    return gaugeRoot.height * 0.06  // Smaller for longer text
+                if ((value > aboveLimitThreshold) || (value < belowLimitThreshold))
+                    return gaugeRoot.height * 0.06
                 else
                     return gaugeRoot.height * 0.12
             }
-
-
-            /*
-            text: {
-                if (value > maxValue) return "ABOVE LIMIT!"
-                else if (value < minValue) return "BELOW LIMIT!"
-                else return value.toFixed(1)
-            }
-            color: {
-                if (value > maxValue) return progressEndColor
-                else if (value < minValue) return progressStartColor
-                else return textColor
-            }
-            font.pixelSize: {
-                if (value > maxValue || value < minValue)
-                    return gaugeRoot.height * 0.06  // Smaller for longer text
-                else
-                    return gaugeRoot.height * 0.12
-            }
-            */
-
             font.bold: true
             font.family: "Segoe UI"
             style: Text.Raised
