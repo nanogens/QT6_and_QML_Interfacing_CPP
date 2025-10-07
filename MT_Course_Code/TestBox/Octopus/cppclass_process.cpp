@@ -15,6 +15,9 @@ void CppClass::ProcessMsg(void)
             Status_Resp();
             uartshadow.messageid = 0;
             break;
+        case COMMUNICATION_RESP_MSGID:
+            Communication_Resp();
+            uartshadow.messageid = 0;
 
 
 

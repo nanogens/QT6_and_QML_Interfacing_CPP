@@ -60,19 +60,26 @@ struct Error
 // To store incoming Resp messages from MCU
 struct Version
 {
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
+
     uint8_t fw_version[2] = {0};
     uint8_t sw_version[2] = {0};
 };
 
 struct Status
 {
-    uint8_t reserved[4] = {0};
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
+
+    uint8_t res[4] = {0};
 };
 
 struct Instrument
 {
     uint8_t reserved = 0;
     uint8_t boxselection = 0;
+
     uint8_t device = 0;
     uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX] = {0};
     uint8_t usage[ARRAY_USAGE_MAX] = {0};
@@ -80,21 +87,67 @@ struct Instrument
 
 struct Communication
 {
-    uint8_t selection = 0;
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
+
     uint8_t connection = 0;
     uint8_t baudrate = 0;
 };
 
 struct Power
 {
-    uint8_t selection = 0;
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
+
     uint8_t batterytype = 0;
+    uint8_t duration[2] = {0};
+    uint8_t powerremaining = {0};
+};
+
+struct Timing
+{
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
+
+    uint8_t set_year = 0;    // 0-99 (00-99)
+    uint8_t set_month = 0;  // 1-12
+    uint8_t set_day = 0;     // 1-31
+    uint8_t set_hour = 0;    // 0-23 (24-hour format)
+    uint8_t set_minute = 0;  // 0-59
+    uint8_t set_second = 0;  // 0-59
+    uint8_t set_ampm = 0;    // 0=AM, 1=PM (optional, since we're using 24-hour)
+
+    uint8_t read_year = 0;
+    uint8_t read_month = 0;
+    uint8_t read_day = 0;
+    uint8_t read_hour = 0;
+    uint8_t read_minute = 0;
+    uint8_t read_second = 0;
+    uint8_t read_ampm = 0;  // 0=AM, 1=PM
+
+    // Additional variables for full year and weekday
+    uint16_t read_full_year = 0; // Full year (2025)
+    uint8_t read_weekday = 0;    // 1=Monday, 7=Sunday
+};
+
+struct Sampling
+{
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
+
+    uint8_t mode = 0;
+    uint8_t rate = 0;
 };
 
 struct Activation
 {
-    uint8_t selection = 0;
+    uint8_t reserved = 0;
+    uint8_t boxselection = 0;
 };
+
+
+
+
 
 struct Uart
 {
@@ -182,14 +235,18 @@ private:
     Send send;
     Error error;
 
+    // Structure instantiation
+    Uart uart;
+    Uartshadow uartshadow;
+
     Version version;
     Status status;
     Instrument instrument;
     Communication communication;
     Power power;
+    Timing timing;
+    Sampling sampling;
     Activation activation;
-    Uart uart;
-    Uartshadow uartshadow;
 
     // Existing private members
     HANDLE m_hPort = INVALID_HANDLE_VALUE;
@@ -221,6 +278,12 @@ private:
     void Ver_Resp();
     void Status_Resp();
     void Instrument_Resp();
+    void Communication_Resp();
+    void Power_Resp();
+    void Timing_Resp();
+    void Sampling_Resp();
+    void Activation_Resp();
+
 };
 
 #endif // CPPCLASS_H

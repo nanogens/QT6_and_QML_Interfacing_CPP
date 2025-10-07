@@ -704,7 +704,6 @@ Item {
                         color: "#ff8c00"
                         z: tempGauge.z + 1
                     }
-
                     ListView4_CircularGuage {
                         id: tempGauge
                         width: 320
@@ -724,7 +723,6 @@ Item {
                         aboveLimitThreshold: 60   // Warn when temperature exceeds 60°C
                         belowLimitThreshold: 10   // Warn when temperature drops below 10°C
                     }
-
                     // Temperature readings list
                     Column {
                         id: tempReadingsList
@@ -749,23 +747,22 @@ Item {
                             }
                         }
                     }
-                    /*
                     Image {
-                        source: "qrc:/Octopus/images/Thermometer.png"
+                        source: "qrc:/Octopus/images/Temperature_Icon.png"
 
                         // Set the desired X and Y position for the center of the image
-                        x: 220
+                        x: 191
                         y: 540
 
                         // Set the scaled width and height
-                        width: 46
-                        height: 79
+                        width: 97
+                        height: 97
 
                         // Ensure smooth scaling
                         smooth: true
                         z: 3
                     }
-                    */
+
 
 
                     // Depth gauge
@@ -823,6 +820,23 @@ Item {
                             }
                         }
                     }
+                    Image {
+                        source: "qrc:/Octopus/images/Depth_Icon.png"
+
+                        // Set the desired X and Y position for the center of the image
+                        x: 513
+                        y: 618
+
+                        // Set the scaled width and height
+                        width: 110
+                        height: 110
+
+                        // Ensure smooth scaling
+                        smooth: true
+                        z: 3
+                    }
+
+
 
                     // Conductivity gauge
                     Text {
@@ -837,7 +851,6 @@ Item {
                         color: "#ff6b9d"
                         z: condGauge.z + 1
                     }
-
                     ListView4_CircularGuage {
                         id: condGauge
                         width: 320
@@ -857,7 +870,6 @@ Item {
                         aboveLimitThreshold: 1800 // Warn when conductivity exceeds 1800 mS/cm
                         belowLimitThreshold: 100  // Warn when conductivity drops below 100 mS/cm
                     }
-
                     // Conductivity readings list
                     Column {
                         id: condReadingsList
@@ -883,6 +895,22 @@ Item {
                         }
                     }
                 }
+                Image {
+                    source: "qrc:/Octopus/images/Conductivity_Icon.png"
+
+                    // Set the desired X and Y position for the center of the image
+                    x: 852
+                    y: 540
+
+                    // Set the scaled width and height
+                    width: 97
+                    height: 97
+
+                    // Ensure smooth scaling
+                    smooth: true
+                    z: 3
+                }
+
 
                 // Option B: Experimental : Rotating carousel
                 Item {

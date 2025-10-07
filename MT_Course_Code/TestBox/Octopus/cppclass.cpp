@@ -51,10 +51,12 @@ void CppClass::Inits(void)
     version.sw_version[1] = 0;
 
     // Initialize status structure
-    status.reserved[0] = 0;
-    status.reserved[1] = 0;
-    status.reserved[2] = 0;
-    status.reserved[3] = 0;
+    status.reserved = 0;
+    status.boxselection = 0;
+    status.res[0] = 0;
+    status.res[1] = 0;
+    status.res[2] = 0;
+    status.res[3] = 0;
 
     // Initialize instrument structure
     instrument.reserved = 0;
@@ -70,16 +72,22 @@ void CppClass::Inits(void)
     }
 
     // Initialize communication structure
-    communication.selection = 0;
+    communication.reserved = 0;
+    communication.boxselection = 0;
     communication.connection = 0;
     communication.baudrate = 0;
 
     // Initialize power structure
-    power.selection = 0;
+    power.reserved = 0;
+    power.boxselection = 0;
     power.batterytype = 0;
+    power.duration[0] = 0;
+    power.duration[1] = 0;
+    power.powerremaining = {0};
 
     // Initialize activation structure
-    activation.selection = 0;
+    activation.reserved = 0;
+    activation.boxselection = 0;
 
     // Initialize uart structure
     uart.sent = 0;
@@ -435,7 +443,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == VER_RESP_MSGID) ||
             (messageidglobal == STATUS_RESP_MSGID) ||
             (messageidglobal == INSTRUMENT_RESP_MSGID) ||
-            (messageidglobal == COMMUNICATIONS_RESP_MSGID) ||
+            (messageidglobal == COMMUNICATION_RESP_MSGID) ||
             (messageidglobal == POWER_RESP_MSGID) ||
             (messageidglobal == TIME_RESP_MSGID) ||
             (messageidglobal == SAMPLING_RESP_MSGID) ||
@@ -466,7 +474,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
         if(
             (messageidglobal == STATUS_SET_MSGID) ||
             (messageidglobal == INSTRUMENT_SET_MSGID) ||
-            (messageidglobal == COMMUNICATIONS_SET_MSGID) ||
+            (messageidglobal == COMMUNICATION_SET_MSGID) ||
             (messageidglobal == POWER_SET_MSGID) ||
             (messageidglobal == TIME_SET_MSGID) ||
             (messageidglobal == SAMPLING_SET_MSGID) ||
@@ -590,7 +598,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
             {
             case INSTRUMENT:
                 // Selection - since we are in here, we know the selection was 1 aka INSTRUMENT
-                //instrument.selection = INSTRUMENT;
+                instrument.boxselection = INSTRUMENT;
 
                 // Device
                 if(i == 1)
@@ -667,7 +675,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                 break;
 
             case COMMUNICATIONS:
-                communication.selection = COMMUNICATIONS;
+                communication.boxselection = COMMUNICATIONS;
 
                 // Communications
                 if(i == 1)
@@ -684,7 +692,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                 break;
 
             case POWER:
-                power.selection = POWER;
+                power.boxselection = POWER;
 
                 // Power
                 if(i == 1)

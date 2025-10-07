@@ -57,9 +57,15 @@ qt_add_qml_module(appOctopus
         RESOURCES
         RESOURCES images/Spectra_Bladder_Mini.png  images/Spectra_Bladder_Sil_1.png images/Spectra_Bladder_Sil_2.png
         RESOURCES images/Spectra_Hydro_Pro.png
-        RESOURCES images/Thermometer.png
+        RESOURCES
         SOURCES cppclass_protocol.cpp
         SOURCES cppclass_process.cpp
+        RESOURCES
+        RESOURCES
+        RESOURCES
+        RESOURCES images/Temperature_Icon.png
+        RESOURCES images/Depth_Icon.png
+        RESOURCES images/Conductivity_Icon.png
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
