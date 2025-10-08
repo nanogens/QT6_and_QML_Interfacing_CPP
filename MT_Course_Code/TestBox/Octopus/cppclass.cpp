@@ -44,31 +44,40 @@ void CppClass::Inits(void)
     // Initialize error structure
     error.errorcode = 0;
 
+
+
+
     // Initialize version structure
-    version.fw_version[0] = 0;
-    version.fw_version[1] = 0;
-    version.sw_version[0] = 0;
-    version.sw_version[1] = 0;
+    version.reserved = 0;
+    version.boxselection = 0;
+    for(counter.y0 = 0; counter.y0 < MAX_VERSION_FW_ARRAY; counter.y0++)
+    {
+        version.fw_version[counter.y0] = 0;
+    }
+    for(counter.y0 = 0; counter.y0 < MAX_VERSION_SW_ARRAY; counter.y0++)
+    {
+        version.sw_version[counter.y0] = 0;
+    }
 
     // Initialize status structure
     status.reserved = 0;
     status.boxselection = 0;
-    status.res[0] = 0;
-    status.res[1] = 0;
-    status.res[2] = 0;
-    status.res[3] = 0;
+    for(counter.y0 = 0; counter.y0 < MAX_STATUS_RES_ARRAY; counter.y0++)
+    {
+        status.res[counter.y0] = 0;
+    }
 
     // Initialize instrument structure
     instrument.reserved = 0;
     instrument.boxselection = 0;
     instrument.device = 0;
-    for(int i = 0; i < ARRAY_SERIALNUMBER_MAX; i++)
+    for(counter.y0 = 0; counter.y0 < MAX_INSTRUMENT_SERIAL_ARRAY; counter.y0++)
     {
-        instrument.serialnumber[i] = 0;
+        instrument.serialnumber[counter.y0] = 0;
     }
-    for(int i = 0; i < ARRAY_USAGE_MAX; i++)
+    for(counter.y0 = 0; counter.y0 < MAX_INSTRUMENT_USAGE_ARRAY; counter.y0++)
     {
-        instrument.usage[i] = 0;
+        instrument.usage[counter.y0] = 0;
     }
 
     // Initialize communication structure
@@ -83,18 +92,47 @@ void CppClass::Inits(void)
     power.batterytype = 0;
     power.duration[0] = 0;
     power.duration[1] = 0;
-    power.powerremaining = {0};
+    for(counter.y0 = 0; counter.y0 < MAX_POWER_POWERREMAINING_ARRAY; counter.y0++)
+    {
+        power.powerremaining[counter.y0] = 0;
+    }
 
     // Initialize activation structure
     activation.reserved = 0;
     activation.boxselection = 0;
 
+
+    // Initialize notes structure
+    for(counter.y0 = 0; counter.y0 < MAX_NOTES_NOTE_ARRAY; counter.y0++)
+    {
+        notes.note[counter.y0] = 0;
+    }
+
+    // Initialize cloud structure
+    for(counter.y0 = 0; counter.y0 < MAX_CLOUD_IP_ARRAY; counter.y0++)
+    {
+        cloud.ip[counter.y0] = 0;
+    }
+    for(counter.y0 = 0; counter.y0 < MAX_CLOUD_LOGIN_ARRAY; counter.y0++)
+    {
+        cloud.login[counter.y0] = 0;
+    }
+    for(counter.y0 = 0; counter.y0 < MAX_CLOUD_PW_ARRAY; counter.y0++)
+    {
+        cloud.pw[counter.y0] = 0;
+    }
+
+
+    // Initialize misc structure
+    misc.stuff = 0;
+
+
     // Initialize uart structure
     uart.sent = 0;
     uart.crcsend = 0;
-    for(int i = 0; i < MAX_UART_ARRAY; i++)
+    for(counter.y0 = 0; counter.y0 < MAX_UART_ARRAY; counter.y0++)
     {
-        uart.payload[i] = 0;
+        uart.payload[counter.y0] = 0;
     }
     uart.status = CLEAR_UART;
     uart.got = 0;
@@ -105,9 +143,9 @@ void CppClass::Inits(void)
 
     // Initialize uartshadow structure
     uartshadow.messageid = 0;
-    for(int i = 0; i < MAX_UART_ARRAY; i++)
+    for(counter.y0 = 0; counter.y0 < MAX_UART_ARRAY; counter.y0++)
     {
-        uartshadow.payload[i] = 0;
+        uartshadow.payload[counter.y0] = 0;
     }
 }
 
@@ -440,12 +478,12 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
     if(settingorquery == QUERY)
     {
         if(
-            (messageidglobal == VER_RESP_MSGID) ||
+            (messageidglobal == VERSION_RESP_MSGID) ||
             (messageidglobal == STATUS_RESP_MSGID) ||
             (messageidglobal == INSTRUMENT_RESP_MSGID) ||
             (messageidglobal == COMMUNICATION_RESP_MSGID) ||
             (messageidglobal == POWER_RESP_MSGID) ||
-            (messageidglobal == TIME_RESP_MSGID) ||
+            (messageidglobal == TIMING_RESP_MSGID) ||
             (messageidglobal == SAMPLING_RESP_MSGID) ||
             (messageidglobal == ACTIVITION_RESP_MSGID) ||
             (messageidglobal == NOTES_RESP_MSGID) ||
@@ -469,6 +507,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
         }
         return false;
     }
+    /* // settings would be outgoing not incoming
     else
     {
         if(
@@ -476,7 +515,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == INSTRUMENT_SET_MSGID) ||
             (messageidglobal == COMMUNICATION_SET_MSGID) ||
             (messageidglobal == POWER_SET_MSGID) ||
-            (messageidglobal == TIME_SET_MSGID) ||
+            (messageidglobal == TIMING_SET_MSGID) ||
             (messageidglobal == SAMPLING_SET_MSGID) ||
             (messageidglobal == ACTIVITION_SET_MSGID) ||
             (messageidglobal == NOTES_SET_MSGID) ||
@@ -492,6 +531,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
         }
         return false;
     }
+    */
 }
 
 void CppClass::sendData(const QByteArray &data)
@@ -613,7 +653,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                     bytePos_index = 0;
                     for (char c : byteArray)
                     {
-                        if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                        if(bytePos_index < MAX_INSTRUMENT_SERIAL_ARRAY)
                         {
                             instrument.serialnumber[bytePos_index] = c;
                             bytePos_index++;
@@ -621,7 +661,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                     }
 
                     // Check if insufficient number of characters
-                    if(bytePos_index < ARRAY_SERIALNUMBER_MAX)
+                    if(bytePos_index < MAX_INSTRUMENT_SERIAL_ARRAY)
                     {
                         qDebug() << "Insufficient number of serial characters";
                         error.errorcode = 0;
@@ -650,7 +690,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 
                         qDebug() << "here1: " << send.writepos;
 
-                        for(int r=0; r < ARRAY_SERIALNUMBER_MAX; r++)
+                        for(int r=0; r < MAX_INSTRUMENT_SERIAL_ARRAY; r++)
                         {
                             AddByteToSend(instrument.serialnumber[r], false);
                         }

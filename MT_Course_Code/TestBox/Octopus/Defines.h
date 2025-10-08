@@ -17,10 +17,36 @@
 #define ACCEPT_1BYTE_AT_A_TIME_ONLY 1
 #define MAX_UART_ARRAY 100
 
-// array sizes
-#define ARRAY_SERIALNUMBER_MAX 13
-#define ARRAY_USAGE_MAX 2
-#define ARRAY_IP_MAX 11
+// Array sizes
+// Version
+#define MAX_VERSION_FW_ARRAY 2
+#define MAX_VERSION_SW_ARRAY 2
+#define MAX_VERSION_RES_ARRAY 4
+// Status
+#define MAX_STATUS_RES_ARRAY 2
+// Instrument
+#define MAX_INSTRUMENT_SERIAL_ARRAY 13
+#define MAX_INSTRUMENT_USAGE_ARRAY 2
+// Power
+#define MAX_POWER_DURATION_ARRAY 2
+#define MAX_POWER_POWERREMAINING_ARRAY 2
+// Timing
+#define MAX_TIMING_COMPCLOCK_FULLYEAR_ARRAY 2
+#define MAX_TIMING_INSTRCLOCK_FULLYEAR_ARRAY 2
+// Activation
+#define MAX_ACTIVATION_START_FULLYEAR_ARRAY 2
+#define MAX_ACTIVATION_END_FULLYEAR_ARRAY 2
+// Notes
+#define MAX_NOTES_NOTE_ARRAY 255
+// Cloud
+#define MAX_CLOUD_IP_ARRAY 13
+#define MAX_CLOUD_LOGIN_ARRAY 25
+#define MAX_CLOUD_PW_ARRAY 25
+// Misc
+
+
+
+
 
 // boxes
 #define INSTRUMENT 0     // Cell A
@@ -42,11 +68,11 @@
 // Messages
 
 // Re-check this -- just using some bogus values for now
-#define VER_QUERY_MSGLGT 0x07
-#define VER_QUERY_MSGID 0x01
+#define VERSION_QUERY_MSGLGT 0x07
+#define VERSION_QUERY_MSGID 0x01
 
-#define VER_RESP_MSGLGT 0x07
-#define VER_RESP_MSGID 0x02
+#define VERSION_RESP_MSGLGT 0x0D
+#define VERSION_RESP_MSGID 0x02
 
 // Re-check this -- just using some bogus values for now
 #define STATUS_QUERY_MSGLGT 0x07
@@ -55,17 +81,17 @@
 #define STATUS_RESP_MSGLGT 0x0B
 #define STATUS_RESP_MSGID 0x04
 
-#define STATUS_SET_MSGLGT 0x07
+#define STATUS_SET_MSGLGT 0x0B
 #define STATUS_SET_MSGID 0x05
 
 // Re-check this -- just using some bogus values for now
 #define INSTRUMENT_QUERY_MSGLGT 0x07
 #define INSTRUMENT_QUERY_MSGID 0x06
 
-#define INSTRUMENT_RESP_MSGLGT 0x17
+#define INSTRUMENT_RESP_MSGLGT 0x19
 #define INSTRUMENT_RESP_MSGID 0x07
 
-#define INSTRUMENT_SET_MSGLGT 0x17
+#define INSTRUMENT_SET_MSGLGT 0x19
 #define INSTRUMENT_SET_MSGID 0x08
 
 // Re-check this -- just using some bogus values for now
@@ -73,7 +99,7 @@
 #define COMMUNICATION_QUERY_MSGID 0x09
 
 #define COMMUNICATION_RESP_MSGLGT 0x17
-#define COMMUNICATION_RESP_MSGID 0x0A
+#define COMMUNICATION_RESP_MSGID 0x0B
 
 #define COMMUNICATION_SET_MSGLGT 0x07
 #define COMMUNICATION_SET_MSGID 0x0B
@@ -83,20 +109,20 @@
 #define POWER_QUERY_MSGID 0x0C
 
 #define POWER_RESP_MSGLGT 0x17
-#define POWER_RESP_MSGID 0x0D
+#define POWER_RESP_MSGID 0x0E
 
 #define POWER_SET_MSGLGT 0x07
 #define POWER_SET_MSGID 0x0E
 
 // Re-check this -- just using some bogus values for now
-#define TIME_QUERY_MSGLGT 0x07
-#define TIME_QUERY_MSGID 0x0F
+#define TIMING_QUERY_MSGLGT 0x07
+#define TIMING_QUERY_MSGID 0x0F
 
-#define TIME_RESP_MSGLGT 0x17
-#define TIME_RESP_MSGID 0x10
+#define TIMING_RESP_MSGLGT 0x1B
+#define TIMING_RESP_MSGID 0x10
 
-#define TIME_SET_MSGLGT 0x07
-#define TIME_SET_MSGID 0x11
+#define TIMING_SET_MSGLGT 0x1B
+#define TIMING_SET_MSGID 0x11
 
 // Re-check this -- just using some bogus values for now
 #define SAMPLING_QUERY_MSGLGT 0x07

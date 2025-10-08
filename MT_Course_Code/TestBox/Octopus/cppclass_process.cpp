@@ -7,8 +7,8 @@ void CppClass::ProcessMsg(void)
     {
         switch(uartshadow.messageid)
         {
-        case VER_RESP_MSGID:
-            Ver_Resp();
+        case VERSION_RESP_MSGID:
+            Version_Resp();
             uartshadow.messageid = 0;
             break;
         case STATUS_RESP_MSGID:

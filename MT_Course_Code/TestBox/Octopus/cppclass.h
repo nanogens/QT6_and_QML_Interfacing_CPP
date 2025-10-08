@@ -57,14 +57,14 @@ struct Error
 };
 
 
-// To store incoming Resp messages from MCU
+// To store incoming Resp messages from MCU and outgoing Set messages from Viewer
 struct Version
 {
     uint8_t reserved = 0;
     uint8_t boxselection = 0;
 
-    uint8_t fw_version[2] = {0};
-    uint8_t sw_version[2] = {0};
+    uint8_t fw_version[MAX_VERSION_FW_ARRAY] = {0};
+    uint8_t sw_version[MAX_VERSION_SW_ARRAY] = {0};
 };
 
 struct Status
@@ -72,7 +72,7 @@ struct Status
     uint8_t reserved = 0;
     uint8_t boxselection = 0;
 
-    uint8_t res[4] = {0};
+    uint8_t res[MAX_STATUS_RES_ARRAY] = {0};
 };
 
 struct Instrument
@@ -81,8 +81,8 @@ struct Instrument
     uint8_t boxselection = 0;
 
     uint8_t device = 0;
-    uint8_t serialnumber[ARRAY_SERIALNUMBER_MAX] = {0};
-    uint8_t usage[ARRAY_USAGE_MAX] = {0};
+    uint8_t serialnumber[MAX_INSTRUMENT_SERIAL_ARRAY] = {0};
+    uint8_t usage[MAX_INSTRUMENT_USAGE_ARRAY] = {0};
 };
 
 struct Communication
@@ -100,8 +100,8 @@ struct Power
     uint8_t boxselection = 0;
 
     uint8_t batterytype = 0;
-    uint8_t duration[2] = {0};
-    uint8_t powerremaining = {0};
+    uint8_t duration[MAX_POWER_DURATION_ARRAY] = {0};
+    uint8_t powerremaining[MAX_POWER_POWERREMAINING_ARRAY] = {0};
 };
 
 struct Timing
@@ -109,25 +109,27 @@ struct Timing
     uint8_t reserved = 0;
     uint8_t boxselection = 0;
 
-    uint8_t set_year = 0;    // 0-99 (00-99)
-    uint8_t set_month = 0;  // 1-12
-    uint8_t set_day = 0;     // 1-31
-    uint8_t set_hour = 0;    // 0-23 (24-hour format)
-    uint8_t set_minute = 0;  // 0-59
-    uint8_t set_second = 0;  // 0-59
-    uint8_t set_ampm = 0;    // 0=AM, 1=PM (optional, since we're using 24-hour)
-
-    uint8_t read_year = 0;
-    uint8_t read_month = 0;
-    uint8_t read_day = 0;
-    uint8_t read_hour = 0;
-    uint8_t read_minute = 0;
-    uint8_t read_second = 0;
-    uint8_t read_ampm = 0;  // 0=AM, 1=PM
-
+    uint8_t compclock_year = 0;    // 0-99 (00-99)
+    uint8_t compclock_month = 0;  // 1-12
+    uint8_t compclock_day = 0;     // 1-31
+    uint8_t compclock_hour = 0;    // 0-23 (24-hour format)
+    uint8_t compclock_minute = 0;  // 0-59
+    uint8_t compclock_second = 0;  // 0-59
+    uint8_t compclock_ampm = 0;    // 0=AM, 1=PM (optional, since we're using 24-hour)
     // Additional variables for full year and weekday
-    uint16_t read_full_year = 0; // Full year (2025)
-    uint8_t read_weekday = 0;    // 1=Monday, 7=Sunday
+    uint8_t compclock_full_year[MAX_TIMING_COMPCLOCK_FULLYEAR_ARRAY] = {0}; // Full year (2025)
+    uint8_t compclock_weekday = 0;    // 1=Monday, 7=Sunday
+
+    uint8_t instrclock_year = 0;
+    uint8_t instrclock_month = 0;
+    uint8_t instrclock_day = 0;
+    uint8_t instrclock_hour = 0;
+    uint8_t instrclock_minute = 0;
+    uint8_t instrclock_second = 0;
+    uint8_t instrclock_ampm = 0;  // 0=AM, 1=PM
+    // Additional variables for full year and weekday
+    uint8_t instrclock_full_year[MAX_TIMING_INSTRCLOCK_FULLYEAR_ARRAY] = {0}; // Full year (2025)
+    uint8_t instrclock_weekday = 0;    // 1=Monday, 7=Sunday
 };
 
 struct Sampling
@@ -143,9 +145,51 @@ struct Activation
 {
     uint8_t reserved = 0;
     uint8_t boxselection = 0;
+
+    // Start Date
+    uint8_t start_year = 0;    // 0-99 (00-99)
+    uint8_t start_month = 0;  // 1-12
+    uint8_t start_day = 0;     // 1-31
+    uint8_t start_hour = 0;    // 0-23 (24-hour format)
+    uint8_t start_minute = 0;  // 0-59
+    uint8_t start_second = 0;  // 0-59
+    uint8_t start_ampm = 0;    // 0=AM, 1=PM (optional, since we're using 24-hour)
+    // Additional variables for full year and weekday
+    uint8_t start_read_full_year[MAX_ACTIVATION_START_FULLYEAR_ARRAY] = {0}; // Full year (2025)
+    uint8_t start_read_weekday = 0;    // 1=Monday, 7=Sunday
+
+    // End Date
+    uint8_t end_year = 0;    // 0-99 (00-99)
+    uint8_t end_month = 0;  // 1-12
+    uint8_t end_day = 0;     // 1-31
+    uint8_t end_hour = 0;    // 0-23 (24-hour format)
+    uint8_t end_minute = 0;  // 0-59
+    uint8_t end_second = 0;  // 0-59
+    uint8_t end_ampm = 0;    // 0=AM, 1=PM (optional, since we're using 24-hour)
+    // Additional variables for full year and weekday
+    uint8_t end_read_full_year[MAX_ACTIVATION_END_FULLYEAR_ARRAY] = {0}; // Full year (2025)
+    uint8_t end_read_weekday = 0;    // 1=Monday, 7=Sunday
+
+    uint8_t event = 0;
+    uint8_t value = 0;
 };
 
+struct Notes
+{
+    uint8_t note[MAX_NOTES_NOTE_ARRAY] = {0};
+};
 
+struct Cloud
+{
+    uint8_t ip[MAX_CLOUD_IP_ARRAY] = {0};
+    uint8_t login[MAX_CLOUD_LOGIN_ARRAY] = {0};
+    uint8_t pw[MAX_CLOUD_PW_ARRAY] = {0};
+};
+
+struct Misc
+{
+    uint8_t stuff;
+};
 
 
 
@@ -247,6 +291,9 @@ private:
     Timing timing;
     Sampling sampling;
     Activation activation;
+    Notes notes;
+    Cloud cloud;
+    Misc misc;
 
     // Existing private members
     HANDLE m_hPort = INVALID_HANDLE_VALUE;
@@ -275,7 +322,7 @@ private:
     void readFileContents();
 
 private:
-    void Ver_Resp();
+    void Version_Resp();
     void Status_Resp();
     void Instrument_Resp();
     void Communication_Resp();

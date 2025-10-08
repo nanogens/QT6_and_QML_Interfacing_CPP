@@ -1,25 +1,23 @@
 #include "cppclass.h"
 
-void CppClass::Ver_Resp(void)
+void CppClass::Version_Resp(void)
 {
-    version.reserved = 0;
-    version.boxselection = 0;
-    version.fw_version[0] = uartshadow.payload[0];
-    version.fw_version[1] = uartshadow.payload[1];
-    version.sw_version[0] = uartshadow.payload[2];
-    version.sw_version[1] = uartshadow.payload[3];
+    version.reserved = uartshadow.payload[0];
+    version.boxselection = uartshadow.payload[1];
+    version.fw_version[0] = uartshadow.payload[2];
+    version.fw_version[1] = uartshadow.payload[3];
+    version.sw_version[0] = uartshadow.payload[4];
+    version.sw_version[1] = uartshadow.payload[5];
 
-    qDebug() << "Ver_Resp Bytes Stored!";
+    qDebug() << "Version_Resp Bytes Stored!";
 }
 
 void CppClass::Status_Resp(void)
 {
-    status.reserved = 0;
-    status.boxselection = 0;
-    status.res[0] = uartshadow.payload[0];
-    status.res[1] = uartshadow.payload[1];
-    status.res[2] = uartshadow.payload[2];
-    status.res[3] = uartshadow.payload[3];
+    status.reserved = uartshadow.payload[0];
+    status.boxselection = uartshadow.payload[1];
+    status.res[0] = uartshadow.payload[2];
+    status.res[1] = uartshadow.payload[3];
 
     qDebug() << "Status_Resp Bytes Stored!";
 }
@@ -65,7 +63,8 @@ void CppClass::Power_Resp(void)
     power.batterytype = uartshadow.payload[2];
     power.duration[0] = uartshadow.payload[3];
     power.duration[1] = uartshadow.payload[4];
-    power.powerremaining = uartshadow.payload[5];
+    power.powerremaining[0] = uartshadow.payload[5];
+    power.powerremaining[1] = uartshadow.payload[6];
 
     qDebug() << "Power_Resp Bytes Stored!";
 }
