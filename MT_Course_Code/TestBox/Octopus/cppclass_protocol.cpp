@@ -14,8 +14,8 @@ void CppClass::Version_Resp(void)
 
 void CppClass::Status_Resp(void)
 {
-    status.reserved = uartshadow.payload[0];
-    status.boxselection = uartshadow.payload[1];
+    status.boxselection = uartshadow.payload[0];
+    status.reserved = uartshadow.payload[1];
     status.res[0] = uartshadow.payload[2];
     status.res[1] = uartshadow.payload[3];
 
@@ -24,8 +24,8 @@ void CppClass::Status_Resp(void)
 
 void CppClass::Instrument_Resp(void)
 {
-    instrument.reserved         = uartshadow.payload[0];
-    instrument.boxselection     = uartshadow.payload[1];
+    instrument.boxselection     = uartshadow.payload[0];
+    instrument.reserved         = uartshadow.payload[1];
     instrument.device           = uartshadow.payload[2];
     instrument.serialnumber[0]  = uartshadow.payload[3];
     instrument.serialnumber[1]  = uartshadow.payload[4];
@@ -44,6 +44,30 @@ void CppClass::Instrument_Resp(void)
     instrument.usage[1]         = uartshadow.payload[17];
 
     qDebug() << "Instrument_Resp Bytes Stored!";
+
+    qDebug() << "-- Instrument_Resp (from MCU):";
+    qDebug() << "  Box Selection:" << instrument.boxselection;
+    qDebug() << "  Reserved:" << instrument.reserved;
+    qDebug() << "  Device:" << instrument.device;
+    qDebug() << "  Serial Number:" << instrument.serialnumber;
+    qDebug() << "  Usage:" << instrument.usage;
+
+
+    // Need to send a subset of the above data to QML front end (perhaps as a List?)
+    // The subset includes device, serialnumber and usage.
+    // How do i do this so that these 3 variables/strings can be updated on the QML side?
+
+    // Create a QVariantMap and insert the data
+    QVariantMap instrumentData;
+    instrumentData["device"] = instrument.device;
+    // Convert uint8_t array to const char* for QString::fromUtf8
+    instrumentData["serialNumber"] = QString::fromUtf8(reinterpret_cast<const char*>(instrument.serialnumber), 13);
+    instrumentData["usage"] = QString::fromUtf8(reinterpret_cast<const char*>(instrument.usage), 2);
+
+    qDebug() << "Emitting instrumentData:" << instrumentData;
+
+    // Emit the signal to send the data to QML
+    emit instrumentDataReceived(instrumentData);
 }
 
 void CppClass::Communication_Resp(void)

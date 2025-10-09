@@ -297,7 +297,7 @@ void CppClass::readwriteThread()
                 }
                 //qDebug() << readBufferShadow[0]; // test printout of bytes received
                 IncomingByteCheck();
-                ProcessMsg();
+                ProcessIncomingMsg();
             }
         }
         else
@@ -342,7 +342,7 @@ void CppClass::IncomingByteCheck(void)
             if(readBufferShadow[0] == STX)
             {
                 uart.got = 2;
-                qDebug() << "STX";
+                //qDebug() << "STX";
             }
             else
             {
@@ -381,6 +381,7 @@ void CppClass::IncomingByteCheck(void)
             // Make a function to check message length
             uart.messagelength = readBufferShadow[0];
             uart.got = 5;
+            qDebug() << "Message LGT" << uart.messagelength;
         }
         else if(uart.got == 5)
         {
@@ -388,9 +389,11 @@ void CppClass::IncomingByteCheck(void)
             // Make a function to check message id
             uart.messageidglobal = readBufferShadow[0];
             uart.got = 6;
+            qDebug() << "Message ID" << uart.messageidglobal;
         }
 
-        // Query
+        /*
+        // Query -- should not even be here !!
         else if((uart.got == 6) && (Search_MsgID(QUERY, uart.messageidglobal) == true))
         {
             uart.crcmsg = readBufferShadow[0];
@@ -406,16 +409,18 @@ void CppClass::IncomingByteCheck(void)
             uart.got = 0;
             uart.crcmsg = 0;
         }
+        */
 
-        // Setting - next 2 blocks
+        // Setting - next 2 blocks  (note: QUERY should be renamed RESP, here and in the Search_MsgID function)
         else if(
-            (Search_MsgID(SETTING, uart.messageidglobal) == true) &&
+            (Search_MsgID(QUERY, uart.messageidglobal) == true) &&
             ((uart.got >= 6) && (uart.got < (uart.messagelength - 1)))
             )
         {
             if(((uart.got - 6) < MAX_UART_ARRAY) && ((uart.got - 6) >= 0)) // protection
             {
                 uart.payload[uart.got-6] = readBufferShadow[0];
+                qDebug() << "Payload : " << uart.payload[uart.got-6];
                 uart.got++;
             }
             else
@@ -426,7 +431,7 @@ void CppClass::IncomingByteCheck(void)
 
         else if(
             (uart.got <= (uart.messagelength - 1)) &&
-            (Search_MsgID(SETTING, uart.messageidglobal) == true)
+            (Search_MsgID(QUERY, uart.messageidglobal) == true)
             )
         {
 
@@ -441,6 +446,10 @@ void CppClass::IncomingByteCheck(void)
                     uart.crcset += uart.payload[counter.yi];
                 }
             }
+
+            qDebug() << "About to check CRC for SET msg";
+            qDebug() << "Calculated CRC : " << uart.crcset;
+            qDebug() << "Message CRC : " << uart.crcmsg;
 
             if(uart.crcset == uart.crcmsg) //uart.crcmsg)  // if it equals the crc of the message packet
             {
@@ -475,6 +484,7 @@ void CppClass::IncomingByteCheck(void)
 
 bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
 {
+    // Something wrong with QUERY, RESP, SET -- CONFUSION !!
     if(settingorquery == QUERY)
     {
         if(
@@ -503,8 +513,10 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == CONDUCTIVITY_READINGS_PROCESSED_RESP_MSGID)
             )
         {
+            qDebug() << "RESP MessageID Found";
             return true;
         }
+        qDebug() << "RESP MessageID Not Found";
         return false;
     }
     /* // settings would be outgoing not incoming

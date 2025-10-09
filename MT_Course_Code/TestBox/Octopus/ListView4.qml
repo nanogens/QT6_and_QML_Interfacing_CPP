@@ -748,15 +748,15 @@ Item {
                         }
                     }
                     Image {
-                        source: "qrc:/Octopus/images/Temperature_Icon.png"
+                        source: "qrc:/Octopus/images/Temperature1_Icon.png"
 
                         // Set the desired X and Y position for the center of the image
-                        x: 191
-                        y: 540
+                        x: 194
+                        y: 542
 
                         // Set the scaled width and height
-                        width: 97
-                        height: 97
+                        width: 90
+                        height: 90
 
                         // Ensure smooth scaling
                         smooth: true
@@ -821,15 +821,15 @@ Item {
                         }
                     }
                     Image {
-                        source: "qrc:/Octopus/images/Depth_Icon.png"
+                        source: "qrc:/Octopus/images/Depth1_Icon.png"
 
                         // Set the desired X and Y position for the center of the image
                         x: 513
-                        y: 618
+                        y: 613
 
                         // Set the scaled width and height
-                        width: 110
-                        height: 110
+                        width: 111
+                        height: 111
 
                         // Ensure smooth scaling
                         smooth: true
@@ -896,15 +896,15 @@ Item {
                     }
                 }
                 Image {
-                    source: "qrc:/Octopus/images/Conductivity_Icon.png"
+                    source: "qrc:/Octopus/images/Conductivity1_Icon.png"
 
                     // Set the desired X and Y position for the center of the image
-                    x: 852
-                    y: 540
+                    x: 855
+                    y: 542
 
                     // Set the scaled width and height
-                    width: 97
-                    height: 97
+                    width: 90
+                    height: 90
 
                     // Ensure smooth scaling
                     smooth: true

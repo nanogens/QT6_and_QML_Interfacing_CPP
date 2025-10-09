@@ -13,6 +13,11 @@ Item {
     id: listview2
     anchors.fill: parent  // Critical: Make Item fill the entire window
 
+    // Add these properties to store the instrument data from C++
+    property string label_Instrument_Device: "Default Device"
+    property string label_Instrument_SerialNumber: "Default Serial"
+    property string label_Instrument_Usage: "Default Usage"
+
     // Define statements (must match Defines.h)
     readonly property int iNSTRUMENT: 0      // Cell A
     readonly property int cOMMUNICATIONS: 1  // B
@@ -121,7 +126,28 @@ Item {
     property string currentActivationMethod: "Switch"
 
 
+    // Function to handle incoming data from C++ - for Instrument
+    function onInstrumentDataReceived(data) {
+        console.log("Instrument data received in QML:", JSON.stringify(data));
 
+        // Update the properties that are bound to your labels
+        label_Instrument_Device = data.device || "No Device";
+        label_Instrument_SerialNumber = data.serialNumber || "No Serial";
+        label_Instrument_Usage = data.usage || "No Usage";
+
+        // Optional: Log the updates for debugging
+        console.log("Updated Device:", label_Instrument_Device);
+        console.log("Updated Serial:", label_Instrument_SerialNumber);
+        console.log("Updated Usage:", label_Instrument_Usage);
+    }
+
+
+    Component.onCompleted:
+    {
+        // Connect the C++ signal to your QML function
+        CppClass.instrumentDataReceived.connect(onInstrumentDataReceived);
+        console.log("Connected to C++ signals");
+    }
 
     // Main Grid Layout
     GridLayout {
@@ -224,7 +250,7 @@ Item {
                             Layout.column: 0
                         }
                         Label {
-                            text: "Submersible Mini AZ"
+                            text: label_Instrument_Device // "Submersible Mini AZ"
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 1
                             Layout.column: 1
@@ -335,7 +361,8 @@ Item {
                                     Instrument_Device: selected_Instrument_Device,
                                     Instrument_Serial_Number: selected_Instrument_Serial_Number
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                //CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.ProcessOutgoingMsg(arr,obj);
                             }
                         }
                     }
@@ -2084,7 +2111,8 @@ Item {
                             calendarDays = daysArray
                         }
 
-                        Component.onCompleted: {
+                        Component.onCompleted:
+                        {
                             currentYear = new Date().getFullYear()
                             currentMonth = new Date().getMonth()
                             selectedDay = new Date().getDate()

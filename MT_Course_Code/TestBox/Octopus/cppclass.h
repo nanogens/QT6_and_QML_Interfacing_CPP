@@ -240,6 +240,7 @@ public:
     Q_INVOKABLE void openAndReadFile(const QString& filePath);
     Q_INVOKABLE void startComm();
     Q_INVOKABLE void stopComm();
+    Q_INVOKABLE void ProcessOutgoingMsg(QVariantList list, QVariantMap map);
 
     // Property binding
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
@@ -251,6 +252,10 @@ signals:
     void dataReceived(const QByteArray &data);
     void fileDataReady(const QVariantMap &metadata, const QVariantList &dataPoints);
     void newDataPointsAdded(const QVariantList &newPoints);
+
+signals:
+    // Declare a signal that emits the QVariantMap
+    void instrumentDataReceived(const QVariantMap &data);
 
 public slots:
     void triggerJSCall();
@@ -310,7 +315,8 @@ private:
     // Private methods
     HANDLE openCommPort(const char* portName, DWORD baudRate = CBR_115200);
     void readwriteThread();
-    void ProcessMsg();
+    void ProcessIncomingMsg();
+    //void ProcessOutgoingMsg(QVariantList list, QVariantMap map);
     void IncomingByteCheck();
     void FalseHeader();
     bool Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal);
