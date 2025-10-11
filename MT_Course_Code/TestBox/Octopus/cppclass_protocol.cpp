@@ -116,3 +116,17 @@ void CppClass::Activation_Resp(void)
 
     qDebug() << "Activation_Resp Bytes Stored!";
 }
+
+
+// ================================
+
+void CppClass::Pressure_Reading_Processed_Query(void)
+{
+  SendHeader(PRESSURE_READINGS_PROCESSED_QUERY_MSGLGT, PRESSURE_READINGS_PROCESSED_QUERY_MSGID);
+  AddByteToSend(send.crcsend, true);
+
+  std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+  writePos = send.writepos; // triggers send
+
+  qDebug() << "Pressure_Reading_Processed_Query Sent!";
+}

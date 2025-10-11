@@ -55,14 +55,16 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
             // Convert QString to char array
             byteArray = list.at(i).toString().toUtf8();
             x = byteArray.toInt();
-            qDebug() << "Instrument.boxselection : " << x;
-            instrument.boxselection = x;  // Box Selection - 1 byte
+            qDebug() << "boxselection : " << x;
+
         }
         else
         {
             switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
             {
+            // SET
             case INSTRUMENT:
+                instrument.boxselection = INSTRUMENT;  // Box Selection - 1 byte
                 // Device - 1 byte
                 if(i == 1)
                 {
@@ -121,6 +123,13 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
                         qDebug() << "Bytes sent!";
                     }
                 }
+                break;
+
+            // QUERY
+            case PRESSURE_READING_PROCESSED_QUERY:
+                //pressurereadingprocessedquery.boxselection = PRESSURE_READING_PROCESSED_QUERY;
+                qDebug() << "In Pressure_Reading_Processed_Query case";
+                Pressure_Reading_Processed_Query();
                 break;
 
             default:

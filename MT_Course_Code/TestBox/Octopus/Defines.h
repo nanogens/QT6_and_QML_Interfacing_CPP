@@ -12,6 +12,7 @@
 
 #define QUERY 0
 #define SETTING 1
+#define RESP 2
 
 #define BUFFER_SIZE 256
 #define ACCEPT_1BYTE_AT_A_TIME_ONLY 1
@@ -59,6 +60,10 @@
 #define CLOUD 7          // Cell H
 #define MISCELLENEOUS 8  // Cell I
 
+// message query activation
+#define PRESSURE_READING_PROCESSED_QUERY 0x2E  // change this later to accomodate raw..etc readings.
+
+
 // message header
 #define DLE 0x10
 #define STX 0x02
@@ -98,10 +103,10 @@
 #define COMMUNICATION_QUERY_MSGLGT 0x07
 #define COMMUNICATION_QUERY_MSGID 0x09
 
-#define COMMUNICATION_RESP_MSGLGT 0x17
-#define COMMUNICATION_RESP_MSGID 0x0B
+#define COMMUNICATION_RESP_MSGLGT 0x0B
+#define COMMUNICATION_RESP_MSGID 0x0A
 
-#define COMMUNICATION_SET_MSGLGT 0x07
+#define COMMUNICATION_SET_MSGLGT 0x0B
 #define COMMUNICATION_SET_MSGID 0x0B
 
 // Re-check this -- just using some bogus values for now
@@ -109,7 +114,7 @@
 #define POWER_QUERY_MSGID 0x0C
 
 #define POWER_RESP_MSGLGT 0x17
-#define POWER_RESP_MSGID 0x0E
+#define POWER_RESP_MSGID 0x0D
 
 #define POWER_SET_MSGLGT 0x07
 #define POWER_SET_MSGID 0x0E
@@ -135,14 +140,14 @@
 #define SAMPLING_SET_MSGID 0x14
 
 // Re-check this -- just using some bogus values for now
-#define ACTIVITION_QUERY_MSGLGT 0x07
-#define ACTIVITION_QUERY_MSGID 0x15
+#define ACTIVATION_QUERY_MSGLGT 0x07
+#define ACTIVATION_QUERY_MSGID 0x15
 
-#define ACTIVITION_RESP_MSGLGT 0x17
-#define ACTIVITION_RESP_MSGID 0x16
+#define ACTIVATION_RESP_MSGLGT 0x17
+#define ACTIVATION_RESP_MSGID 0x16
 
-#define ACTIVITION_SET_MSGLGT 0x07
-#define ACTIVITION_SET_MSGID 0x17
+#define ACTIVATION_SET_MSGLGT 0x07
+#define ACTIVATION_SET_MSGID 0x17
 
 // Re-check this -- just using some bogus values for now
 #define NOTES_QUERY_MSGLGT 0x07
@@ -195,14 +200,8 @@
 #define PRESSURE_READINGS_PROCESSED_QUERY_MSGLGT 0x07
 #define PRESSURE_READINGS_PROCESSED_QUERY_MSGID 0x26
 
-#define PRESSURE_READINGS_PROCESSED_RESP_MSGLGT 0x07
+#define PRESSURE_READINGS_PROCESSED_RESP_MSGLGT 0x11
 #define PRESSURE_READINGS_PROCESSED_RESP_MSGID 0x27
-
-
-
-
-
-
 
 // Re-check this -- just using some bogus values for now
 #define TEMPERATURE_VARIABLES_QUERY_MSGLGT 0x07
@@ -227,11 +226,6 @@
 
 #define TEMPERATURE_READINGS_PROCESSED_RESP_MSGLGT 0x07
 #define TEMPERATURE_READINGS_PROCESSED_RESP_MSGID 0x2E
-
-
-
-
-
 
 // Re-check this -- just using some bogus values for now
 #define CONDUCTIVITY_VARIABLES_QUERY_MSGLGT 0x07

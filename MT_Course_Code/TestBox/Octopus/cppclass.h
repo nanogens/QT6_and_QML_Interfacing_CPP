@@ -337,6 +337,8 @@ private:
     void Sampling_Resp();
     void Activation_Resp();
 
+public:
+    void Pressure_Reading_Processed_Query();
 };
 
 #endif // CPPCLASS_H

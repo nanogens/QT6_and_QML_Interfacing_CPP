@@ -33,7 +33,6 @@ Item {
     readonly property int aRRAY_IP_MAX: 11
     readonly property int aRRAY_LOGIN_MAX: 13
 
-
     // Reference sizes for scaling (unchanged)
     readonly property real baseWidth: 1920
     readonly property real baseHeight: 1080
@@ -361,8 +360,7 @@ Item {
                                     Instrument_Device: selected_Instrument_Device,
                                     Instrument_Serial_Number: selected_Instrument_Serial_Number
                                 };
-                                //CppClass.passFromQmlToCpp3(arr, obj);
-                                CppClass.ProcessOutgoingMsg(arr,obj);
+                                CppClass.passFromQmlToCpp3(arr, obj);
                             }
                         }
                     }

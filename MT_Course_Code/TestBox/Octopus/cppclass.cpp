@@ -342,7 +342,7 @@ void CppClass::IncomingByteCheck(void)
             if(readBufferShadow[0] == STX)
             {
                 uart.got = 2;
-                //qDebug() << "STX";
+                qDebug() << "STX";
             }
             else
             {
@@ -393,6 +393,7 @@ void CppClass::IncomingByteCheck(void)
         }
 
         /*
+        // We probably do not need this.
         // Query -- should not even be here !!
         else if((uart.got == 6) && (Search_MsgID(QUERY, uart.messageidglobal) == true))
         {
@@ -411,9 +412,9 @@ void CppClass::IncomingByteCheck(void)
         }
         */
 
-        // Setting - next 2 blocks  (note: QUERY should be renamed RESP, here and in the Search_MsgID function)
+        // Setting - next 2 blocks  (note: RESP should be renamed RESP, here and in the Search_MsgID function)
         else if(
-            (Search_MsgID(QUERY, uart.messageidglobal) == true) &&
+            (Search_MsgID(RESP, uart.messageidglobal) == true) &&
             ((uart.got >= 6) && (uart.got < (uart.messagelength - 1)))
             )
         {
@@ -431,7 +432,7 @@ void CppClass::IncomingByteCheck(void)
 
         else if(
             (uart.got <= (uart.messagelength - 1)) &&
-            (Search_MsgID(QUERY, uart.messageidglobal) == true)
+            (Search_MsgID(RESP, uart.messageidglobal) == true)
             )
         {
 
@@ -485,7 +486,7 @@ void CppClass::IncomingByteCheck(void)
 bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
 {
     // Something wrong with QUERY, RESP, SET -- CONFUSION !!
-    if(settingorquery == QUERY)
+    if(settingorquery == RESP)
     {
         if(
             (messageidglobal == VERSION_RESP_MSGID) ||
@@ -495,7 +496,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == POWER_RESP_MSGID) ||
             (messageidglobal == TIMING_RESP_MSGID) ||
             (messageidglobal == SAMPLING_RESP_MSGID) ||
-            (messageidglobal == ACTIVITION_RESP_MSGID) ||
+            (messageidglobal == ACTIVATION_RESP_MSGID) ||
             (messageidglobal == NOTES_RESP_MSGID) ||
             (messageidglobal == CLOUD_RESP_MSGID) ||
             (messageidglobal == MISC_RESP_MSGID) ||

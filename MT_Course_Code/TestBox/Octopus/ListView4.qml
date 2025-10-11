@@ -10,6 +10,9 @@ Item {
     height: 1080
     visible: true
 
+    // Define statements (must match Defines.h)
+    readonly property int pRESSURE_READING_PROCESSED_QUERY: 0x2E // if you change it in #defines, change it here too
+
     // Column width ratios (easily adjustable)
     property real col0Width: 0.20  // 25%
     property real col1Width: 0.60  // 50%
@@ -274,10 +277,25 @@ Item {
                                 font.pixelSize: 16 * scaleFactor
                                 Layout.row: 5
                                 Layout.column: 1
+
+                                onClicked: {
+                                    var selection = pRESSURE_READING_PROCESSED_QUERY;
+                                    var reserved = 0;
+                                    var selected_Instrument_Serial_Number = 0;
+                                    var arr = [selection,reserved];
+                                    var obj =
+                                    {
+                                        Selection : selection,
+                                        Reserved: reserved
+                                    };
+                                    //CppClass.passFromQmlToCpp3(arr, obj);
+                                    CppClass.ProcessOutgoingMsg(arr,obj);
+                                }
                             }
-                        }
+                        }                                                                   
                     }
                 }
+
             }
 
             // Column 0, Row 1
@@ -713,7 +731,7 @@ Item {
                             right: depthGauge.left
                             rightMargin: -80
                         }
-                        value: 50
+                        value: 20
                         minValue: 0
                         maxValue: 70
                         unit: "°C"
