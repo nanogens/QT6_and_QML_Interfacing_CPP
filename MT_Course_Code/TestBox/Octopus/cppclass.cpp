@@ -501,17 +501,9 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == CLOUD_RESP_MSGID) ||
             (messageidglobal == MISC_RESP_MSGID) ||
 
-            (messageidglobal == PRESSURE_VARIABLES_RESP_MSGID) ||
-            (messageidglobal == PRESSURE_READINGS_RAW_RESP_MSGID) ||
-            (messageidglobal == PRESSURE_READINGS_PROCESSED_RESP_MSGID) ||
-
-            (messageidglobal == TEMPERATURE_VARIABLES_RESP_MSGID) ||
-            (messageidglobal == TEMPERATURE_READINGS_RAW_RESP_MSGID) ||
-            (messageidglobal == TEMPERATURE_READINGS_PROCESSED_RESP_MSGID) ||
-
-            (messageidglobal == CONDUCTIVITY_VARIABLES_RESP_MSGID) ||
-            (messageidglobal == CONDUCTIVITY_READINGS_RAW_RESP_MSGID) ||
-            (messageidglobal == CONDUCTIVITY_READINGS_PROCESSED_RESP_MSGID)
+            (messageidglobal == CTD_VARIABLES_RESP_MSGID) ||
+            (messageidglobal == CTD_READINGS_RAW_RESP_MSGID) ||
+            (messageidglobal == CTD_READINGS_PROCESSED_RESP_MSGID)
             )
         {
             qDebug() << "RESP MessageID Found";
@@ -535,9 +527,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == CLOUD_SET_MSGID) ||
             (messageidglobal == MISC_SET_MSGID) ||
 
-            (messageidglobal == PRESSURE_VARIABLES_SET_MSGID) ||
-            (messageidglobal == TEMPERATURE_VARIABLES_SET_MSGID) ||
-            (messageidglobal == CONDUCTIVITY_VARIABLES_SET_MSGID)
+            (messageidglobal == CTD_VARIABLES_SET_MSGID) ||
             )
         {
             return true;

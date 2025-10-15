@@ -32,6 +32,7 @@ Item {
     // Calculate the normalized value (0-1 range)
     property real normalizedValue: (value - minValue) / (maxValue - minValue)
 
+    /*
     // ANIMATION FOR TESTING
     PropertyAnimation on value {
         id: testAnimation
@@ -41,6 +42,7 @@ Item {
         loops: Animation.Infinite
         running: true
     }
+    */
 
     Behavior on value {
         SmoothedAnimation {

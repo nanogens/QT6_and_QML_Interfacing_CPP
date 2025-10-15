@@ -26,6 +26,12 @@ void CppClass::ProcessIncomingMsg(void)
             Instrument_Resp();
             uartshadow.messageid = 0;
             break;
+
+        case CTD_READINGS_PROCESSED_RESP_MSGID:
+            CTD_Readings_Processed_Resp();
+            uartshadow.messageid = 0;
+            break;
+
         default :
             uartshadow.messageid = 0;
             break;
@@ -126,10 +132,10 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
                 break;
 
             // QUERY
-            case PRESSURE_READING_PROCESSED_QUERY:
-                //pressurereadingprocessedquery.boxselection = PRESSURE_READING_PROCESSED_QUERY;
-                qDebug() << "In Pressure_Reading_Processed_Query case";
-                Pressure_Reading_Processed_Query();
+            case CTD_READINGS_PROCESSED_QUERY_MSGID:
+                //ctdreadingprocessedquery.boxselection = CTD_READING_PROCESSED_QUERY;
+                qDebug() << "In CTD_Readings_Processed_Query case";
+                CTD_Readings_Processed_Query();
                 break;
 
             default:

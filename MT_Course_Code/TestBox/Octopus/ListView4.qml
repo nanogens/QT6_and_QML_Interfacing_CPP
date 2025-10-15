@@ -11,7 +11,7 @@ Item {
     visible: true
 
     // Define statements (must match Defines.h)
-    readonly property int pRESSURE_READING_PROCESSED_QUERY: 0x2E // if you change it in #defines, change it here too
+    readonly property int cTD_READINGS_PROCESSED_QUERY_MSGID: 0x26 // if you change it in #defines, change it here too
 
     // Column width ratios (easily adjustable)
     property real col0Width: 0.20  // 25%
@@ -101,6 +101,26 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: "black"
+
+
+
+        // Function to handle incoming data from C++ - for Instrument
+        function onCTDReadingsProcessedDataReceived(data) {
+            console.log("CTDReadingsProcessedDataReceived data received in QML:", JSON.stringify(data));
+
+            // Update the properties that are bound to your labels
+            depthGauge.value = data.value || 0;
+
+            // Optional: Log the updates for debugging
+            console.log("Updated depthGuage.value:", depthGauge.value);
+        }
+
+        Component.onCompleted:
+        {
+            // Connect the C++ signal to your QML function
+            CppClass.ctdreadingsprocessedDataReceived.connect(onCTDReadingsProcessedDataReceived);
+            console.log("Connected to C++ signals");
+        }
 
         // Main Grid Layout
         GridLayout {
@@ -279,7 +299,7 @@ Item {
                                 Layout.column: 1
 
                                 onClicked: {
-                                    var selection = pRESSURE_READING_PROCESSED_QUERY;
+                                    var selection = cTD_READINGS_PROCESSED_QUERY_MSGID;
                                     var reserved = 0;
                                     var selected_Instrument_Serial_Number = 0;
                                     var arr = [selection,reserved];
@@ -295,7 +315,6 @@ Item {
                         }                                                                   
                     }
                 }
-
             }
 
             // Column 0, Row 1

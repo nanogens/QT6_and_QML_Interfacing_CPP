@@ -117,16 +117,40 @@ void CppClass::Activation_Resp(void)
     qDebug() << "Activation_Resp Bytes Stored!";
 }
 
+void CppClass::CTD_Readings_Processed_Resp(void)
+{
+  ctd.boxselection            = uartshadow.payload[0];
+  ctd.reserved                = uartshadow.payload[1];
+  ctd.depth[0]                = uartshadow.payload[2];
+  ctd.depth[1]                = uartshadow.payload[3];
+  ctd.temperature[0]          = uartshadow.payload[4];
+  ctd.temperature[1]          = uartshadow.payload[5];
+  ctd.conductivity[0]         = uartshadow.payload[6];
+  ctd.conductivity[1]         = uartshadow.payload[7];
+  ctd.reserved1               = uartshadow.payload[8];
+  ctd.reserved2               = uartshadow.payload[9];
+
+  // Create a QVariantMap and insert the data
+  QVariantMap ctdreadingsprocessedData;
+  ctdreadingsprocessedData["value"] = (ctd.depth[0] << 8) + ctd.depth[1];
+
+  qDebug() << "Emitting ctdreadingsprocessedData:" << ctdreadingsprocessedData;
+
+  // Emit the signal to send the data to QML
+  emit ctdreadingsprocessedDataReceived(ctdreadingsprocessedData);
+
+  qDebug() << "CTD_Readings_Processed_Resp Bytes Stored!";
+}
 
 // ================================
 
-void CppClass::Pressure_Reading_Processed_Query(void)
+void CppClass::CTD_Readings_Processed_Query(void)
 {
-  SendHeader(PRESSURE_READINGS_PROCESSED_QUERY_MSGLGT, PRESSURE_READINGS_PROCESSED_QUERY_MSGID);
+  SendHeader(CTD_READINGS_PROCESSED_QUERY_MSGLGT, CTD_READINGS_PROCESSED_QUERY_MSGID);
   AddByteToSend(send.crcsend, true);
 
   std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
   writePos = send.writepos; // triggers send
 
-  qDebug() << "Pressure_Reading_Processed_Query Sent!";
+  qDebug() << "CTD_Readings_Processed_Query Sent!";
 }

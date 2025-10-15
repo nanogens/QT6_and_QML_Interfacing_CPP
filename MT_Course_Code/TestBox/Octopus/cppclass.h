@@ -191,7 +191,18 @@ struct Misc
     uint8_t stuff;
 };
 
-
+// From QML page 1
+struct CTD
+{
+    uint16_t value = 0;
+    uint8_t boxselection = 0;
+    uint8_t reserved = 0;
+    uint8_t depth[2] = {0};
+    uint8_t temperature[2] = {0};
+    uint8_t conductivity[2] = {0};
+    uint8_t reserved1 = 0;
+    uint8_t reserved2 = 0;
+};
 
 struct Uart
 {
@@ -256,6 +267,7 @@ signals:
 signals:
     // Declare a signal that emits the QVariantMap
     void instrumentDataReceived(const QVariantMap &data);
+    void ctdreadingsprocessedDataReceived(const QVariantMap &data);
 
 public slots:
     void triggerJSCall();
@@ -300,6 +312,10 @@ private:
     Cloud cloud;
     Misc misc;
 
+    // page 1 QML
+    CTD ctd;
+
+
     // Existing private members
     HANDLE m_hPort = INVALID_HANDLE_VALUE;
     SerialData m_serialData;
@@ -338,7 +354,10 @@ private:
     void Activation_Resp();
 
 public:
-    void Pressure_Reading_Processed_Query();
+    void CTD_Readings_Processed_Query();
+
+public:
+    void CTD_Readings_Processed_Resp();
 };
 
 #endif // CPPCLASS_H
