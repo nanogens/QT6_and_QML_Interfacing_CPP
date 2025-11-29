@@ -130,16 +130,133 @@ void CppClass::CTD_Readings_Processed_Resp(void)
   ctd.reserved1               = uartshadow.payload[8];
   ctd.reserved2               = uartshadow.payload[9];
 
+
+  // Pressure (mbar) to Depth (m) calculation
+  //float pressure_mbar = 0;
+  //float surface_pressure_mbar = 0;
+  //float water_pressure_pa = (pressure_mbar - surface_pressure_mbar) * MBAR_TO_PA;
+  //float depth_m = water_pressure_pa / (FRESHWATER_DENSITY * GRAVITY);
+  //int32_t depth_cm_x100 = (int32_t)(depth_m * 10000.0f); // MT changed from 10000.0f to 1.0f for now  // meters × 10000 = cm × 100
+
+
   // Create a QVariantMap and insert the data
   QVariantMap ctdreadingsprocessedData;
-  ctdreadingsprocessedData["value"] = (ctd.depth[0] << 8) + ctd.depth[1];
+
+  ctdreadingsprocessedData["depth"] = (float)((float)((ctd.depth[0] << 8) + ctd.depth[1]) / 10000.0);
+  ctdreadingsprocessedData["temp"] = (float)(((ctd.temperature[0] << 8) + ctd.temperature[1]) / 10.0);
+  ctdreadingsprocessedData["cond"] = ((ctd.conductivity[0] << 8) + ctd.conductivity[1]);
 
   qDebug() << "Emitting ctdreadingsprocessedData:" << ctdreadingsprocessedData;
 
   // Emit the signal to send the data to QML
-  emit ctdreadingsprocessedDataReceived(ctdreadingsprocessedData);
+  emit ctdreadingsprocessedDataReceived(ctdreadingsprocessedData);  
 
   qDebug() << "CTD_Readings_Processed_Resp Bytes Stored!";
+}
+
+void CppClass::Submersible_Info_Resp(void)
+{
+    submersibleinfo.boxselection                       = uartshadow.payload[0];
+    submersibleinfo.reserved                           = uartshadow.payload[1];
+
+    submersibleinfo.device                             = uartshadow.payload[2];
+
+    submersibleinfo.instrument_serialnumber[0]         = uartshadow.payload[3];
+    submersibleinfo.instrument_serialnumber[1]         = uartshadow.payload[4];
+    submersibleinfo.instrument_serialnumber[2]         = uartshadow.payload[5];
+    submersibleinfo.instrument_serialnumber[3]         = uartshadow.payload[6];
+    submersibleinfo.instrument_serialnumber[4]         = uartshadow.payload[7];
+    submersibleinfo.instrument_serialnumber[5]         = uartshadow.payload[8];
+    submersibleinfo.instrument_serialnumber[6]         = uartshadow.payload[9];
+    submersibleinfo.instrument_serialnumber[7]         = uartshadow.payload[10];
+    submersibleinfo.instrument_serialnumber[8]         = uartshadow.payload[11];
+    submersibleinfo.instrument_serialnumber[9]         = uartshadow.payload[12];
+    submersibleinfo.instrument_serialnumber[10]        = uartshadow.payload[13];
+    submersibleinfo.instrument_serialnumber[11]        = uartshadow.payload[14];
+    submersibleinfo.instrument_serialnumber[12]        = uartshadow.payload[15];
+
+    submersibleinfo.reserved                           = uartshadow.payload[16]; // note: same reserved variable as above (2nd byte)
+    submersibleinfo.reserved                           = uartshadow.payload[17]; // note: same reserved variable as above (2nd byte)
+
+    submersibleinfo.memory_total[0]                    = uartshadow.payload[18];
+    submersibleinfo.memory_total[1]                    = uartshadow.payload[19];
+    submersibleinfo.memory_used[0]                     = uartshadow.payload[20];
+    submersibleinfo.memory_used[1]                     = uartshadow.payload[21];
+
+    submersibleinfo.reserved                           = uartshadow.payload[22]; // note: same reserved variable as above (2nd byte)
+    submersibleinfo.reserved                           = uartshadow.payload[23]; // note: same reserved variable as above (2nd byte)
+
+    submersibleinfo.surface_pressure[0]                = uartshadow.payload[24];
+    submersibleinfo.surface_pressure[1]                = uartshadow.payload[25];
+
+    submersibleinfo.reserved                           = uartshadow.payload[26]; // note: same reserved variable as above (2nd byte)
+    submersibleinfo.reserved                           = uartshadow.payload[27]; // note: same reserved variable as above (2nd byte)
+
+    submersibleinfo.battery_cell                       = uartshadow.payload[28];
+    submersibleinfo.battery_type                       = uartshadow.payload[29];
+    submersibleinfo.hours[0]                           = uartshadow.payload[30];
+    submersibleinfo.hours[1]                           = uartshadow.payload[31];
+
+    submersibleinfo.reserved                           = uartshadow.payload[32]; // note: same reserved variable as above (2nd byte)
+    submersibleinfo.reserved                           = uartshadow.payload[33]; // note: same reserved variable as above (2nd byte)
+
+    submersibleinfo.messages_received[0]               = uartshadow.payload[34];
+    submersibleinfo.messages_received[1]               = uartshadow.payload[35];
+    submersibleinfo.messages_received[2]               = uartshadow.payload[36];
+    submersibleinfo.messages_received[3]               = uartshadow.payload[37];
+
+    submersibleinfo.messages_sent[0]                   = uartshadow.payload[38];
+    submersibleinfo.messages_sent[1]                   = uartshadow.payload[39];
+    submersibleinfo.messages_sent[2]                   = uartshadow.payload[40];
+    submersibleinfo.messages_sent[3]                   = uartshadow.payload[41];
+
+    submersibleinfo.reserved                           = uartshadow.payload[42]; // note: same reserved variable as above (2nd byte)
+    submersibleinfo.reserved                           = uartshadow.payload[43]; // note: same reserved variable as above (2nd byte)
+
+    submersibleinfo.tablettime_year                    = uartshadow.payload[44];
+    submersibleinfo.tablettime_month                   = uartshadow.payload[45];
+    submersibleinfo.tablettime_day                     = uartshadow.payload[46];
+    submersibleinfo.tablettime_hour                    = uartshadow.payload[47];
+    submersibleinfo.tablettime_minute                  = uartshadow.payload[48];
+    submersibleinfo.tablettime_second                  = uartshadow.payload[49];
+    submersibleinfo.tablettime_ampm                    = uartshadow.payload[50];
+
+    submersibleinfo.devicetime_year                    = uartshadow.payload[51];
+    submersibleinfo.devicetime_month                   = uartshadow.payload[52];
+    submersibleinfo.devicetime_day                     = uartshadow.payload[53];
+    submersibleinfo.devicetime_hour                    = uartshadow.payload[54];
+    submersibleinfo.devicetime_minute                  = uartshadow.payload[55];
+    submersibleinfo.devicetime_second                  = uartshadow.payload[56];
+    submersibleinfo.devicetime_ampm                    = uartshadow.payload[57];
+
+    submersibleinfo.upcomingrecordingtime_year         = uartshadow.payload[58];
+    submersibleinfo.upcomingrecordingtime_month        = uartshadow.payload[59];
+    submersibleinfo.upcomingrecordingtime_day          = uartshadow.payload[60];
+    submersibleinfo.upcomingrecordingtime_hour         = uartshadow.payload[61];
+    submersibleinfo.upcomingrecordingtime_minute       = uartshadow.payload[62];
+    submersibleinfo.upcomingrecordingtime_second       = uartshadow.payload[63];
+    submersibleinfo.upcomingrecordingtime_ampm         = uartshadow.payload[64];
+
+    submersibleinfo.reserved                           = uartshadow.payload[65]; // note: same reserved variable as above (2nd byte)
+    submersibleinfo.reserved                           = uartshadow.payload[66]; // note: same reserved variable as above (2nd byte)
+
+
+    // Create a QVariantMap and insert the data
+    QVariantMap submersibleinfoprocessedData;
+
+    submersibleinfoprocessedData["battery_cell"] = submersibleinfo.battery_cell;
+    submersibleinfoprocessedData["messages_received"] = ((submersibleinfo.messages_received[0] << 24)
+                                                      + (submersibleinfo.messages_received[1] << 16)
+                                                      + (submersibleinfo.messages_received[2] << 8)
+                                                      + (submersibleinfo.messages_received[3]));
+
+    qDebug() << "Emitting submersibleinfoprocessedData:" << submersibleinfoprocessedData;
+
+    // Emit the signal to send the data to QML
+    emit submersibleinfoprocessedDataReceived(submersibleinfoprocessedData);
+
+
+    qDebug() << "Submersible_Info_Resp Bytes Stored!";
 }
 
 // ================================

@@ -28,6 +28,11 @@ Item {
     property string label_Instrument_SerialNumber: "SN-12345"
     property string label_Instrument_Usage: "Active"
 
+    // ADD BATTERY PROPERTIES:
+    property string label_Battery_BatteryCell: "0"
+    property string label_Battery_BatteryType: "Li-ion"
+    property string label_Battery_Usage: "Active"
+
     // ADD LINE PROPERTIES:
     property real lineOpacity: 0.7
     property real lineFadeStart: 0.3
@@ -46,25 +51,137 @@ Item {
     property real prevDepthValue: 0
     property real prevCondValue: 0
 
+    // Stream button state
+    property bool streamActive: false
+    property bool packetReceived: false  // Track if valid packets are being received
+    property int packetTimeoutMs: 2000   // Timeout for considering packets stale
+
+    // Add this with your other properties
+    property bool isConnected: false  // Track if RS-485 is connected
+
+
+    // Add these with your other properties
+    property string label_Memory_TotalMemory: "4.00 Mega Bytes"
+    property string label_Memory_UsedMemory: "1.22 Mega Bytes"
+    property string label_Memory_SurfacePressure: "1013.25 hPa"
+    property string label_Messages_MessagesReceived: "0"
+    property string label_Messages_MessagesSent: "0"
+    property string label_Reserved_Reserved: "N/A"
+
+    // Timer for periodic RS-485 messages
+    Timer {
+        id: rs485Timer
+        interval: 1000 // 1 second
+        repeat: true
+        running: false
+        property int triggerCount: 0
+
+        onTriggered: {
+            if (streamActive)
+            {
+              sendCTDReadingsProcessedQuery(); // sent every (interval) seconds
+            }
+        }
+    }
+
+    // Timer for packet timeout detection
+    Timer {
+        id: packetTimeoutTimer
+        interval: packetTimeoutMs
+        repeat: false
+        running: false
+        onTriggered: {
+            packetReceived = false;
+            console.log("Packet timeout - no valid packets received");
+        }
+    }
+
+    // Function to send CTD Readings Processed Query
+    function sendCTDReadingsProcessedQuery() {
+        var selection = cTD_READINGS_PROCESSED_QUERY_MSGID;
+        var reserved = 0;
+        var arr = [selection, reserved];
+        var obj = {
+            Selection: selection,
+            Reserved: reserved
+        };
+
+        console.log("Sending periodic CTD Readings Processed Query");
+        CppClass.ProcessOutgoingMsg(arr, obj);
+    }
+
+    // Function to handle stream button click
+    function handleStreamButtonClick() {
+        // Only allow streaming if connected
+        if (!isConnected) {
+            console.log("Cannot start stream - not connected to RS-485 network");
+            return;
+        }
+
+        streamActive = !streamActive;
+        console.log("Stream button clicked. Active:", streamActive);
+
+        if (streamActive) {
+            // Clear all reading lists when starting a new stream
+            tempReadings.clear();
+            depthReadings.clear();
+            condReadings.clear();
+            console.log("Cleared all reading lists - starting fresh stream");
+
+            // Start periodic messaging and reading updates
+            rs485Timer.start();
+            updateTimer.running = true; // Start reading updates
+            // Reset packet received state and start timeout timer
+            packetReceived = false;
+            packetTimeoutTimer.start();
+            console.log("Started periodic RS-485 messages and reading updates");
+        } else {
+            // Stop periodic messaging and timeout timer
+            rs485Timer.stop();
+            packetTimeoutTimer.stop();
+            updateTimer.running = false; // Stop reading updates
+            packetReceived = false;
+            console.log("Stopped periodic RS-485 messages and reading updates");
+        }
+
+        // Send initial command to inform backend of stream state
+        var selection = cTD_READINGS_PROCESSED_QUERY_MSGID;
+        var reserved = 0;
+        var streamState = streamActive ? 1 : 0; // Send stream state as additional parameter
+        var arr = [selection, reserved, streamState];
+        var obj = {
+            Selection: selection,
+            Reserved: reserved,
+            StreamActive: streamActive
+        };
+
+        CppClass.ProcessOutgoingMsg(arr, obj);
+    }
+
     // Function to add new readings when gauge values change
     function updateReadingLists() {
+        // Only add readings if stream is active
+        if (!streamActive) {
+            return;
+        }
+
         // Update temperature readings if value changed
-        if (tempGauge.value !== prevTempValue) {
+        //if (tempGauge.value !== prevTempValue) {
             addReading(tempReadings, tempGauge.value, tempGauge.unit);
             prevTempValue = tempGauge.value;
-        }
+        //}
 
         // Update depth readings if value changed
-        if (depthGauge.value !== prevDepthValue) {
+        //if (depthGauge.value !== prevDepthValue) {
             addReading(depthReadings, depthGauge.value, depthGauge.unit);
             prevDepthValue = depthGauge.value;
-        }
+        //}
 
         // Update conductivity readings if value changed
-        if (condGauge.value !== prevCondValue) {
+        //if (condGauge.value !== prevCondValue) {
             addReading(condReadings, condGauge.value, condGauge.unit);
             prevCondValue = condGauge.value;
-        }
+        //}
     }
 
     function addReading(model, value, unit) {
@@ -77,11 +194,60 @@ Item {
         }
     }
 
-    // Timer to periodically check for gauge value changes
+    // Function to handle connection state changes
+    function setConnectionState(connected) {
+        console.log("=== setConnectionState called ===");
+        console.log("Before - isConnected:", isConnected, "streamActive:", streamActive);
+
+        isConnected = connected;
+        console.log("After - isConnected:", isConnected, "streamActive:", streamActive);
+        console.log("RS-485 connection state:", connected ? "Connected" : "Disconnected");
+
+        // Force reset streaming state whenever connection changes
+        resetStreamState();
+    }
+
+    // Add this function to ListView4.qml
+    function resetStreamState() {
+        console.log("=== resetStreamState called ===");
+        console.log("Before reset - streamActive:", streamActive);
+
+        streamActive = false;
+        rs485Timer.stop();
+        packetTimeoutTimer.stop();
+        updateTimer.running = false;
+        packetReceived = false;
+
+        console.log("After reset - streamActive:", streamActive);
+        console.log("Resetting stream state to default");
+    }
+
+    // Add this to ListView4.qml to sync with CppClass.running
+    Connections {
+        target: CppClass
+        function onRunningChanged() {
+            isConnected = CppClass.running;
+            console.log("CppClass.running changed to:", CppClass.running);
+
+            // If communication stopped, force stop streaming
+            if (!CppClass.running && streamActive) {
+                console.log("Communication stopped - forcing stream to deactivate");
+                // Don't call handleStreamButtonClick() - directly reset the state
+                streamActive = false;
+                rs485Timer.stop();
+                packetTimeoutTimer.stop();
+                updateTimer.running = false;
+                packetReceived = false;
+                console.log("Stream forcibly deactivated due to disconnection");
+            }
+        }
+    }
+
+    // Timer to periodically check for gauge value changes - only when stream is active
     Timer {
         id: updateTimer
         interval: 1000 // Check every 1000ms for gauge updates
-        running: true
+        running: streamActive // Only run when stream is active
         repeat: true
         onTriggered: updateReadingLists()
     }
@@ -93,8 +259,8 @@ Item {
         addReading(depthReadings, depthGauge.value, depthGauge.unit);
         addReading(condReadings, condGauge.value, condGauge.unit);
 
-        prevTempValue = tempGauge.value;
         prevDepthValue = depthGauge.value;
+        prevTempValue = tempGauge.value;
         prevCondValue = condGauge.value;
     }
 
@@ -102,23 +268,66 @@ Item {
         anchors.fill: parent
         color: "black"
 
-
-
         // Function to handle incoming data from C++ - for Instrument
-        function onCTDReadingsProcessedDataReceived(data) {
+        function onCTDReadingsProcessedDataReceived(data)
+        {
             console.log("CTDReadingsProcessedDataReceived data received in QML:", JSON.stringify(data));
 
             // Update the properties that are bound to your labels
-            depthGauge.value = data.value || 0;
+            depthGauge.value = data.depth || 0;
+            tempGauge.value = data.temp || 0;
+            condGauge.value = data.cond || 0;
+
+            // Mark that we received a valid packet and restart timeout timer
+            if (streamActive) {
+                packetReceived = true;
+                packetTimeoutTimer.restart();
+                console.log("Valid packet received - updating stream button state");
+            }
 
             // Optional: Log the updates for debugging
             console.log("Updated depthGuage.value:", depthGauge.value);
+            console.log("Updated tempGuage.value:", tempGauge.value);
+            console.log("Updated condGuage.value:", condGauge.value);
         }
+
+        function onSubmersibleInfoProcessedDataReceived(data)
+        {
+            console.log("SubmersibleInfoProcessedDataReceived data received in QML:", JSON.stringify(data));
+
+            // Update the properties that are bound to your labels
+
+            // This is if data.battery_cell is to be interpreted as a number as opposed to a character
+            if (data.battery_cell !== undefined) {
+                label_Battery_BatteryCell = data.battery_cell.toFixed(1) + " V";  // Example: "3.7 V"
+            } else {
+                label_Battery_BatteryCell = "N/A";
+            }
+
+            // This is if data.messages_received is to be interpreted as a number as opposed to a character
+            if (data.messages_received !== undefined) {
+                label_Messages_MessagesReceived = data.messages_received.toFixed(0);  // Example: 234234
+            } else {
+                label_Messages_MessagesReceived = "N/A";
+            }
+
+
+            // Mark that we received a valid packet and restart timeout timer
+            if (streamActive) {
+                packetReceived = true;
+                packetTimeoutTimer.restart();
+                console.log("Valid packet received - updating stream button state");
+            }
+
+            console.log("Updated label_Battery_BatteryCell:", label_Battery_BatteryCell);
+        }
+
 
         Component.onCompleted:
         {
             // Connect the C++ signal to your QML function
             CppClass.ctdreadingsprocessedDataReceived.connect(onCTDReadingsProcessedDataReceived);
+            CppClass.submersibleinfoprocessedDataReceived.connect(onSubmersibleInfoProcessedDataReceived);
             console.log("Connected to C++ signals");
         }
 
@@ -161,7 +370,7 @@ Item {
                 }
             }
 
-            // Column 0: 3 rows
+            // Column 0: Row 0
             Rectangle {
                 id: col0row0
                 Layout.column: 0
@@ -239,7 +448,7 @@ Item {
 
                             // Row 1: Device
                             Label {
-                                text: "  Device  . ."
+                                text: "  Device  . . . . . . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
@@ -255,7 +464,7 @@ Item {
 
                             // Row 2 : Serial number
                             Label {
-                                text: "  Serial Number  ."
+                                text: "  Serial Number  . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
@@ -312,7 +521,7 @@ Item {
                                     CppClass.ProcessOutgoingMsg(arr,obj);
                                 }
                             }
-                        }                                                                   
+                        }
                     }
                 }
             }
@@ -360,7 +569,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Instrument Status"
+                                    item.text = "Logger Memory"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -393,51 +602,39 @@ Item {
                             }
 
 
-                            // Row 1: Device
+                            // Row 1: Total Memory
                             Label {
-                                text: "  Device  . ."
+                                text: "  Total Memory  . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: "Submersible Mini AZ"
+                                text: label_Memory_TotalMemory
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
                             }
 
 
-                            // Row 2 : Serial number
+                            // Row 2 : Used Memory
                             Label {
-                                text: "  Serial Number  ."
+                                text: "  Used Memory  . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Instrument_SerialNumber
+                                text: label_Memory_UsedMemory
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
                             }
 
-                            // Row 3 : Usage
-                            Label {
-                                text: "  Usage  . . . . . . . . . . . . ."
-                                font.bold: true
-                                font.pixelSize: generalFontSize * scaleFactor
-                                Layout.row: 3
-                                Layout.column: 0
-                            }
-                            Label {
-                                text: label_Instrument_Usage
-                                font.pixelSize: generalFontSize * scaleFactor
-                                Layout.row: 3
-                                Layout.column: 1
-                            }
+                            // Row 3 : Unassigned
+
 
                             // Row 4 : Spacer
                             Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
@@ -502,7 +699,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Instrument Status"
+                                    item.text = "Pressure Configuration"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -535,22 +732,22 @@ Item {
                             }
 
 
-                            // Row 1: Device
+                            // Row 1: Surface Pressure
                             Label {
-                                text: "  Device  . ."
+                                text: "  Surface Pressure  . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: "Submersible Mini AZ"
+                                text: label_Memory_SurfacePressure
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
                             }
 
-
+                            /*
                             // Row 2 : Serial number
                             Label {
                                 text: "  Serial Number  ."
@@ -580,6 +777,7 @@ Item {
                                 Layout.row: 3
                                 Layout.column: 1
                             }
+                            */
 
                             // Row 4 : Spacer
                             Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
@@ -602,6 +800,7 @@ Item {
             }
 
 
+
             // Column 1, Row 0 to 2  -- Guage Cluster
             Rectangle {
                 Layout.column: 1
@@ -617,6 +816,59 @@ Item {
                     text: "Col 1 (Spans 3 rows)\n" + (col1Width * 100).toFixed(0) + "%"
                     anchors.centerIn: parent
                     color: "white"
+                }
+
+                // Stream Button - Positioned in upper right corner of gauge cluster
+                MouseArea {
+                    id: streamButton
+                    width: 175
+                    height: 56
+                    anchors {
+                        top: parent.top
+                        topMargin: 20
+                        right: parent.right
+                        rightMargin: 30
+                    }
+
+                    onClicked: {
+                        handleStreamButtonClick();
+                    }
+
+                    Image {
+                        id: streamButtonImage
+                        anchors.fill: parent
+                        source: {
+                            // Always show deactivate button if not connected, regardless of streamActive state
+                            if (!isConnected) {
+                                return "qrc:/Octopus/images/Stream_Deactivate_Button.png";
+                            }
+
+                            if (!streamActive) {
+                                return "qrc:/Octopus/images/Stream_Deactivate_Button.png";
+                            } else {
+                                // When active, show different images based on packet reception
+                                return packetReceived ?
+                                    "qrc:/Octopus/images/Stream_ActivateToggle_Button.png" :
+                                    "qrc:/Octopus/images/Stream_Activate_Button.png";
+                            }
+                        }
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                    }
+
+                    // Add hover effect
+                    states: State {
+                        name: "hovered"
+                        when: streamButton.containsMouse
+                        PropertyChanges {
+                            target: streamButtonImage
+                            scale: 1.05
+                        }
+                    }
+
+                    transitions: Transition {
+                        NumberAnimation { property: "scale"; duration: 100 }
+                    }
                 }
 
                 // Option A: Container for the gauge cluster
@@ -750,15 +1002,15 @@ Item {
                             right: depthGauge.left
                             rightMargin: -80
                         }
-                        value: 20
-                        minValue: 0
-                        maxValue: 70
+                        value: 90
+                        minValue: -30
+                        maxValue: 90
                         unit: "°C"
                         progressStartColor: "gold"
                         progressEndColor: "tomato"
                         z: 2
-                        aboveLimitThreshold: 60   // Warn when temperature exceeds 60°C
-                        belowLimitThreshold: 10   // Warn when temperature drops below 10°C
+                        aboveLimitThreshold: 85   // Warn when temperature exceeds 60°C
+                        belowLimitThreshold: -25   // Warn when temperature drops below 10°C
                     }
                     // Temperature readings list
                     Column {
@@ -800,8 +1052,6 @@ Item {
                         z: 3
                     }
 
-
-
                     // Depth gauge
                     Text {
                         id: depthTitle
@@ -822,17 +1072,19 @@ Item {
                         width: 500
                         height: 500
                         anchors.centerIn: parent
-                        value: 150
-                        minValue: 0
-                        maxValue: 150
+                        value: 160
+                        minValue: -10
+                        maxValue: 160
                         unit: "m"
                         progressStartColor: "springgreen"
                         progressEndColor: "deepskyblue"
                         z: 3
-                        aboveLimitThreshold: 130  // Warn when depth exceeds 130m
-                        belowLimitThreshold: 5    // Warn when depth is below 5m
+                        aboveLimitThreshold: 155  // Warn when depth exceeds 155m
+                        belowLimitThreshold: -5    // Warn when depth is below -5m
+                        decimalPlaces: 2
                     }
 
+                    // Depth readings list
                     // Depth readings list
                     Column {
                         id: depthReadingsList
@@ -848,8 +1100,8 @@ Item {
                         Repeater {
                             model: depthReadings
                             delegate: Text {
-                                text: value.toFixed(1) + " " + unit
-                                font.pixelSize: 18 // Increased by ~30% from 14
+                                text: value.toFixed(2) + " " + unit  // Change ONLY this to toFixed(2)
+                                font.pixelSize: 18
                                 font.bold: index === 0
                                 color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
                                 horizontalAlignment: Text.AlignHCenter
@@ -857,6 +1109,7 @@ Item {
                             }
                         }
                     }
+
                     Image {
                         source: "qrc:/Octopus/images/Depth1_Icon.png"
 
@@ -897,15 +1150,15 @@ Item {
                             left: depthGauge.right
                             leftMargin: -80
                         }
-                        value: 120
-                        minValue: 0
+                        value: 2000
+                        minValue: -10
                         maxValue: 2000
                         unit: "mS/cm"
                         progressStartColor: "#FF6EC7"
                         progressEndColor: "#8A2BE2"
                         z: 2
-                        aboveLimitThreshold: 1800 // Warn when conductivity exceeds 1800 mS/cm
-                        belowLimitThreshold: 100  // Warn when conductivity drops below 100 mS/cm
+                        aboveLimitThreshold: 1990 // Warn when conductivity exceeds 1800 mS/cm
+                        belowLimitThreshold: 0  // Warn when conductivity drops below 100 mS/cm
                     }
                     // Conductivity readings list
                     Column {
@@ -1084,6 +1337,8 @@ Item {
                 }
             }
 
+
+
             // Column 2, Row 0
             Rectangle {
                 id: col2row0
@@ -1127,7 +1382,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Instrument Status"
+                                    item.text = "Internal Battery"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -1162,14 +1417,14 @@ Item {
 
                             // Row 1: Device
                             Label {
-                                text: "  Device  . ."
+                                text: "  Battery Cell  . . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: "Submersible Mini AZ"
+                                text: label_Battery_BatteryCell
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
@@ -1178,14 +1433,14 @@ Item {
 
                             // Row 2 : Serial number
                             Label {
-                                text: "  Serial Number  ."
+                                text: "  Battery Type  . . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Instrument_SerialNumber
+                                text: label_Battery_BatteryType
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
@@ -1193,14 +1448,14 @@ Item {
 
                             // Row 3 : Usage
                             Label {
-                                text: "  Usage  . . . . . . . . . . . . ."
+                                text: "  Usage  . . . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 3
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Instrument_Usage
+                                text: label_Battery_Usage
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 3
                                 Layout.column: 1
@@ -1269,7 +1524,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Instrument Status"
+                                    item.text = "Communication to Surface"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -1304,14 +1559,14 @@ Item {
 
                             // Row 1: Device
                             Label {
-                                text: "  Device  . ."
+                                text: "  Messages Received  . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: "Submersible Mini AZ"
+                                text: label_Messages_MessagesReceived
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
@@ -1320,19 +1575,20 @@ Item {
 
                             // Row 2 : Serial number
                             Label {
-                                text: "  Serial Number  ."
+                                text: "  Messages Sent  . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Instrument_SerialNumber
+                                text: label_Messages_MessagesSent
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
                             }
 
+                            /*
                             // Row 3 : Usage
                             Label {
                                 text: "  Usage  . . . . . . . . . . . . ."
@@ -1347,6 +1603,7 @@ Item {
                                 Layout.row: 3
                                 Layout.column: 1
                             }
+                            */
 
                             // Row 4 : Spacer
                             Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }
@@ -1411,7 +1668,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Instrument Status"
+                                    item.text = "Reserved Box"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -1446,20 +1703,20 @@ Item {
 
                             // Row 1: Device
                             Label {
-                                text: "  Device  . ."
+                                text: "  Reserved  . . . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: "Submersible Mini AZ"
+                                text: label_Reserved_Reserved
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
                             }
 
-
+                            /*
                             // Row 2 : Serial number
                             Label {
                                 text: "  Serial Number  ."
@@ -1489,6 +1746,7 @@ Item {
                                 Layout.row: 3
                                 Layout.column: 1
                             }
+                            */
 
                             // Row 4 : Spacer
                             Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }

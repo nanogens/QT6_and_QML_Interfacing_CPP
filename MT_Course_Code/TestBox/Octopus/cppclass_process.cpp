@@ -32,6 +32,12 @@ void CppClass::ProcessIncomingMsg(void)
             uartshadow.messageid = 0;
             break;
 
+        case SUBMERSIBLE_INFO_RESP_MSGID:
+            Submersible_Info_Resp();
+            qDebug() << "In ProcessIncomingMsg(), in case SUBMERSIBLE_INFO_RESP_MSGID";
+            uartshadow.messageid = 0;
+            break;
+
         default :
             uartshadow.messageid = 0;
             break;

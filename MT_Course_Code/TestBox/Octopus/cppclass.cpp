@@ -421,7 +421,7 @@ void CppClass::IncomingByteCheck(void)
             if(((uart.got - 6) < MAX_UART_ARRAY) && ((uart.got - 6) >= 0)) // protection
             {
                 uart.payload[uart.got-6] = readBufferShadow[0];
-                qDebug() << "Payload : " << uart.payload[uart.got-6];
+                //qDebug() << "Payload : " << uart.payload[uart.got-6];
                 uart.got++;
             }
             else
@@ -437,6 +437,7 @@ void CppClass::IncomingByteCheck(void)
         {
 
             uart.crcmsg = readBufferShadow[0]; // the crc at the end of Set Working Parameters
+            qDebug() << "CRCMSG : " << readBufferShadow[0];
             // it is DEST + SOURCE and not SOURCE + DEST because dest & source values are in relation to what we send not receive.
             uart.crcset = DLE + STX + DEST + SOURCE + uart.messagelength + uart.messageidglobal;
 
@@ -503,10 +504,11 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
 
             (messageidglobal == CTD_VARIABLES_RESP_MSGID) ||
             (messageidglobal == CTD_READINGS_RAW_RESP_MSGID) ||
-            (messageidglobal == CTD_READINGS_PROCESSED_RESP_MSGID)
+            (messageidglobal == CTD_READINGS_PROCESSED_RESP_MSGID) ||
+            (messageidglobal == SUBMERSIBLE_INFO_RESP_MSGID)
             )
         {
-            qDebug() << "RESP MessageID Found";
+            //qDebug() << "RESP MessageID Found";
             return true;
         }
         qDebug() << "RESP MessageID Not Found";

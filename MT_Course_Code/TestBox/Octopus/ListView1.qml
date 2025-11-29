@@ -5,10 +5,8 @@ import QtCharts 2.15
 
 Item {
     id: root
-    //width: 1200
-    //height: 800
-
-
+    //width: 1920
+    //height: 1080
 
     property var supportedInstruments: ["RBR Concerto", "Van Essen TD-Diver"]
     property var batteryTypes: ["Alkaline", "Lithium", "Rechargeable Li-Ion", "External"]

@@ -7,10 +7,17 @@ Item {
     id: gaugeRoot
 
     // Public properties that can be set from outside
+    // MT
+    // Default value for all guages but we put in the default values for the main depth guage as we
+    // need to fill it in with something.
+    // But its actually for all 3 guages
     property real value: 75
-    property real minValue: 0
-    property real maxValue: 150
+    property real minValue: -10
+    property real maxValue: 160
     property string unit: "m"
+
+    // Defines number of decimal places to display for guage and addList
+    property int decimalPlaces: 1  // Default to 1 decimal place
 
     // Colors that can be customized
     property color gaugeColor: "#1a1a1a"
@@ -22,8 +29,11 @@ Item {
     property color progressEndColor: "deepskyblue"
 
     // Individual warning limit properties
-    property real aboveLimitThreshold: maxValue - 20  // Default, can be overridden
-    property real belowLimitThreshold: minValue + 20  // Default, can be overridden
+    // MT
+    // As with value, minValue, maxValue, this is set from outside.
+    // But we just put this here as we have to put something.
+    property real aboveLimitThreshold: maxValue - 10  // Default, can be overridden
+    property real belowLimitThreshold: minValue + 10  // Default, can be overridden
 
     // Size properties that scale with parent
     width: 300
@@ -264,7 +274,7 @@ Item {
             text: {
                 if (value > aboveLimitThreshold) return "ABOVE LIMIT!"
                 else if (value < belowLimitThreshold) return "BELOW LIMIT!"
-                else return value.toFixed(1)
+                else return value.toFixed(decimalPlaces)  // CHANGE THIS LINE to toFixed(decimalPlaces)
             }
             color: {
                 if (value > aboveLimitThreshold) return progressEndColor
@@ -308,14 +318,14 @@ Item {
         spacing: gaugeRoot.width * 0.55
 
         Text {
-            text: minValue.toFixed(1) + " " + unit
+            text: minValue.toFixed(decimalPlaces) + " " + unit
             color: scaleColor
             font.pixelSize: gaugeRoot.height * 0.055
             font.family: "Arial"
         }
 
         Text {
-            text: maxValue.toFixed(1) + " " + unit
+            text: maxValue.toFixed(decimalPlaces) + " " + unit
             color: scaleColor
             font.pixelSize: gaugeRoot.height * 0.055
             font.family: "Arial"

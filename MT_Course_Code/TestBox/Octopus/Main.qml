@@ -44,6 +44,21 @@ ApplicationWindow
       }
   }
 
+  // To inidcate if a connection (Connect) button is active so we know what Stream Data button is allowed to do
+  Connections {
+      target: CppClass
+      function onRunningChanged() {
+          if (contentStack.currentItem && contentStack.currentItem.setConnectionState) {
+              contentStack.currentItem.setConnectionState(CppClass.running);
+
+              // Force reset the streaming state when connection changes
+              if (contentStack.currentItem && contentStack.currentItem.resetStreamState) {
+                  contentStack.currentItem.resetStreamState();
+              }
+          }
+      }
+  }
+
   header: ToolBar {
       contentItem: Rectangle {
           // Gradient fill for the toolbar
@@ -89,9 +104,15 @@ ApplicationWindow
                       }
                       onClicked: {
                           CppClass.startComm();
+                          // Add this line:
+                          if (contentStack.currentItem && contentStack.currentItem.setConnectionState) {
+                              contentStack.currentItem.setConnectionState(true);
+                          }
                       }
                   }
                   ToolSeparator {}
+
+
                   ToolButton
                   {
                       text: 'Disconnect'
@@ -106,9 +127,25 @@ ApplicationWindow
                           verticalAlignment: Text.AlignVCenter
                       }
                       onClicked: {
+                          console.log("=== Disconnect button clicked ===");
+
+                          // Directly reset streaming state in ListView4
+                          if (contentStack.currentItem) {
+                              console.log("Directly resetting stream state");
+                              contentStack.currentItem.streamActive = false;
+                              if (contentStack.currentItem.resetStreamState) {
+                                  contentStack.currentItem.resetStreamState();
+                              }
+                          }
+
+                          // Then stop the communication
                           CppClass.stopComm();
+
+                          console.log("=== Disconnect complete ===");
                       }
                   }
+
+
                   ToolButton {
                       icon.source: "qrc:/Octopus/images/baseline-more_vert-24px.svg"
                       onClicked: menu.open()
@@ -137,32 +174,32 @@ ApplicationWindow
 
   Drawer
   {
-    id: sideNav
-    width: 200
-    height: parent.height
-    ColumnLayout {
-        width: parent.width
-        Label {
-            text: 'Drawer'
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            font.pixelSize: 20
-            Layout.fillWidth: true
-        }
-        Repeater {
-            model: 5
-            SideNavButton {
-                icon.source: "qrc:/Octopus/images/baseline-category-24px.svg"
-                text: 'List ' + (index + 1)
-                Layout.fillWidth: true
-                onClicked: {
-                    currentViewIndex = index
-                    sideNav.close()
-                    console.log("Switched to view", index)
-                }
-            }
-        }
-    }
+      id: sideNav
+      width: 280
+      height: parent.height
+      ColumnLayout {
+          width: parent.width
+          Label {
+              text: '-= Main Menu =-'
+              horizontalAlignment: Text.AlignHCenter
+              verticalAlignment: Text.AlignVCenter
+              font.pixelSize: 20
+              Layout.fillWidth: true
+          }
+          Repeater {
+              model: ["Streaming Page", "Settings Page", "Graphing Page"]
+              SideNavButton {
+                  icon.source: "qrc:/Octopus/images/baseline-category-24px.svg"
+                  text: modelData
+                  Layout.fillWidth: true
+                  onClicked: {
+                      currentViewIndex = index
+                      sideNav.close()
+                      console.log("Switched to view:", modelData)
+                  }
+              }
+          }
+      }
   }
 
   Pane
@@ -179,8 +216,8 @@ ApplicationWindow
           ListView4 {}  // Guages
           ListView2 {}
           ListView3 {}  // New simple view
-          ListView0 {}  // Your original grid content
-          ListView1 {}  // New simple view
+          //ListView0 {}  // Your original grid content
+          //ListView1 {}  // New simple view
       }
   }
 }

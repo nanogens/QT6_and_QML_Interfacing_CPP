@@ -38,8 +38,10 @@ Item {
     readonly property real baseHeight: 1080
     property real scaleFactor: 1
     property real refSize: Math.max(40 * listview2.scaleFactor, 30)
-    property real generalFontSize: 16 * scaleFactor
-    property real dropdownFontSize: 12 * scaleFactor
+    property real generalFontSize: 18.5 * scaleFactor
+    property real smallFontSize: 18 * scaleFactor
+    property real dropdownFontSize: 14 * scaleFactor
+
 
 
     // Banner Component (unchanged)
@@ -366,14 +368,14 @@ Item {
                     }
                 }
             }
-
         }
+
 
         // Cell B - Communications
         Rectangle {
             id: cellBContainer
             Layout.row: 0
-            Layout.column: 1
+            Layout.column: 1            
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumWidth: parent.width/3 - refSize/5
@@ -452,7 +454,7 @@ Item {
 
                         // Row : Cable Link
                         Label {
-                            text: "  Connection  . . . . . . . . ."
+                            text: "  Connection  . . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 1
@@ -468,17 +470,18 @@ Item {
                             id: id_Communication_Connection_ComboBox
                             model: model_Communication_Connection_ComboBox
                             currentIndex: 0
-                            implicitWidth: 200 * scaleFactor
                             implicitHeight: 28 * scaleFactor
                             font.pixelSize: dropdownFontSize * scaleFactor
                             Layout.row: 1
                             Layout.column: 2
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 200 * scaleFactor
                             onCurrentIndexChanged: current_Communication_Connection = model[currentIndex]
-                        }
+                        }                     
 
                         // Row : Baud Rate
                         Label {
-                            text: "  Baud Rate  . . . . . . . . . . ."
+                            text: "  Baud Rate  . . . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 2
@@ -494,40 +497,22 @@ Item {
                             id: id_Communication_BaudRate_ComboBox
                             model: model_Communication_BaudRate_ComboBox
                             currentIndex: 0
-                            implicitWidth: 200 * scaleFactor
                             implicitHeight: 28 * scaleFactor
                             font.pixelSize: dropdownFontSize * scaleFactor
                             Layout.row: 2
                             Layout.column: 2
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 200 * scaleFactor
                             onCurrentIndexChanged: current_Communication_BaudRate = model[currentIndex]
                         }
 
-                        // Row : Empty spacer
-                        Label {
-                            text: ""
-                            Layout.row: 3
-                            Layout.column: 0
-                            Layout.fillHeight: true  // Pushes buttons to bottom
-                        }
-                        Label {
-                            text: ""
-                            Layout.row: 3
-                            Layout.column: 1
-                            Layout.fillHeight: true
-                        }
-                        Label {
-                            text: ""
-                            Layout.row: 3
-                            Layout.column: 2
-                            Layout.fillHeight: true
-                        }
+                        // Row 3 : Spacer
+                        Label { text: ""; Layout.row: 3; Layout.column: 0; Layout.fillHeight: true }
+                        Label { text: ""; Layout.row: 3; Layout.column: 1; Layout.fillHeight: true }
+                        Label { text: ""; Layout.row: 3; Layout.column: 2; Layout.fillHeight: true }
 
-                        // Row : Buttons
-                        Label {
-                            text: ""
-                            Layout.row: 4
-                            Layout.column: 0
-                        }
+                        // Row 4 : Buttons
+                        Label { text: ""; Layout.row: 4; Layout.column: 0 }
                         Button {
                             id: button3Id
                             text: "Read Instrument"
@@ -568,6 +553,9 @@ Item {
                 }
             }
         }
+
+
+
 
         // Cell C - Power
         Rectangle {
@@ -869,7 +857,7 @@ Item {
 
                         // Row 1 : Computer Time
                         Label {
-                            text: "  Computer Time . . . . ."
+                            text: "  Computer Time . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 1
@@ -898,9 +886,9 @@ Item {
                         }
                         CheckBox {
                             id: syncCheckBox
-                            text: "Sync to Computer Clock"
+                            text: "Sync to Computer"
                             implicitHeight: 34 * scaleFactor
-                            font.pixelSize: 14 * scaleFactor
+                            font.pixelSize: smallFontSize
                             Layout.row: 2; Layout.column: 2
                             Layout.fillWidth: true
                             checked: syncEnabled
@@ -923,9 +911,9 @@ Item {
                             Layout.column: 0
                         }
                         Button {
-                            text: "Set Date/Time (Instrument)"
-                            implicitHeight: 34 * scaleFactor
-                            font.pixelSize: 14 * scaleFactor
+                            text: "Set Logger Date/Time"
+                            implicitHeight: 36 * scaleFactor
+                            font.pixelSize: 16 * scaleFactor
                             Layout.row: 3; Layout.column: 2
                             Layout.fillWidth: true
                             onClicked: {
@@ -1251,7 +1239,7 @@ Item {
 
                         // Row 1: Scheduled Time - Start
                         Label {
-                            text: "  Scheduled (Start) . . ."
+                            text: "  Scheduled (Start) . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 1; Layout.column: 0
@@ -1264,8 +1252,8 @@ Item {
                         }
                         Button {
                             text: "Set Date/Time (Start)"
-                            implicitHeight: 34 * scaleFactor
-                            font.pixelSize: 14 * scaleFactor
+                            implicitHeight: 36 * scaleFactor
+                            font.pixelSize: 16 * scaleFactor
                             Layout.row: 1; Layout.column: 2
                             Layout.fillWidth: true
                             onClicked: {
@@ -1276,7 +1264,7 @@ Item {
 
                         // Row 2: Scheduled Time - End
                         Label {
-                            text: "  Scheduled (End) . . . . ."
+                            text: "  Scheduled (End) . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 2; Layout.column: 0
@@ -1289,8 +1277,8 @@ Item {
                         }
                         Button {
                             text: "Set Date/Time (End)"
-                            implicitHeight: 34 * scaleFactor
-                            font.pixelSize: 14 * scaleFactor
+                            implicitHeight: 36 * scaleFactor
+                            font.pixelSize: 16 * scaleFactor
                             Layout.row: 2; Layout.column: 2
                             Layout.fillWidth: true
                             onClicked: {
@@ -1301,7 +1289,7 @@ Item {
 
                         // Row 3: Event
                         Label {
-                            text: "  Event . . . . . . . . . . . . . . ."
+                            text: "  Event . . . . . . . . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 3; Layout.column: 0
@@ -1327,7 +1315,7 @@ Item {
 
                         // Row 4 : Event Trigger
                         Label {
-                            text: "  Event Trigger . . . . . . . ."
+                            text: "  Event Trigger . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 4

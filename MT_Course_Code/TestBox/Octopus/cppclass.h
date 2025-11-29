@@ -204,6 +204,52 @@ struct CTD
     uint8_t reserved2 = 0;
 };
 
+struct SubmersibleInfo
+{
+    uint8_t boxselection = 0;
+    uint8_t reserved = 0;
+
+    uint8_t device = 0;
+
+    uint8_t instrument_serialnumber[13] = {0};
+
+    uint8_t memory_total[2] = {0};
+    uint8_t memory_used[2] = {0};
+
+    uint8_t surface_pressure[2] = {0};
+
+    uint8_t battery_cell = 0;
+    uint8_t battery_type = 0;
+    uint8_t hours[2] = {0};
+
+    uint8_t messages_received[4] = {0};
+    uint8_t messages_sent[4] = {0};
+
+    uint8_t tablettime_year;
+    uint8_t tablettime_month;
+    uint8_t tablettime_day;
+    uint8_t tablettime_hour;
+    uint8_t tablettime_minute;
+    uint8_t tablettime_second;
+    uint8_t tablettime_ampm;
+
+    uint8_t devicetime_year;
+    uint8_t devicetime_month;
+    uint8_t devicetime_day;
+    uint8_t devicetime_hour;
+    uint8_t devicetime_minute;
+    uint8_t devicetime_second;
+    uint8_t devicetime_ampm;
+
+    uint8_t upcomingrecordingtime_year;
+    uint8_t upcomingrecordingtime_month;
+    uint8_t upcomingrecordingtime_day;
+    uint8_t upcomingrecordingtime_hour;
+    uint8_t upcomingrecordingtime_minute;
+    uint8_t upcomingrecordingtime_second;
+    uint8_t upcomingrecordingtime_ampm;
+};
+
 struct Uart
 {
     uint8_t sent = 0;
@@ -268,6 +314,7 @@ signals:
     // Declare a signal that emits the QVariantMap
     void instrumentDataReceived(const QVariantMap &data);
     void ctdreadingsprocessedDataReceived(const QVariantMap &data);
+    void submersibleinfoprocessedDataReceived(const QVariantMap &data);
 
 public slots:
     void triggerJSCall();
@@ -314,6 +361,7 @@ private:
 
     // page 1 QML
     CTD ctd;
+    SubmersibleInfo submersibleinfo;
 
 
     // Existing private members
@@ -358,6 +406,7 @@ public:
 
 public:
     void CTD_Readings_Processed_Resp();
+    void Submersible_Info_Resp();
 };
 
 #endif // CPPCLASS_H

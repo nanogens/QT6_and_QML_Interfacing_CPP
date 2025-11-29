@@ -60,15 +60,16 @@
 #define CLOUD 7          // Cell H
 #define MISCELLENEOUS 8  // Cell I
 
-
-
 // message header
 #define DLE 0x10
 #define STX 0x02
 #define SOURCE 0x00
 #define DEST 0x88
 
-// Messages
+// Constants for pressureToDepthCm()
+#define MBAR_TO_PA 100.0
+#define FRESHWATER_DENSITY 1000.0
+#define GRAVITY 9.80665
 
 // Re-check this -- just using some bogus values for now
 #define VERSION_QUERY_MSGLGT 0x07
@@ -201,8 +202,12 @@
 #define CTD_READINGS_PROCESSED_RESP_MSGLGT 0x11
 #define CTD_READINGS_PROCESSED_RESP_MSGID 0x27
 
+// Re-check this -- just using some bogus values for now
+#define SUBMERSIBLE_INFO_QUERY_MSGLGT 0x07
+#define SUBMERSIBLE_INFO_QUERY_MSGID 0x28
 
-
+#define SUBMERSIBLE_INFO_RESP_MSGLGT 0x4A
+#define SUBMERSIBLE_INFO_RESP_MSGID 0x29
 
 
 #endif // DEFINES_H
