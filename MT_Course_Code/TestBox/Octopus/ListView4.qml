@@ -25,13 +25,7 @@ Item {
     property real scaleFactor: 1.0
     property real refSize: 40
     property real generalFontSize: 16
-    property string label_Instrument_SerialNumber: "SN-12345"
-    property string label_Instrument_Usage: "Active"
 
-    // ADD BATTERY PROPERTIES:
-    property string label_Battery_BatteryCell: "0"
-    property string label_Battery_BatteryType: "Li-ion"
-    property string label_Battery_Usage: "Active"
 
     // ADD LINE PROPERTIES:
     property real lineOpacity: 0.7
@@ -59,14 +53,20 @@ Item {
     // Add this with your other properties
     property bool isConnected: false  // Track if RS-485 is connected
 
-
-    // Add these with your other properties
-    property string label_Memory_TotalMemory: "4.00 Mega Bytes"
-    property string label_Memory_UsedMemory: "1.22 Mega Bytes"
-    property string label_Memory_SurfacePressure: "1013.25 hPa"
-    property string label_Messages_MessagesReceived: "0"
-    property string label_Messages_MessagesSent: "0"
+    // Label initialization
+    property string label_Instrument_SerialNumber: "N/A"
+    property string label_Instrument_Usage: "N/A"
+    property string label_Instrument_Device: "N/A"
+    property string label_Memory_Total: "N/A"
+    property string label_Memory_Used: "N/A"
+    property string label_Configuration_SurfacePressure: "N/A"
+    property string label_Messages_Received: "N/A"
+    property string label_Messages_Sent: "N/A"
     property string label_Reserved_Reserved: "N/A"
+    property string label_Battery_Cell: "N/A"
+    property string label_Battery_Type: "N/A"
+    property string label_Battery_Usage: "N/A"
+
 
     // Timer for periodic RS-485 messages
     Timer {
@@ -135,7 +135,9 @@ Item {
             packetReceived = false;
             packetTimeoutTimer.start();
             console.log("Started periodic RS-485 messages and reading updates");
-        } else {
+        }
+        else
+        {
             // Stop periodic messaging and timeout timer
             rs485Timer.stop();
             packetTimeoutTimer.stop();
@@ -297,19 +299,72 @@ Item {
 
             // Update the properties that are bound to your labels
 
-            // This is if data.battery_cell is to be interpreted as a number as opposed to a character
-            if (data.battery_cell !== undefined) {
-                label_Battery_BatteryCell = data.battery_cell.toFixed(1) + " V";  // Example: "3.7 V"
+            // Instrument - Device
+            if (data.instrument_device !== undefined) {
+                label_Instrument_Device = data.instrument_device;
             } else {
-                label_Battery_BatteryCell = "N/A";
+                label_Instrument_Device = "N/A";
+            }
+            // Instrument - Serial Number
+            if (data.instrument_serialnumber !== undefined) {
+                label_Instrument_SerialNumber = data.instrument_serialnumber;  // Direct assignment for strings
+            } else {
+                label_Instrument_SerialNumber = "N/A";
+            }
+            // Instrument - Usage
+            if (data.instrument_usage !== undefined) {
+                label_Instrument_Usage = data.instrument_usage;
+            } else {
+                label_Instrument_Usage = "N/A";
             }
 
-            // This is if data.messages_received is to be interpreted as a number as opposed to a character
-            if (data.messages_received !== undefined) {
-                label_Messages_MessagesReceived = data.messages_received.toFixed(0);  // Example: 234234
+
+            // Memory - Total
+            if (data.memory_total !== undefined) {
+                label_Memory_Total = data.memory_total;
             } else {
-                label_Messages_MessagesReceived = "N/A";
+                label_Memory_Total = "N/A";
             }
+            // Memory - Used
+            if (data.memory_used !== undefined) {
+                label_Memory_Used = data.memory_used;
+            } else {
+                label_Memory_Used = "N/A";
+            }
+
+            // Configuration - Surface Pressure
+            if (data.surface_pressure !== undefined) {
+                label_Configuration_SurfacePressure = data.surface_pressure;
+            } else {
+                label_Configuration_SurfacePressure = "N/A";
+            }
+
+            // Battery - Cell
+            if (data.battery_cell !== undefined) {
+                label_Battery_Cell = data.battery_cell.toFixed(1) + " V";  // Example: "3.7 V"
+            } else {
+                label_Battery_Cell = "N/A";
+            }
+            // Battery - Type
+            if (data.battery_type !== undefined) {
+                label_Battery_Type = data.battery_type.toFixed(1) + " V";  // Example: "3.7 V"
+            } else {
+                label_Battery_Type = "N/A";
+            }
+
+            // Messages - Received
+            if (data.messages_received !== undefined) {
+                label_Messages_Received = data.messages_received.toFixed(0);  // Example: 234234
+            } else {
+                label_Messages_Received = "N/A";
+            }
+            // Messages - Sent
+            if (data.messages_sent !== undefined) {
+                label_Messages_Sent = data.messages_sent.toFixed(0);  // Example: 234234
+            } else {
+                label_Messages_Sent = "N/A";
+            }
+
 
 
             // Mark that we received a valid packet and restart timeout timer
@@ -455,7 +510,7 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: "Submersible Mini AZ"
+                                text: label_Instrument_Device
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
@@ -611,7 +666,7 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Memory_TotalMemory
+                                text: label_Memory_Total
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
@@ -627,7 +682,7 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Memory_UsedMemory
+                                text: label_Memory_Used
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
@@ -699,7 +754,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Pressure Configuration"
+                                    item.text = "Configuration"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -734,14 +789,14 @@ Item {
 
                             // Row 1: Surface Pressure
                             Label {
-                                text: "  Surface Pressure  . . . . . . ."
+                                text: "  Surface Pressure  . . . . "
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Memory_SurfacePressure
+                                text: label_Configuration_SurfacePressure
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
@@ -1415,7 +1470,7 @@ Item {
                             }
 
 
-                            // Row 1: Device
+                            // Row 1: Battery Cell
                             Label {
                                 text: "  Battery Cell  . . . . . . . ."
                                 font.bold: true
@@ -1424,14 +1479,14 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Battery_BatteryCell
+                                text: label_Battery_Cell
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
                             }
 
 
-                            // Row 2 : Serial number
+                            // Row 2 : Battery Type
                             Label {
                                 text: "  Battery Type  . . . . . . . ."
                                 font.bold: true
@@ -1440,7 +1495,7 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Battery_BatteryType
+                                text: label_Battery_Type
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
@@ -1524,7 +1579,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Communication to Surface"
+                                    item.text = "Message Traffic"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -1557,7 +1612,7 @@ Item {
                             }
 
 
-                            // Row 1: Device
+                            // Row 1:
                             Label {
                                 text: "  Messages Received  . ."
                                 font.bold: true
@@ -1566,14 +1621,14 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Messages_MessagesReceived
+                                text: label_Messages_Received
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
                             }
 
 
-                            // Row 2 : Serial number
+                            // Row 2 : Message Sent
                             Label {
                                 text: "  Messages Sent  . . . . . . ."
                                 font.bold: true
@@ -1582,7 +1637,7 @@ Item {
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Messages_MessagesSent
+                                text: label_Messages_Sent
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
@@ -1701,7 +1756,7 @@ Item {
                             }
 
 
-                            // Row 1: Device
+                            // Row 1: Reserved
                             Label {
                                 text: "  Reserved  . . . . . . . . ."
                                 font.bold: true

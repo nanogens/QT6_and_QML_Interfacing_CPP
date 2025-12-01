@@ -90,14 +90,14 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
                     bytePos_index = 0;
                     for (char c : byteArray)
                     {
-                        if(bytePos_index < MAX_INSTRUMENT_SERIAL_ARRAY)
+                        if(bytePos_index < MAX_INSTRUMENT_SERIALNUMBER_ARRAY)
                         {
                             instrument.serialnumber[bytePos_index] = c;
                             bytePos_index++;
                         }
                     }
                     // Check if insufficient number of characters
-                    if(bytePos_index < MAX_INSTRUMENT_SERIAL_ARRAY)
+                    if(bytePos_index < MAX_INSTRUMENT_SERIALNUMBER_ARRAY)
                     {
                         qDebug() << "Insufficient number of serial characters";
                         error.errorcode = 1;
@@ -118,7 +118,7 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
                         AddByteToSend(instrument.boxselection, false); // Box Selection
                         AddByteToSend(0x00, false); // Reserved (instrument.reserved)
                         AddByteToSend(instrument.device, false); // Devices
-                        for(int r=0; r < MAX_INSTRUMENT_SERIAL_ARRAY; r++) // Serial
+                        for(int r=0; r < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; r++) // Serial
                         {
                             AddByteToSend(instrument.serialnumber[r], false);
                         }

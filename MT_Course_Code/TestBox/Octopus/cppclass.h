@@ -81,7 +81,7 @@ struct Instrument
     uint8_t boxselection = 0;
 
     uint8_t device = 0;
-    uint8_t serialnumber[MAX_INSTRUMENT_SERIAL_ARRAY] = {0};
+    uint8_t serialnumber[MAX_INSTRUMENT_SERIALNUMBER_ARRAY] = {0};
     uint8_t usage[MAX_INSTRUMENT_USAGE_ARRAY] = {0};
 };
 
@@ -209,45 +209,45 @@ struct SubmersibleInfo
     uint8_t boxselection = 0;
     uint8_t reserved = 0;
 
-    uint8_t device = 0;
+    uint8_t instrument_device = 0;
+    uint8_t instrument_serialnumber[MAX_INSTRUMENT_SERIALNUMBER_ARRAY] = {0};
+    uint8_t instrument_usage[MAX_INSTRUMENT_USAGE_ARRAY] = {0};
 
-    uint8_t instrument_serialnumber[13] = {0};
+    uint8_t memory_total[MAX_MEMORY_TOTAL_ARRAY] = {0};
+    uint8_t memory_used[MAX_MEMORY_USED_ARRAY] = {0};
 
-    uint8_t memory_total[2] = {0};
-    uint8_t memory_used[2] = {0};
-
-    uint8_t surface_pressure[2] = {0};
+    uint8_t configuration_surfacepressure[MAX_CONFIGURATION_SURFACEPRESSURE_ARRAY] = {0};
 
     uint8_t battery_cell = 0;
     uint8_t battery_type = 0;
-    uint8_t hours[2] = {0};
+    uint8_t battery_hours[2] = {0};
 
     uint8_t messages_received[4] = {0};
     uint8_t messages_sent[4] = {0};
 
-    uint8_t tablettime_year;
-    uint8_t tablettime_month;
-    uint8_t tablettime_day;
-    uint8_t tablettime_hour;
-    uint8_t tablettime_minute;
-    uint8_t tablettime_second;
-    uint8_t tablettime_ampm;
+    uint8_t schedule_tablettime_year;
+    uint8_t schedule_tablettime_month;
+    uint8_t schedule_tablettime_day;
+    uint8_t schedule_tablettime_hour;
+    uint8_t schedule_tablettime_minute;
+    uint8_t schedule_tablettime_second;
+    uint8_t schedule_tablettime_ampm;
 
-    uint8_t devicetime_year;
-    uint8_t devicetime_month;
-    uint8_t devicetime_day;
-    uint8_t devicetime_hour;
-    uint8_t devicetime_minute;
-    uint8_t devicetime_second;
-    uint8_t devicetime_ampm;
+    uint8_t schedule_devicetime_year;
+    uint8_t schedule_devicetime_month;
+    uint8_t schedule_devicetime_day;
+    uint8_t schedule_devicetime_hour;
+    uint8_t schedule_devicetime_minute;
+    uint8_t schedule_devicetime_second;
+    uint8_t schedule_devicetime_ampm;
 
-    uint8_t upcomingrecordingtime_year;
-    uint8_t upcomingrecordingtime_month;
-    uint8_t upcomingrecordingtime_day;
-    uint8_t upcomingrecordingtime_hour;
-    uint8_t upcomingrecordingtime_minute;
-    uint8_t upcomingrecordingtime_second;
-    uint8_t upcomingrecordingtime_ampm;
+    uint8_t schedule_upcomingrecordingtime_year;
+    uint8_t schedule_upcomingrecordingtime_month;
+    uint8_t schedule_upcomingrecordingtime_day;
+    uint8_t schedule_upcomingrecordingtime_hour;
+    uint8_t schedule_upcomingrecordingtime_minute;
+    uint8_t schedule_upcomingrecordingtime_second;
+    uint8_t schedule_upcomingrecordingtime_ampm;
 };
 
 struct Uart

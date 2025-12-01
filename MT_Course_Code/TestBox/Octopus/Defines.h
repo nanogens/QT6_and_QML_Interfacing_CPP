@@ -18,7 +18,18 @@
 #define ACCEPT_1BYTE_AT_A_TIME_ONLY 1
 #define MAX_UART_ARRAY 100
 
-// Array sizes
+// Array size - Page 1 (Streaming)
+//#define MAX_INSTRUMENT_SERIALNUMBER_ARRAY 13
+// Instrument
+//#define MAX_INSTRUMENT_SERIALNUMBER_ARRAY 13
+//#define MAX_INSTRUMENT_USAGE_ARRAY 2
+// Memory
+#define MAX_MEMORY_TOTAL_ARRAY 2
+#define MAX_MEMORY_USED_ARRAY 2
+
+#define MAX_CONFIGURATION_SURFACEPRESSURE_ARRAY 2
+
+// Array sizes - Page 2 (Configuration)
 // Version
 #define MAX_VERSION_FW_ARRAY 2
 #define MAX_VERSION_SW_ARRAY 2
@@ -26,7 +37,7 @@
 // Status
 #define MAX_STATUS_RES_ARRAY 2
 // Instrument
-#define MAX_INSTRUMENT_SERIAL_ARRAY 13
+#define MAX_INSTRUMENT_SERIALNUMBER_ARRAY 13
 #define MAX_INSTRUMENT_USAGE_ARRAY 2
 // Power
 #define MAX_POWER_DURATION_ARRAY 2

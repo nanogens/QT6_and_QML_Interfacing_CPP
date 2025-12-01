@@ -70,8 +70,9 @@ void CppClass::Inits(void)
     // Initialize instrument structure
     instrument.reserved = 0;
     instrument.boxselection = 0;
+
     instrument.device = 0;
-    for(counter.y0 = 0; counter.y0 < MAX_INSTRUMENT_SERIAL_ARRAY; counter.y0++)
+    for(counter.y0 = 0; counter.y0 < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; counter.y0++)
     {
         instrument.serialnumber[counter.y0] = 0;
     }
@@ -658,7 +659,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                     bytePos_index = 0;
                     for (char c : byteArray)
                     {
-                        if(bytePos_index < MAX_INSTRUMENT_SERIAL_ARRAY)
+                        if(bytePos_index < MAX_INSTRUMENT_SERIALNUMBER_ARRAY)
                         {
                             instrument.serialnumber[bytePos_index] = c;
                             bytePos_index++;
@@ -666,7 +667,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                     }
 
                     // Check if insufficient number of characters
-                    if(bytePos_index < MAX_INSTRUMENT_SERIAL_ARRAY)
+                    if(bytePos_index < MAX_INSTRUMENT_SERIALNUMBER_ARRAY)
                     {
                         qDebug() << "Insufficient number of serial characters";
                         error.errorcode = 0;
@@ -695,7 +696,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 
                         qDebug() << "here1: " << send.writepos;
 
-                        for(int r=0; r < MAX_INSTRUMENT_SERIAL_ARRAY; r++)
+                        for(int r=0; r < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; r++)
                         {
                             AddByteToSend(instrument.serialnumber[r], false);
                         }
