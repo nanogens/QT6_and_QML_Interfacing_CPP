@@ -183,14 +183,15 @@ ApplicationWindow
               text: '-= Main Menu =-'
               horizontalAlignment: Text.AlignHCenter
               verticalAlignment: Text.AlignVCenter
-              font.pixelSize: 20
+              font.pixelSize: 25
               Layout.fillWidth: true
           }
           Repeater {
-              model: ["Streaming Page", "Settings Page", "Graphing Page"]
+              model: ["1. Streaming Page", "2. Settings Page", "3. Graphing Page"]
               SideNavButton {
                   icon.source: "qrc:/Octopus/images/baseline-category-24px.svg"
                   text: modelData
+                  font.pixelSize: 22
                   Layout.fillWidth: true
                   onClicked: {
                       currentViewIndex = index

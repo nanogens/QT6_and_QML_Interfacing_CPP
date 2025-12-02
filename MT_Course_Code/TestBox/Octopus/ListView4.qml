@@ -21,11 +21,12 @@ Item {
     // Debug toggle
     property bool showDebugOutlines: false
 
-    // ADD THESE MISSING PROPERTIES:
+    // Visuals
     property real scaleFactor: 1.0
     property real refSize: 40
-    property real generalFontSize: 16
-
+    property real generalFontSize: 18
+    // for the list (text) below each of the 3 guages
+    property real listFontSize: 20  // Change this value to adjust font size on all 3 lists
 
     // ADD LINE PROPERTIES:
     property real lineOpacity: 0.7
@@ -50,6 +51,8 @@ Item {
     property bool packetReceived: false  // Track if valid packets are being received
     property int packetTimeoutMs: 2000   // Timeout for considering packets stale
 
+
+
     // Add this with your other properties
     property bool isConnected: false  // Track if RS-485 is connected
 
@@ -66,7 +69,9 @@ Item {
     property string label_Battery_Cell: "N/A"
     property string label_Battery_Type: "N/A"
     property string label_Battery_Usage: "N/A"
-
+    property string label_Time_Computer: "N/A"
+    property string label_Time_Device: "N/A"
+    property string label_Time_UpcomingRec: "N/A"
 
     // Timer for periodic RS-485 messages
     Timer {
@@ -341,7 +346,7 @@ Item {
 
             // Battery - Cell
             if (data.battery_cell !== undefined) {
-                label_Battery_Cell = data.battery_cell.toFixed(1) + " V";  // Example: "3.7 V"
+                label_Battery_Cell = data.battery_cell.toFixed(1);  // Example : Need to convert to cell type string
             } else {
                 label_Battery_Cell = "N/A";
             }
@@ -351,6 +356,15 @@ Item {
             } else {
                 label_Battery_Type = "N/A";
             }
+            // Battery - Usage
+            if (data.battery_type !== undefined) {
+                label_Battery_Usage = data.battery_type.toFixed(1) + " h";  // Example: "5.2 h"
+            } else {
+                label_Battery_Usage = "N/A";
+            }
+
+
+
 
             // Messages - Received
             if (data.messages_received !== undefined) {
@@ -364,8 +378,30 @@ Item {
             } else {
                 label_Messages_Sent = "N/A";
             }
+            if (data.messages_received !== undefined) {
+                label_Messages_Received = data.messages_received.toFixed(0);  // Example: 234234
+            } else {
+                label_Messages_Received = "N/A";
+            }
 
-
+            // Time - Computer (Tablet)
+            if (data.schedule_tablettime !== undefined) {
+                label_Time_Computer = data.schedule_tablettime;  // Direct assignment for strings
+            } else {
+                label_Time_Computer = "N/A";
+            }
+            // Time - Device
+            if (data.schedule_tablettime !== undefined) {
+                label_Time_Device = data.schedule_tablettime;  // Direct assignment for strings
+            } else {
+                label_Time_Device = "N/A";
+            }
+            // Time - Upcoming Rec
+            if (data.schedule_tablettime !== undefined) {
+                label_Time_UpcomingRec = data.schedule_tablettime;  // Direct assignment for strings
+            } else {
+                label_Time_UpcomingRec = "N/A";
+            }
 
             // Mark that we received a valid packet and restart timeout timer
             if (streamActive) {
@@ -789,7 +825,7 @@ Item {
 
                             // Row 1: Surface Pressure
                             Label {
-                                text: "  Surface Pressure  . . . . "
+                                text: "  Surface Pressure  . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
@@ -1083,7 +1119,7 @@ Item {
                             model: tempReadings
                             delegate: Text {
                                 text: value.toFixed(1) + " " + unit
-                                font.pixelSize: 18 // Increased by ~30% from 14
+                                font.pixelSize: listFontSize
                                 font.bold: index === 0
                                 color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
                                 horizontalAlignment: Text.AlignHCenter
@@ -1140,7 +1176,6 @@ Item {
                     }
 
                     // Depth readings list
-                    // Depth readings list
                     Column {
                         id: depthReadingsList
                         anchors {
@@ -1156,7 +1191,7 @@ Item {
                             model: depthReadings
                             delegate: Text {
                                 text: value.toFixed(2) + " " + unit  // Change ONLY this to toFixed(2)
-                                font.pixelSize: 18
+                                font.pixelSize: listFontSize
                                 font.bold: index === 0
                                 color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
                                 horizontalAlignment: Text.AlignHCenter
@@ -1231,7 +1266,7 @@ Item {
                             model: condReadings
                             delegate: Text {
                                 text: value.toFixed(1) + " " + unit
-                                font.pixelSize: 18 // Increased by ~30% from 14
+                                font.pixelSize: listFontSize
                                 font.bold: index === 0
                                 color: Qt.rgba(1, 1, 1, 1.0 - (index / (maxReadings * 1.5)))
                                 horizontalAlignment: Text.AlignHCenter
@@ -1239,21 +1274,21 @@ Item {
                             }
                         }
                     }
-                }
-                Image {
-                    source: "qrc:/Octopus/images/Conductivity1_Icon.png"
+                    Image {
+                        source: "qrc:/Octopus/images/Conductivity1_Icon.png"
 
-                    // Set the desired X and Y position for the center of the image
-                    x: 855
-                    y: 542
+                        // Set the desired X and Y position for the center of the image
+                        x: 855
+                        y: 542
 
-                    // Set the scaled width and height
-                    width: 90
-                    height: 90
+                        // Set the scaled width and height
+                        width: 90
+                        height: 90
 
-                    // Ensure smooth scaling
-                    smooth: true
-                    z: 3
+                        // Ensure smooth scaling
+                        smooth: true
+                        z: 3
+                    }
                 }
 
 
@@ -1472,7 +1507,7 @@ Item {
 
                             // Row 1: Battery Cell
                             Label {
-                                text: "  Battery Cell  . . . . . . . ."
+                                text: "  Battery Cell  . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
@@ -1488,7 +1523,7 @@ Item {
 
                             // Row 2 : Battery Type
                             Label {
-                                text: "  Battery Type  . . . . . . . ."
+                                text: "  Battery Type  . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
@@ -1614,7 +1649,7 @@ Item {
 
                             // Row 1:
                             Label {
-                                text: "  Messages Received  . ."
+                                text: "  Messages Rcvd  ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
@@ -1630,7 +1665,7 @@ Item {
 
                             // Row 2 : Message Sent
                             Label {
-                                text: "  Messages Sent  . . . . . . ."
+                                text: "  Messages Sent  . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
@@ -1723,7 +1758,7 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Reserved Box"
+                                    item.text = "Time"
                                     item.fontSize = 14 * scaleFactor
                                 }
                             }
@@ -1756,32 +1791,31 @@ Item {
                             }
 
 
-                            // Row 1: Reserved
+                            // Row 1: Computer/Tablet Time
                             Label {
-                                text: "  Reserved  . . . . . . . . ."
+                                text: "  Computer  . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Reserved_Reserved
+                                text: label_Time_Computer
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 1
                                 Layout.column: 1
                             }
 
-                            /*
-                            // Row 2 : Serial number
+                            // Row 2 : Device Time
                             Label {
-                                text: "  Serial Number  ."
+                                text: "  Device  . . . . . . . ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Instrument_SerialNumber
+                                text: label_Time_Device
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 2
                                 Layout.column: 1
@@ -1789,19 +1823,19 @@ Item {
 
                             // Row 3 : Usage
                             Label {
-                                text: "  Usage  . . . . . . . . . . . . ."
+                                text: "  Upcoming Rec  ."
                                 font.bold: true
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 3
                                 Layout.column: 0
                             }
                             Label {
-                                text: label_Instrument_Usage
+                                text: label_Time_UpcomingRec
                                 font.pixelSize: generalFontSize * scaleFactor
                                 Layout.row: 3
                                 Layout.column: 1
                             }
-                            */
+
 
                             // Row 4 : Spacer
                             Label { text: ""; Layout.row: 4; Layout.column: 0; Layout.fillHeight: true }

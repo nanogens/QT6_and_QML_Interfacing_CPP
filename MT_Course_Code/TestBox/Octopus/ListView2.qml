@@ -40,9 +40,14 @@ Item {
     property real refSize: Math.max(40 * listview2.scaleFactor, 30)
     property real generalFontSize: 18.5 * scaleFactor
     property real smallFontSize: 18 * scaleFactor
-    property real dropdownFontSize: 14 * scaleFactor
-
-
+    property real dropdownFontSize: 14.5 * scaleFactor
+    property real calenderButtonFontSize: 19 * scaleFactor
+    property real calendarLabelFontSize: 20 * scaleFactor
+    property real calendarSpinBoxFontSize: 20 * scaleFactor
+    property real calendarTitleFontSize: 27 * scaleFactor
+    property real calendarDayFontSize: 22 * scaleFactor
+    property real calendarMonthFontSize: 22 * scaleFactor
+    property real calendarDateFontSize: 20 * scaleFactor
 
     // Banner Component (unchanged)
     Component {
@@ -370,7 +375,6 @@ Item {
             }
         }
 
-
         // Cell B - Communications
         Rectangle {
             id: cellBContainer
@@ -553,9 +557,6 @@ Item {
                 }
             }
         }
-
-
-
 
         // Cell C - Power
         Rectangle {
@@ -1928,9 +1929,9 @@ Item {
             modal: true
             focus: true
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-            width: 600 * scaleFactor
-            height: 520 * scaleFactor
-            padding: 10 * scaleFactor
+            width: 800 * scaleFactor
+            height: 600 * scaleFactor
+            padding: 20 * scaleFactor
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
 
@@ -1946,7 +1947,7 @@ Item {
                 Label {
                     text: "Select " + genericDateTimePopup.mode + " Date"
                     font.bold: true
-                    font.pixelSize: 18 * scaleFactor
+                    font.pixelSize: calendarTitleFontSize
                     Layout.alignment: Qt.AlignHCenter
                     Layout.bottomMargin: 5 * scaleFactor
                     color: "lightgreen"
@@ -1960,7 +1961,8 @@ Item {
                     Button {
                         text: "Previous"
                         implicitWidth: 120 * scaleFactor
-                        implicitHeight: 40 * scaleFactor
+                        implicitHeight: 45 * scaleFactor
+                        font.pixelSize: calenderButtonFontSize
                         onClicked: {
                             var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth - 1, 1)
                             datesGrid.currentMonth = newDate.getMonth()
@@ -1972,15 +1974,16 @@ Item {
                     Label {
                         text: Qt.locale().monthName(datesGrid.currentMonth) + " " + datesGrid.currentYear
                         font.bold: true
-                        font.pixelSize: 15 * scaleFactor
+                        font.pixelSize: calendarMonthFontSize
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
                     }
 
                     Button {
                         text: "Next"
+                        font.pixelSize: calenderButtonFontSize
                         implicitWidth: 120 * scaleFactor
-                        implicitHeight: 40 * scaleFactor
+                        implicitHeight: 45 * scaleFactor
                         onClicked: {
                             var newDate = new Date(datesGrid.currentYear, datesGrid.currentMonth + 1, 1)
                             datesGrid.currentMonth = newDate.getMonth()
@@ -1994,13 +1997,12 @@ Item {
                 Column {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 250 * scaleFactor
-                    spacing: 0
+                    spacing: 8 * scaleFactor
 
                     // Day of week headers
                     Row {
                         width: parent.width
                         height: 30 * scaleFactor
-                        spacing: 0
 
                         Repeater {
                             model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -2009,7 +2011,7 @@ Item {
                                 height: parent.height
                                 text: modelData
                                 font.bold: true
-                                font.pixelSize: 12 * scaleFactor
+                                font.pixelSize: calendarDayFontSize
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -2051,7 +2053,7 @@ Item {
                                 Label {
                                     anchors.centerIn: parent
                                     text: isCurrentMonth ? day : ""
-                                    font.pixelSize: 14 * scaleFactor
+                                    font.pixelSize: calendarDateFontSize
                                     font.bold: isSelected || isToday
                                     color: isSelected ? "white" : (isCurrentMonth ? "#BFBFBF" : "#cccccc")
                                 }
@@ -2125,7 +2127,7 @@ Item {
 
                     Label {
                         text: "Select " + genericDateTimePopup.mode + " Time" // FIXED
-                        font.pixelSize: 18 * scaleFactor
+                        font.pixelSize: calendarTitleFontSize
                         font.bold: true
                         Layout.row: 1; Layout.column: 2
                         Layout.columnSpan: 4
@@ -2144,7 +2146,7 @@ Item {
 
                     Label {
                         text: "Hour:"
-                        font.pixelSize: 12 * scaleFactor
+                        font.pixelSize: calendarLabelFontSize
                         Layout.row: 3; Layout.column: 0
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
@@ -2152,15 +2154,15 @@ Item {
                         id: hourSpin
                         from: 1; to: 12; value: (genericDateTimePopup.currentSelectedDate.getHours() % 12) || 12 // FIXED
                         editable: true
-                        implicitHeight: 30 * scaleFactor
-                        font.pixelSize: 12 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: calendarSpinBoxFontSize
                         Layout.row: 3; Layout.column: 1
                         Layout.fillWidth: true
                     }
 
                     Label {
                         text: "Minute:"
-                        font.pixelSize: 12 * scaleFactor
+                        font.pixelSize: calendarLabelFontSize
                         Layout.row: 3; Layout.column: 2
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
@@ -2168,15 +2170,15 @@ Item {
                         id: minuteSpin
                         from: 0; to: 59; value: genericDateTimePopup.currentSelectedDate.getMinutes() // FIXED
                         editable: true
-                        implicitHeight: 30 * scaleFactor
-                        font.pixelSize: 12 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: calendarSpinBoxFontSize
                         Layout.row: 3; Layout.column: 3
                         Layout.fillWidth: true
                     }
 
                     Label {
                         text: "Second:"
-                        font.pixelSize: 12 * scaleFactor
+                        font.pixelSize: calendarLabelFontSize
                         Layout.row: 3; Layout.column: 4
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
@@ -2184,15 +2186,15 @@ Item {
                         id: secondSpin
                         from: 0; to: 59; value: genericDateTimePopup.currentSelectedDate.getSeconds() // FIXED
                         editable: true
-                        implicitHeight: 30 * scaleFactor
-                        font.pixelSize: 12 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: calendarSpinBoxFontSize
                         Layout.row: 3; Layout.column: 5
                         Layout.fillWidth: true
                     }
 
                     Label {
                         text: "AM/PM:"
-                        font.pixelSize: 12 * scaleFactor
+                        font.pixelSize: calendarLabelFontSize
                         Layout.row: 3; Layout.column: 6
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     }
@@ -2200,8 +2202,8 @@ Item {
                         id: amPmCombo
                         model: ["AM", "PM"]
                         currentIndex: genericDateTimePopup.currentSelectedDate.getHours() >= 12 ? 1 : 0 // FIXED
-                        implicitHeight: 30 * scaleFactor
-                        font.pixelSize: 12 * scaleFactor
+                        implicitHeight: 40 * scaleFactor
+                        font.pixelSize: calendarSpinBoxFontSize
                         Layout.row: 3; Layout.column: 7
                         Layout.fillWidth: true
                     }
@@ -2211,7 +2213,7 @@ Item {
                 Label {
                     text: "Selected: " + genericDateTimePopup.currentSelectedDate.toLocaleDateString(Qt.locale(), "yyyy-MM-dd") + // FIXED
                           " " + getFormattedTime()
-                    font.pixelSize: 16 * scaleFactor
+                    font.pixelSize: calendarTitleFontSize
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 7 * scaleFactor
                     Layout.bottomMargin: 7 * scaleFactor
@@ -2236,17 +2238,17 @@ Item {
 
                     Button {
                         text: "Cancel"
-                        implicitWidth: 100 * scaleFactor
-                        implicitHeight: 40 * scaleFactor
-                        font.pixelSize: 16 * scaleFactor
+                        implicitWidth: 120 * scaleFactor
+                        implicitHeight: 45 * scaleFactor
+                        font.pixelSize: calenderButtonFontSize
                         onClicked: genericDateTimePopup.close()
                     }
 
                     Button {
                         text: "Set " + genericDateTimePopup.mode + " Date and Time" // FIXED
-                        implicitWidth: 230 * scaleFactor
-                        implicitHeight: 40 * scaleFactor
-                        font.pixelSize: 16 * scaleFactor
+                        implicitWidth: 250 * scaleFactor
+                        implicitHeight: 45 * scaleFactor
+                        font.pixelSize: calenderButtonFontSize
                         onClicked: {
                             var hour24 = hourSpin.value
                             if (amPmCombo.currentIndex === 1 && hour24 < 12) {
@@ -2282,24 +2284,6 @@ Item {
             }
         }
 
-        Popup {
-            id: normalPopup
-            ColumnLayout {
-                anchors.fill: parent
-                Label {
-                    text: 'Normal Popup'
-                }
-                CheckBox {
-                    text: 'E-mail'
-                }
-                CheckBox {
-                    text: 'Calendar'
-                }
-                CheckBox {
-                    text: 'Contacts'
-                }
-            }
-        }
     }
 }
 

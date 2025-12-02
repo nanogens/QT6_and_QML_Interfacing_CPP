@@ -244,7 +244,7 @@ void CppClass::Submersible_Info_Resp(void)
     // Create a QVariantMap and insert the data
     QVariantMap submersibleinfoprocessedData;
 
-    // Instruments
+    // Instruments --------------------------------------------------------------------------------
     submersibleinfoprocessedData["instrument_device"] = submersibleinfo.instrument_device;
     QString serialnumberStr;
     for(int i = 0; i < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; i++) {
@@ -254,24 +254,24 @@ void CppClass::Submersible_Info_Resp(void)
     submersibleinfoprocessedData["instrument_usage"] = ((submersibleinfo.instrument_usage[0] << 8)
                                                      + (submersibleinfo.instrument_usage[1]));
 
-    // Memory
+    // Memory --------------------------------------------------------------------------------------
     submersibleinfoprocessedData["memory_total"] = ((submersibleinfo.memory_total[0] << 8)
                                                         + (submersibleinfo.memory_total[1]));
     submersibleinfoprocessedData["memory_used"] = ((submersibleinfo.memory_used[0] << 8)
                                                 + (submersibleinfo.memory_used[1]));
 
 
-    // Configuration
+    // Configuration -------------------------------------------------------------------------------
     submersibleinfoprocessedData["surface_pressure"] = ((submersibleinfo.configuration_surfacepressure[0] << 8)
                                                      + (submersibleinfo.configuration_surfacepressure[1]));
 
-    // Battery
+    // Battery -------------------------------------------------------------------------------------
     submersibleinfoprocessedData["battery_cell"] = submersibleinfo.battery_cell;
     submersibleinfoprocessedData["battery_type"] = submersibleinfo.battery_type;
     submersibleinfoprocessedData["battery_usage"] = ((submersibleinfo.battery_hours[0] << 8)
                                                      + (submersibleinfo.battery_hours[1]));
 
-    // Message Traffic
+    // Message Traffic -----------------------------------------------------------------------------
     submersibleinfoprocessedData["messages_received"] = ((submersibleinfo.messages_received[0] << 24)
                                                       + (submersibleinfo.messages_received[1] << 16)
                                                       + (submersibleinfo.messages_received[2] << 8)
@@ -281,7 +281,41 @@ void CppClass::Submersible_Info_Resp(void)
                                                          + (submersibleinfo.messages_sent[2] << 8)
                                                          + (submersibleinfo.messages_sent[3]));
 
+    // Time - Schedule_TableTime --------------------------------------------------------------------
+    // Format: 2025-12-01 02:58:13 PM
+    QString formattedTime = QString::asprintf("%04u-%02u-%02u %02u:%02u:%02u %s",
+                                              submersibleinfo.schedule_tablettime_year,
+                                              submersibleinfo.schedule_tablettime_month,
+                                              submersibleinfo.schedule_tablettime_day,
+                                              submersibleinfo.schedule_tablettime_hour,
+                                              submersibleinfo.schedule_tablettime_minute,
+                                              submersibleinfo.schedule_tablettime_second,
+                                              submersibleinfo.schedule_tablettime_ampm ? "PM" : "AM"); // Assuming 0=AM, 1=PM or similar
+    // Add to QVariantMap
+    submersibleinfoprocessedData["schedule_tablettime"] = formattedTime;
 
+
+    // Time - Schedule_DeviceTime --------------------------------------------------------------------
+    QString deviceTimeFormatted = QString::asprintf("%04u-%02u-%02u %02u:%02u:%02u %s",
+                                                    submersibleinfo.schedule_devicetime_year,
+                                                    submersibleinfo.schedule_devicetime_month,
+                                                    submersibleinfo.schedule_devicetime_day,
+                                                    submersibleinfo.schedule_devicetime_hour,
+                                                    submersibleinfo.schedule_devicetime_minute,
+                                                    submersibleinfo.schedule_devicetime_second,
+                                                    (submersibleinfo.schedule_devicetime_ampm == 0 || submersibleinfo.schedule_devicetime_ampm == 'A') ? "AM" : "PM");
+    submersibleinfoprocessedData["schedule_devicetime"] = deviceTimeFormatted;
+
+    // Time - Schedule_UpcomingRecordingTime ----------------------------------------------------------
+    QString upcomingTimeFormatted = QString::asprintf("%04u-%02u-%02u %02u:%02u:%02u %s",
+                                                      submersibleinfo.schedule_upcomingrecordingtime_year,
+                                                      submersibleinfo.schedule_upcomingrecordingtime_month,
+                                                      submersibleinfo.schedule_upcomingrecordingtime_day,
+                                                      submersibleinfo.schedule_upcomingrecordingtime_hour,
+                                                      submersibleinfo.schedule_upcomingrecordingtime_minute,
+                                                      submersibleinfo.schedule_upcomingrecordingtime_second,
+                                                      (submersibleinfo.schedule_upcomingrecordingtime_ampm == 0 || submersibleinfo.schedule_upcomingrecordingtime_ampm == 'A') ? "AM" : "PM");
+    submersibleinfoprocessedData["schedule_upcomingrecordingtime"] = upcomingTimeFormatted;
 
 
     qDebug() << "Emitting submersibleinfoprocessedData:" << submersibleinfoprocessedData;

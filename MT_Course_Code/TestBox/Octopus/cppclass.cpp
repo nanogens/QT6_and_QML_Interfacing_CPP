@@ -701,6 +701,9 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                             AddByteToSend(instrument.serialnumber[r], false);
                         }
 
+                        AddByteToSend(0x00, false); // Usage
+                        AddByteToSend(0x00, false);
+
                         for(int m=0; m < send.writepos; m++)
                         {
                             qDebug() << writeBuffer[m];
