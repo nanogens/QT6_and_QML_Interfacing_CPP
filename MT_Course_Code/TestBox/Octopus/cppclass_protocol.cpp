@@ -22,6 +22,9 @@ void CppClass::Status_Resp(void)
     qDebug() << "Status_Resp Bytes Stored!";
 }
 
+
+// QML Page 2 ===============================================
+
 void CppClass::Instrument_Resp(void)
 {
     instrument.boxselection     = uartshadow.payload[0];
@@ -50,7 +53,7 @@ void CppClass::Instrument_Resp(void)
     qDebug() << "  Reserved:" << instrument.reserved;
     qDebug() << "  Device:" << instrument.device;
     qDebug() << "  Serial Number:" << instrument.serialnumber;
-    qDebug() << "  Usage:" << instrument.usage;
+    qDebug() << "  Usage:" << (instrument.usage[0] << 8) + instrument.usage[1];
 
 
     // Need to send a subset of the above data to QML front end (perhaps as a List?)
@@ -59,10 +62,12 @@ void CppClass::Instrument_Resp(void)
 
     // Create a QVariantMap and insert the data
     QVariantMap instrumentData;
-    instrumentData["device"] = instrument.device;
+
+    instrumentData["instrument_device"] = instrument.device;
     // Convert uint8_t array to const char* for QString::fromUtf8
-    instrumentData["serialnumber"] = QString::fromUtf8(reinterpret_cast<const char*>(instrument.serialnumber), 13);
-    instrumentData["usage"] = QString::fromUtf8(reinterpret_cast<const char*>(instrument.usage), 2);
+    instrumentData["instrument_serialnumber"] = QString::fromUtf8(reinterpret_cast<const char*>(instrument.serialnumber), 13);
+    instrumentData["instrument_usage"] = ((instrument.usage[0] << 8)
+                                       + (instrument.usage[1]));
 
     qDebug() << "Emitting instrumentData:" << instrumentData;
 
@@ -72,18 +77,36 @@ void CppClass::Instrument_Resp(void)
 
 void CppClass::Communication_Resp(void)
 {
-    communication.reserved = uartshadow.payload[0];
-    communication.boxselection = uartshadow.payload[1];
+    communication.boxselection = uartshadow.payload[0];
+    communication.reserved = uartshadow.payload[1];
     communication.connection = uartshadow.payload[2];
     communication.baudrate = uartshadow.payload[3];
 
     qDebug() << "Communication_Resp Bytes Stored!";
+
+    qDebug() << "-- Communication_Resp (from MCU):";
+    qDebug() << "  Box Selection:" << communication.boxselection;
+    qDebug() << "  Reserved:" << communication.reserved;
+    qDebug() << "  Connection:" << communication.connection;
+    qDebug() << "  Baud Rate:" << communication.baudrate;
+
+    // Create a QVariantMap and insert the data
+    QVariantMap communicationData;
+
+    communicationData["communication_connection"] = communication.connection;
+    communicationData["communication_baudrate"] = communication.baudrate;
+
+    qDebug() << "Emitting communicationData:" << communicationData;
+
+    // Emit the signal to send the data to QML
+    emit communicationDataReceived(communicationData);
+
 }
 
 void CppClass::Power_Resp(void)
 {
-    power.reserved = uartshadow.payload[0];
-    power.boxselection = uartshadow.payload[1];
+    power.boxselection = uartshadow.payload[0];
+    power.reserved = uartshadow.payload[1];
     power.batterytype = uartshadow.payload[2];
     power.duration[0] = uartshadow.payload[3];
     power.duration[1] = uartshadow.payload[4];
@@ -91,31 +114,64 @@ void CppClass::Power_Resp(void)
     power.powerremaining[1] = uartshadow.payload[6];
 
     qDebug() << "Power_Resp Bytes Stored!";
+
+    qDebug() << "-- Power (from MCU):";
+    qDebug() << "  Box Selection:" << power.boxselection;
+    qDebug() << "  Reserved:" << power.reserved;
+    qDebug() << "  Type:" << power.batterytype;
+    qDebug() << "  Duration:" << (power.duration[0] << 8) + power.duration[1];
+    qDebug() << "  Remaining:" << (power.powerremaining[0] << 8) + power.powerremaining[1];
+
+    // Create a QVariantMap and insert the data
+    QVariantMap powerData;
+    powerData["power_batterytype"] = power.batterytype;
+    powerData["power_duration"] = (power.duration[0] << 8) + power.duration[1];
+    powerData["power_powerremaining"] = (power.powerremaining[0] << 8) + power.powerremaining[1];
+
+    qDebug() << "Emitting powerData:" << powerData;
+
+    // Emit the signal to send the data to QML
+    emit powerDataReceived(powerData);
 }
 
 void CppClass::Timing_Resp(void)
 {
-    timing.reserved = uartshadow.payload[0];
-    timing.boxselection = uartshadow.payload[1];
+    timing.boxselection = uartshadow.payload[0];
+    timing.reserved = uartshadow.payload[1];
 
-    qDebug() << "Time_Resp Bytes Stored!";
+    qDebug() << "Timing_Resp Bytes Stored!";
 }
 
 void CppClass::Sampling_Resp(void)
 {
-    sampling.reserved = uartshadow.payload[0];
-    sampling.boxselection = uartshadow.payload[1];
+    sampling.boxselection = uartshadow.payload[0];
+    sampling.reserved = uartshadow.payload[1];
 
     qDebug() << "Sampling_Resp Bytes Stored!";
 }
 
 void CppClass::Activation_Resp(void)
 {
-    activation.reserved = uartshadow.payload[0];
-    activation.boxselection = uartshadow.payload[1];
+    activation.boxselection = uartshadow.payload[0];
+    activation.reserved = uartshadow.payload[1];
 
     qDebug() << "Activation_Resp Bytes Stored!";
 }
+
+void CppClass::Notes_Resp(void)
+{
+    qDebug() << "Notes_Resp Bytes Stored!";
+}
+
+void CppClass::Cloud_Resp(void)
+{
+    qDebug() << "Cloud_Resp Bytes Stored!";
+}
+
+
+
+// QML Page 1 ===============================================
+
 
 void CppClass::CTD_Readings_Processed_Resp(void)
 {
@@ -338,4 +394,54 @@ void CppClass::CTD_Readings_Processed_Query(void)
   writePos = send.writepos; // triggers send
 
   qDebug() << "CTD_Readings_Processed_Query Sent!";
+}
+
+
+
+
+// QML Page 2 ===============================================
+
+void CppClass::Instrument_Query(void)
+{
+
+}
+
+void CppClass::Communication_Query(void)
+{
+
+}
+
+void CppClass::Power_Query(void)
+{
+
+}
+
+void CppClass::Timing_Query(void)
+{
+
+}
+
+void CppClass::Sampling_Query(void)
+{
+
+}
+
+void CppClass::Activation_Query(void)
+{
+
+}
+
+void CppClass::Notes_Query(void)
+{
+
+}
+
+void CppClass::Cloud_Query(void)
+{
+
+}
+
+void CppClass::Misc_Query(void)
+{
+
 }

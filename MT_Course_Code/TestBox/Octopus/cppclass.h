@@ -75,6 +75,9 @@ struct Status
     uint8_t res[MAX_STATUS_RES_ARRAY] = {0};
 };
 
+
+// From QML page 2 =====================================================
+
 struct Instrument
 {
     uint8_t reserved = 0;
@@ -191,7 +194,7 @@ struct Misc
     uint8_t stuff;
 };
 
-// From QML page 1
+// From QML page 1 =====================================================
 struct CTD
 {
     uint16_t value = 0;
@@ -249,6 +252,11 @@ struct SubmersibleInfo
     uint8_t schedule_upcomingrecordingtime_second;
     uint8_t schedule_upcomingrecordingtime_ampm;
 };
+
+
+
+
+
 
 struct Uart
 {
@@ -313,6 +321,15 @@ signals:
 signals:
     // Declare a signal that emits the QVariantMap
     void instrumentDataReceived(const QVariantMap &data);
+    void communicationDataReceived(const QVariantMap &data);
+    void powerDataReceived(const QVariantMap &data);
+    void timingDataReceived(const QVariantMap &data);
+    void samplingDataReceived(const QVariantMap &data);
+    void activationDataReceived(const QVariantMap &data);
+    void notesDataReceived(const QVariantMap &data);
+    void cloudDataReceived(const QVariantMap &data);
+
+
     void ctdreadingsprocessedDataReceived(const QVariantMap &data);
     void submersibleinfoprocessedDataReceived(const QVariantMap &data);
 
@@ -394,12 +411,15 @@ private:
 private:
     void Version_Resp();
     void Status_Resp();
+
     void Instrument_Resp();
     void Communication_Resp();
     void Power_Resp();
     void Timing_Resp();
     void Sampling_Resp();
     void Activation_Resp();
+    void Notes_Resp();
+    void Cloud_Resp();
 
 public:
     void CTD_Readings_Processed_Query();
@@ -407,6 +427,17 @@ public:
 public:
     void CTD_Readings_Processed_Resp();
     void Submersible_Info_Resp();
+
+public:
+    void Instrument_Query();
+    void Communication_Query();
+    void Power_Query();
+    void Timing_Query();
+    void Sampling_Query();
+    void Activation_Query();
+    void Notes_Query();
+    void Cloud_Query();
+    void Misc_Query();
 };
 
 #endif // CPPCLASS_H

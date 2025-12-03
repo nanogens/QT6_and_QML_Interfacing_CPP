@@ -223,6 +223,7 @@ void CppClass::setTransmitMode(bool transmitting)
     QThread::usleep(1);  // Transceiver switching delay
 }
 
+// Worker thread to handle reception and transmission of bytes to UART
 void CppClass::readwriteThread()
 {
     while (m_serialData.running)
@@ -330,6 +331,7 @@ void CppClass::FalseHeader(void)
     }
 }
 
+// Routine intercepting incoming bytes (byte by byte analysis)
 void CppClass::IncomingByteCheck(void)
 {
     if(uart.status != FILLED_UART)
@@ -392,28 +394,7 @@ void CppClass::IncomingByteCheck(void)
             uart.got = 6;
             qDebug() << "Message ID" << uart.messageidglobal;
         }
-
-        /*
-        // We probably do not need this.
-        // Query -- should not even be here !!
-        else if((uart.got == 6) && (Search_MsgID(QUERY, uart.messageidglobal) == true))
-        {
-            uart.crcmsg = readBufferShadow[0];
-
-            if(uart.crcmsg == (DLE + STX + DEST + SOURCE + uart.messagelength + uart.messageidglobal) % 256)
-            {
-                uart.status = FILLED_UART; // immediately block it from re-entering this receive interrupt until present request is processed in main loop
-                uartshadow.messageid = uart.messageidglobal;
-
-                // Some indicator it passed the CRC.
-                qDebug() << "QUERY SUCCESSFULLY RECEIVED!";
-            }
-            uart.got = 0;
-            uart.crcmsg = 0;
-        }
-        */
-
-        // Setting - next 2 blocks  (note: RESP should be renamed RESP, here and in the Search_MsgID function)
+        // Setting - next 2 blocks
         else if(
             (Search_MsgID(RESP, uart.messageidglobal) == true) &&
             ((uart.got >= 6) && (uart.got < (uart.messagelength - 1)))
@@ -430,13 +411,12 @@ void CppClass::IncomingByteCheck(void)
                 uart.got = 0;
             }
         }
-
+        // CRC summation and check against packet CRC
         else if(
             (uart.got <= (uart.messagelength - 1)) &&
             (Search_MsgID(RESP, uart.messageidglobal) == true)
             )
         {
-
             uart.crcmsg = readBufferShadow[0]; // the crc at the end of Set Working Parameters
             qDebug() << "CRCMSG : " << readBufferShadow[0];
             // it is DEST + SOURCE and not SOURCE + DEST because dest & source values are in relation to what we send not receive.
@@ -513,31 +493,12 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             return true;
         }
         qDebug() << "RESP MessageID Not Found";
-        return false;
     }
-    /* // settings would be outgoing not incoming
     else
     {
-        if(
-            (messageidglobal == STATUS_SET_MSGID) ||
-            (messageidglobal == INSTRUMENT_SET_MSGID) ||
-            (messageidglobal == COMMUNICATION_SET_MSGID) ||
-            (messageidglobal == POWER_SET_MSGID) ||
-            (messageidglobal == TIMING_SET_MSGID) ||
-            (messageidglobal == SAMPLING_SET_MSGID) ||
-            (messageidglobal == ACTIVITION_SET_MSGID) ||
-            (messageidglobal == NOTES_SET_MSGID) ||
-            (messageidglobal == CLOUD_SET_MSGID) ||
-            (messageidglobal == MISC_SET_MSGID) ||
-
-            (messageidglobal == CTD_VARIABLES_SET_MSGID) ||
-            )
-        {
-            return true;
-        }
-        return false;
+        return true;
     }
-    */
+    return false;
 }
 
 void CppClass::sendData(const QByteArray &data)
@@ -615,6 +576,7 @@ void CppClass::passFromQmlToCpp2(const QVariantList &files)
     }
 }
 
+// Called from the QML when we need to send out query / setting
 void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 {
     int bytePos_index = 0;
@@ -687,34 +649,24 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
                         SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
 
                         AddByteToSend(0x00, false); // Reserved
-
                         AddByteToSend(INSTRUMENT, false); // Box Selection
-
-                        qDebug() << "here0: " << send.writepos;
-
+                        //qDebug() << "here0: " << send.writepos;
                         AddByteToSend(instrument.device, false); // Devices
-
-                        qDebug() << "here1: " << send.writepos;
-
-                        for(int r=0; r < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; r++)
+                        for(int r=0; r < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; r++) // Serial Number
                         {
                             AddByteToSend(instrument.serialnumber[r], false);
                         }
-
                         AddByteToSend(0x00, false); // Usage
                         AddByteToSend(0x00, false);
+                        //for(int m=0; m < send.writepos; m++)
+                        //{
+                        //    qDebug() << writeBuffer[m];
+                        //}
 
-                        for(int m=0; m < send.writepos; m++)
-                        {
-                            qDebug() << writeBuffer[m];
-                        }
-
-                        qDebug() << "here2: " << send.writepos;
-
-                        qDebug() << "crc: " << send.crcsend;
-
+                        //qDebug() << "crc: " << send.crcsend;
                         AddByteToSend(send.crcsend, true);
 
+                        // Queue it to be sent
                         std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
                         writePos = send.writepos; // triggers send
 
@@ -799,7 +751,8 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
     }
 }
 
-// Helper functions
+// Adds a byte to the queue that is to be sent.
+// Note: The writeBuffer is only sent when triggered to do so (by setting writePos).
 void CppClass::AddByteToSend(uint8_t data, bool crc_yesno)
 {
     writeBuffer[send.writepos] = data;
@@ -841,10 +794,12 @@ void CppClass::passFromQmlToCpp3prev(QVariantList list, QVariantMap map)
         if(i == 0)
         {
             int x = byteArray.toInt();
+            /*
             if(x == 1)
             {
                 qDebug() << "MT ";
             }
+            */
         }
 
         for (char c : byteArray)

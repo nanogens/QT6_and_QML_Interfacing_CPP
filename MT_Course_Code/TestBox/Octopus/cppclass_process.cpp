@@ -15,10 +15,7 @@ void CppClass::ProcessIncomingMsg(void)
             Status_Resp();
             uartshadow.messageid = 0;
             break;
-        case COMMUNICATION_RESP_MSGID:
-            Communication_Resp();
-            uartshadow.messageid = 0;
-            break;
+
 
 
 
@@ -26,6 +23,27 @@ void CppClass::ProcessIncomingMsg(void)
             Instrument_Resp();
             uartshadow.messageid = 0;
             break;
+        case COMMUNICATION_RESP_MSGID:
+            Communication_Resp();
+            uartshadow.messageid = 0;
+            break;
+        case TIMING_RESP_MSGID:
+            Timing_Resp();
+            uartshadow.messageid = 0;
+            break;
+        case SAMPLING_RESP_MSGID:
+            Sampling_Resp();
+            uartshadow.messageid = 0;
+            break;
+        case ACTIVATION_RESP_MSGID:
+            Activation_Resp();
+            uartshadow.messageid = 0;
+            break;
+        case NOTES_RESP_MSGID:
+            Notes_Resp();
+            uartshadow.messageid = 0;
+            break;
+
 
         case CTD_READINGS_PROCESSED_RESP_MSGID:
             CTD_Readings_Processed_Resp();
@@ -60,15 +78,15 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
     for( int i{0} ; i < list.size(); i++)
     {
         // The first string is the selection string.
-        // Use it to determine what category the information came from
+        // Use it to determine what category (box) the information came from
         // and what therefore needs to be processed.
+        // Note: Box is stored in variable x which is then used in the else below.
         if(i == 0)
         {
             // Convert QString to char array
             byteArray = list.at(i).toString().toUtf8();
             x = byteArray.toInt();
             qDebug() << "boxselection : " << x;
-
         }
         else
         {
@@ -104,10 +122,10 @@ void CppClass::ProcessOutgoingMsg(QVariantList list, QVariantMap map)
                     }
                     else  // print it out
                     {
-                        for(int s=0; s < bytePos_index; s++)
-                        {
+                        //for(int s=0; s < bytePos_index; s++)
+                        //{
                             //qDebug() << instrument.serialnumber[s];
-                        }
+                        //}
                         error.errorcode = 0;
                     }
 

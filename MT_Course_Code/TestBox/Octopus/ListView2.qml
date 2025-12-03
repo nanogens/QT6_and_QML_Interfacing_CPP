@@ -13,11 +13,6 @@ Item {
     id: listview2
     anchors.fill: parent  // Critical: Make Item fill the entire window
 
-    // Add these properties to store the instrument data from C++
-    property string label_Instrument_Device: "Default Device"
-    property string label_Instrument_SerialNumber: "Default Serial"
-    property string label_Instrument_Usage: "Default Usage"
-
     // Define statements (must match Defines.h)
     readonly property int iNSTRUMENT: 0      // Cell A
     readonly property int cOMMUNICATIONS: 1  // B
@@ -48,6 +43,13 @@ Item {
     property real calendarDayFontSize: 22 * scaleFactor
     property real calendarMonthFontSize: 22 * scaleFactor
     property real calendarDateFontSize: 20 * scaleFactor
+
+
+    // Add these properties to store the instrument data from C++
+    property string label_Instrument_Device: "Default Device"
+    property string label_Instrument_SerialNumber: "Default Serial"
+    property string label_Instrument_Usage: "Default Usage"
+
 
     // Banner Component (unchanged)
     Component {
@@ -137,9 +139,9 @@ Item {
         console.log("Instrument data received in QML:", JSON.stringify(data));
 
         // Update the properties that are bound to your labels
-        label_Instrument_Device = data.device || "No Device";
-        label_Instrument_SerialNumber = data.serialNumber || "No Serial";
-        label_Instrument_Usage = data.usage || "No Usage";
+        label_Instrument_Device = model_Instrument_Device_ComboBox[data.instrument_device] || model_Instrument_Device_ComboBox[0];
+        label_Instrument_SerialNumber = data.instrument_serialnumber || "No Serial";
+        label_Instrument_Usage = data.instrument_usage || "No Usage";
 
         // Optional: Log the updates for debugging
         console.log("Updated Device:", label_Instrument_Device);
@@ -290,6 +292,7 @@ Item {
                         }
                         TextField {
                             id: text_Instrument_SerialNumber
+                            text: "SZM-XZ-XXXXXX"  // Add this line
                             implicitHeight: 28 * scaleFactor
                             font.pixelSize: dropdownFontSize * scaleFactor
                             Layout.row: 2
@@ -358,7 +361,7 @@ Item {
                             Layout.row: 5
                             Layout.column: 2
                             onClicked: {
-                                var selection = "0";
+                                var selection = iNSTRUMENT;  // Box 0
                                 var selected_Instrument_Device = id_Instrument_Device_ComboBox.currentIndex;
                                 var selected_Instrument_Serial_Number = text_Instrument_SerialNumber.text;
                                 var arr = [selection, selected_Instrument_Device, selected_Instrument_Serial_Number];
@@ -367,7 +370,8 @@ Item {
                                     Instrument_Device: selected_Instrument_Device,
                                     Instrument_Serial_Number: selected_Instrument_Serial_Number
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                //CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.ProcessOutgoingMsg(arr, obj);
                             }
                         }
                     }
@@ -550,7 +554,7 @@ Item {
                                     Communication_Connection: selected_Communication_Connection,
                                     Communication_BaudRate: selected_Communication_BaudRate
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.ProcessOutgoingMsg(arr, obj);
                             }
                         }
                     }

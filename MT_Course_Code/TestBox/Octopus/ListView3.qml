@@ -342,13 +342,13 @@ GridLayout {
                                 Text {
                                     text: fileName
                                     font.bold: true
-                                    font.pixelSize: 14
+                                    font.pixelSize: 20
                                     elide: Text.ElideRight
                                 }
 
                                 Text {
                                     text: note
-                                    font.pixelSize: 12
+                                    font.pixelSize: 18
                                     color: "#666"
                                     elide: Text.ElideRight
                                 }
@@ -360,13 +360,13 @@ GridLayout {
 
                                 Text {
                                     text: fileSize
-                                    font.pixelSize: 12
+                                    font.pixelSize: 18
                                     horizontalAlignment: Text.AlignRight
                                 }
 
                                 Text {
                                     text: timeClosed
-                                    font.pixelSize: 12
+                                    font.pixelSize: 18
                                     color: "#666"
                                     horizontalAlignment: Text.AlignRight
                                 }
@@ -407,14 +407,14 @@ GridLayout {
             id: deviceInfo
             text: "Device: "
             color: "white"
-            font.pixelSize: 14
+            font.pixelSize: 20
         }
 
         Text {
             id: timeInfo
             text: "Time: "
             color: "white"
-            font.pixelSize: 12
+            font.pixelSize: 18
         }
 
         TabBar {

@@ -89,47 +89,57 @@ ApplicationWindow
                   anchors.verticalCenter: parent.verticalCenter
                   spacing: 5
 
+                  // Connect button
                   ToolButton
                   {
                       text: 'Connect'
-                      enabled: !CppClass.running
+                      // Add null check
+                      enabled: CppClass ? !CppClass.running : false
 
                       contentItem: Text {
                           text: parent.text
-                          font.pixelSize: CppClass.running ? 18 : 16
-                          font.bold: CppClass.running
-                          color: parent.enabled ? (CppClass.running ? "#36454F" : "#36454F") : "gray"
+                          // Add null checks
+                          font.pixelSize: (CppClass && CppClass.running) ? 18 : 16
+                          font.bold: (CppClass && CppClass.running)
+                          color: parent.enabled ? ((CppClass && CppClass.running) ? "#36454F" : "#36454F") : "gray"
                           horizontalAlignment: Text.AlignHCenter
                           verticalAlignment: Text.AlignVCenter
                       }
                       onClicked: {
-                          CppClass.startComm();
-                          // Add this line:
-                          if (contentStack.currentItem && contentStack.currentItem.setConnectionState) {
-                              contentStack.currentItem.setConnectionState(true);
+                          if (CppClass) {
+                              CppClass.startComm();
+                              if (contentStack.currentItem && contentStack.currentItem.setConnectionState) {
+                                  contentStack.currentItem.setConnectionState(true);
+                              }
                           }
                       }
                   }
+
                   ToolSeparator {}
 
 
+                  // Disconnect button
                   ToolButton
                   {
                       text: 'Disconnect'
-                      enabled: CppClass.running
+                      // Add null check
+                      enabled: CppClass ? CppClass.running : false
 
                       contentItem: Text {
                           text: parent.text
-                          font.pixelSize: !CppClass.running ? 18 : 16
-                          font.bold: !CppClass.running
-                          color: parent.enabled ? (!CppClass.running ? "#36454F" : "white") : "gray"
+                          // Add null checks
+                          font.pixelSize: (CppClass && !CppClass.running) ? 18 : 16
+                          font.bold: (CppClass && !CppClass.running)
+                          color: parent.enabled ? ((CppClass && !CppClass.running) ? "#36454F" : "white") : "gray"
                           horizontalAlignment: Text.AlignHCenter
                           verticalAlignment: Text.AlignVCenter
                       }
                       onClicked: {
+                          if (!CppClass) return;
+
                           console.log("=== Disconnect button clicked ===");
 
-                          // Directly reset streaming state in ListView4
+                          // Directly reset streaming state
                           if (contentStack.currentItem) {
                               console.log("Directly resetting stream state");
                               contentStack.currentItem.streamActive = false;
@@ -140,7 +150,6 @@ ApplicationWindow
 
                           // Then stop the communication
                           CppClass.stopComm();
-
                           console.log("=== Disconnect complete ===");
                       }
                   }
