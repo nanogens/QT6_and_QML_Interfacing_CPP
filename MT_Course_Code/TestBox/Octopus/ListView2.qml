@@ -36,14 +36,15 @@ Item {
     property real generalFontSize: 18.5 * scaleFactor
     property real smallFontSize: 18 * scaleFactor
     property real dropdownFontSize: 14.5 * scaleFactor
-    property real calenderButtonFontSize: 19 * scaleFactor
-    property real calendarLabelFontSize: 20 * scaleFactor
+    property real calenderButtonFontSize: 21 * scaleFactor
+    property real calendarLabelFontSize: 21 * scaleFactor
     property real calendarSpinBoxFontSize: 20 * scaleFactor
     property real calendarTitleFontSize: 27 * scaleFactor
     property real calendarDayFontSize: 22 * scaleFactor
     property real calendarMonthFontSize: 22 * scaleFactor
     property real calendarDateFontSize: 20 * scaleFactor
-
+    property real cellboxTitleFontSize: 24 * scaleFactor
+    property real buttonFontSize: 20 * scaleFactor
 
     // Add these properties to store the instrument data from C++
     property string label_Instrument_Device: "Default Device"
@@ -74,7 +75,7 @@ Item {
                 color: "black"
                 font {
                     bold: true
-                    pixelSize: Math.max(generalFontSize, (18 * listview2.scaleFactor))
+                    pixelSize: Math.max(cellboxTitleFontSize, (18 * listview2.scaleFactor))
                     family: "Arial"
                 }
             }
@@ -348,7 +349,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
                         }
@@ -357,7 +358,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
                             onClicked: {
@@ -526,7 +527,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 4
                             Layout.column: 1
                             onClicked: {
@@ -541,7 +542,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 4
                             Layout.column: 2
                             onClicked: {
@@ -745,7 +746,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
                             onClicked: {
@@ -760,7 +761,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
                             onClicked: {
@@ -954,7 +955,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
                         }
@@ -963,7 +964,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
                         }
@@ -1134,7 +1135,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
                         }
@@ -1143,7 +1144,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
                             onClicked: {
@@ -1357,7 +1358,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 6; Layout.column: 1
                         }
                         Button {
@@ -1365,7 +1366,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 6; Layout.column: 2
                             onClicked: {
                                 var selection = "6";
@@ -1524,7 +1525,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 2
                             Layout.column: 0
                             onClicked: {
@@ -1540,7 +1541,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 2
                             Layout.column: 1
                             onClicked: {
@@ -1746,7 +1747,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
                         }
@@ -1755,7 +1756,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
                         }
@@ -1898,7 +1899,7 @@ Item {
                             text: "Read Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
                         }
@@ -1907,7 +1908,7 @@ Item {
                             text: "Write Instrument"
                             implicitHeight: 40 * scaleFactor
                             implicitWidth: 200 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
                             onClicked:
@@ -1964,7 +1965,7 @@ Item {
 
                     Button {
                         text: "Previous"
-                        implicitWidth: 120 * scaleFactor
+                        implicitWidth: 130 * scaleFactor
                         implicitHeight: 45 * scaleFactor
                         font.pixelSize: calenderButtonFontSize
                         onClicked: {
@@ -2250,7 +2251,7 @@ Item {
 
                     Button {
                         text: "Set " + genericDateTimePopup.mode + " Date and Time" // FIXED
-                        implicitWidth: 250 * scaleFactor
+                        implicitWidth: 270 * scaleFactor
                         implicitHeight: 45 * scaleFactor
                         font.pixelSize: calenderButtonFontSize
                         onClicked: {

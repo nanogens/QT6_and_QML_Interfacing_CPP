@@ -73,6 +73,10 @@ Item {
     property string label_Time_Device: "N/A"
     property string label_Time_UpcomingRec: "N/A"
 
+    property real cellboxTitleFontSize: 20 * scaleFactor
+
+    property bool pageActive: false
+
     // Timer for periodic RS-485 messages
     Timer {
         id: rs485Timer
@@ -133,11 +137,13 @@ Item {
             condReadings.clear();
             console.log("Cleared all reading lists - starting fresh stream");
 
+            // Reset packet state to false when starting new stream
+            packetReceived = false; // Add this line
+
             // Start periodic messaging and reading updates
             rs485Timer.start();
             updateTimer.running = true; // Start reading updates
             // Reset packet received state and start timeout timer
-            packetReceived = false;
             packetTimeoutTimer.start();
             console.log("Started periodic RS-485 messages and reading updates");
         }
@@ -229,6 +235,54 @@ Item {
         console.log("Resetting stream state to default");
     }
 
+    // Add this function to detect page activation
+    function checkPageActivation() {
+        // Try to find the StackLayout parent
+        var parentItem = parent;
+        var foundStack = null;
+
+        while (parentItem && !foundStack) {
+            if (parentItem.objectName === "contentStack" ||
+                (parentItem.hasOwnProperty && parentItem.hasOwnProperty("currentIndex"))) {
+                foundStack = parentItem;
+            } else {
+                parentItem = parentItem.parent;
+            }
+        }
+
+        if (foundStack) {
+            // ListView4 is index 0, ListView2 is index 1, ListView3 is index 2
+            pageActive = (foundStack.currentIndex === 0);
+            //console.log("Page activation check: pageActive =", pageActive, "currentIndex =", foundStack.currentIndex);
+
+            // Auto-stop streaming if page becomes inactive
+            if (!pageActive && streamActive) {
+                console.log("Auto-stopping stream due to page deactivation");
+                resetStreamState();
+            }
+        }
+    }
+
+    // Add this to monitor parent StackLayout changes
+    Timer {
+        id: pageCheckTimer
+        interval: 100
+        running: true
+        repeat: true
+        onTriggered: checkPageActivation()
+    }
+
+    // Also check when component becomes visible
+    onVisibleChanged: {
+        console.log("ListView4 visible changed to:", visible);
+        if (!visible && streamActive) {
+            console.log("ListView4 became invisible - stopping stream");
+            resetStreamState();
+        }
+    }
+
+
+
     // Add this to ListView4.qml to sync with CppClass.running
     Connections {
         target: CppClass
@@ -287,9 +341,9 @@ Item {
 
             // Mark that we received a valid packet and restart timeout timer
             if (streamActive) {
-                packetReceived = true;
+                packetReceived = !packetReceived; // Toggle the state
                 packetTimeoutTimer.restart();
-                console.log("Valid packet received - updating stream button state");
+                console.log("Valid packet received - toggling stream button state. New state:", packetReceived);
             }
 
             // Optional: Log the updates for debugging
@@ -405,9 +459,9 @@ Item {
 
             // Mark that we received a valid packet and restart timeout timer
             if (streamActive) {
-                packetReceived = true;
+                packetReceived = !packetReceived; // Toggle the state
                 packetTimeoutTimer.restart();
-                console.log("Valid packet received - updating stream button state");
+                console.log("Valid packet received - updating stream button state. New state:", packetReceived);
             }
 
             console.log("Updated label_Battery_BatteryCell:", label_Battery_BatteryCell);
@@ -504,8 +558,8 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Instrument Status"
-                                    item.fontSize = 14 * scaleFactor
+                                    item.text = "(0) Instrument Status"
+                                    item.fontSize = cellboxTitleFontSize
                                 }
                             }
                         }
@@ -660,8 +714,8 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Logger Memory"
-                                    item.fontSize = 14 * scaleFactor
+                                    item.text = "(1) Logger Memory"
+                                    item.fontSize = cellboxTitleFontSize
                                 }
                             }
                         }
@@ -790,8 +844,8 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Configuration"
-                                    item.fontSize = 14 * scaleFactor
+                                    item.text = "(2) Configuration"
+                                    item.fontSize = cellboxTitleFontSize
                                 }
                             }
                         }
@@ -903,11 +957,13 @@ Item {
                 border.width: showDebugOutlines ? 1 : 0
                 border.color: "darkgreen"
 
+                /*
                 Text {
                     text: "Col 1 (Spans 3 rows)\n" + (col1Width * 100).toFixed(0) + "%"
                     anchors.centerIn: parent
                     color: "white"
                 }
+                */
 
                 // Stream Button - Positioned in upper right corner of gauge cluster
                 MouseArea {
@@ -962,11 +1018,41 @@ Item {
                     }
                 }
 
+                // OPTION 1: PNG Image Display (shows when streaming is NOT active)
+                Item {
+                    id: pngDisplay
+                    anchors.fill: parent
+                    visible: !streamActive  // Show when streaming is NOT active
+
+                    Image {
+                        id: dataCollectorImage
+                        source: "qrc:/Octopus/images/Data_Collector_Render.png"
+                        anchors.centerIn: parent
+                        width: Math.min(parent.width * 0.8, 600)  // 80% of parent width, max 600px
+                        height: width * (sourceSize.height / sourceSize.width)  // Maintain aspect ratio
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+
+                        // Optional: Add a text label below the image
+                        Text {
+                            anchors {
+                                top: parent.bottom
+                                horizontalCenter: parent.horizontalCenter
+                                topMargin: 20
+                            }
+                            text: "Ready to Stream"
+                            font.pixelSize: 24
+                            font.bold: true
+                            color: "lightgreen"
+                        }
+                    }
+                }
+
                 // Option A: Container for the gauge cluster
                 Item {
                     id: gaugeCluster
                     anchors.fill: parent
-                    visible: selectMainControl // Show when selectMainControl is true
+                    visible: streamActive && selectMainControl // Show when streaming active AND selectMainControl is true
 
                     /*
                     // Add temporary background and border
@@ -1322,7 +1408,8 @@ Item {
                             ListElement { file: "qrc:/Octopus/images/Spectra_Bladder_Mini.png"; name: "Mini" }
                             ListElement { file: "qrc:/Octopus/images/Spectra_Bladder_Sil_1.png"; name: "Sil 1" }
                             ListElement { file: "qrc:/Octopus/images/Spectra_Bladder_Sil_2.png"; name: "Sil 2" }
-                            ListElement { file: "qrc:/Octopus/images/Spectra_Hydro_Pro.png"; name: "Hydro Pro" }
+                            //ListElement { file: "qrc:/Octopus/images/Spectra_Hydro_Pro.png"; name: "Hydro Pro" }
+                            ListElement { file: "qrc:/Octopus/images/Data_Collector_Render.png"; name: "Data Collector" }
                         }
 
                         Component {
@@ -1472,8 +1559,8 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Internal Battery"
-                                    item.fontSize = 14 * scaleFactor
+                                    item.text = "(3) Internal Battery"
+                                    item.fontSize = cellboxTitleFontSize
                                 }
                             }
                         }
@@ -1614,8 +1701,8 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Message Traffic"
-                                    item.fontSize = 14 * scaleFactor
+                                    item.text = "(4) Message Traffic"
+                                    item.fontSize = cellboxTitleFontSize
                                 }
                             }
                         }
@@ -1758,8 +1845,8 @@ Item {
                                 sourceComponent: bannerComponent
                                 Layout.fillWidth: true
                                 onLoaded: {
-                                    item.text = "Time"
-                                    item.fontSize = 14 * scaleFactor
+                                    item.text = "(5) Time"
+                                    item.fontSize = cellboxTitleFontSize
                                 }
                             }
                         }

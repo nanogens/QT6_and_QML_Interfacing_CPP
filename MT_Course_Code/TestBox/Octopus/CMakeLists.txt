@@ -69,14 +69,15 @@ qt_add_qml_module(appOctopus
         RESOURCES images/Temperature1_Icon.png
         RESOURCES images/Depth1_Icon.png
         RESOURCES images/Conductivity1_Icon.png
-        RESOURCES ../../../../../Users/MT/Downloads/Stream_Activate_Button.png
         RESOURCES
         RESOURCES
         RESOURCES
         RESOURCES
-        RESOURCES images/Stream_Activate_Button.png
+        RESOURCES
         RESOURCES images/Stream_Deactivate_Button.png
         RESOURCES images/Stream_ActivateToggle_Button.png
+        RESOURCES images/Stream_Activate_Button.png
+        RESOURCES images/Data_Collector_Render.png
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
