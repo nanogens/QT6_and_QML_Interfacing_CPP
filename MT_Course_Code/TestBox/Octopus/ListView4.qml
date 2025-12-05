@@ -116,7 +116,7 @@ Item {
         };
 
         console.log("Sending periodic CTD Readings Processed Query");
-        CppClass.ProcessOutgoingMsg(arr, obj);
+        CppClass.processOutgoingMsg(arr, obj);
     }
 
     // Function to handle stream button click
@@ -168,7 +168,7 @@ Item {
             StreamActive: streamActive
         };
 
-        CppClass.ProcessOutgoingMsg(arr, obj);
+        CppClass.processOutgoingMsg(arr, obj);
     }
 
     // Function to add new readings when gauge values change
@@ -663,7 +663,7 @@ Item {
                                         Reserved: reserved
                                     };
                                     //CppClass.passFromQmlToCpp3(arr, obj);
-                                    CppClass.ProcessOutgoingMsg(arr,obj);
+                                    CppClass.processOutgoingMsg(arr,obj);
                                 }
                             }
                         }
@@ -1040,8 +1040,8 @@ Item {
                                 horizontalCenter: parent.horizontalCenter
                                 topMargin: 20
                             }
-                            text: "Ready to Stream"
-                            font.pixelSize: 24
+                            text: "\t\tReady to Stream\n\nClick [Connect] followed by [Stream Data]"
+                            font.pixelSize: 25
                             font.bold: true
                             color: "lightgreen"
                         }

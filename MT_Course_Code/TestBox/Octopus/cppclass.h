@@ -305,7 +305,7 @@ public:
     Q_INVOKABLE void openAndReadFile(const QString& filePath);
     Q_INVOKABLE void startComm();
     Q_INVOKABLE void stopComm();
-    Q_INVOKABLE void ProcessOutgoingMsg(QVariantList list, QVariantMap map);
+    Q_INVOKABLE void processOutgoingMsg(QVariantList list, QVariantMap map);
 
     // Property binding
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
@@ -411,6 +411,9 @@ private:
 private:
     void Version_Resp();
     void Status_Resp();
+
+    void Instrument_Set(QVariantList& list, int i, QByteArray& byteArray);
+
 
     void Instrument_Resp();
     void Communication_Resp();

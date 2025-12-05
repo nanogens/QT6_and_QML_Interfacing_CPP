@@ -99,9 +99,9 @@ ApplicationWindow
                       contentItem: Text {
                           text: parent.text
                           // Add null checks
-                          font.pixelSize: (CppClass && CppClass.running) ? 18 : 16
-                          font.bold: (CppClass && CppClass.running)
-                          color: parent.enabled ? ((CppClass && CppClass.running) ? "#36454F" : "#36454F") : "gray"
+                          font.pixelSize: (CppClass && CppClass.running) ? 23 : 20
+                          font.bold: (CppClass && CppClass.running) ? true : true
+                          color: parent.enabled ? ((CppClass && CppClass.running) ? "gray" : "gray") : "black"
                           horizontalAlignment: Text.AlignHCenter
                           verticalAlignment: Text.AlignVCenter
                       }
@@ -128,9 +128,9 @@ ApplicationWindow
                       contentItem: Text {
                           text: parent.text
                           // Add null checks
-                          font.pixelSize: (CppClass && !CppClass.running) ? 18 : 16
-                          font.bold: (CppClass && !CppClass.running)
-                          color: parent.enabled ? ((CppClass && !CppClass.running) ? "#36454F" : "white") : "gray"
+                          font.pixelSize: (CppClass && !CppClass.running) ? 23 : 20
+                          font.bold: (CppClass && CppClass.running) ? true : true
+                          color: parent.enabled ? ((CppClass && !CppClass.running) ? "gray" : "gray") : "black"
                           horizontalAlignment: Text.AlignHCenter
                           verticalAlignment: Text.AlignVCenter
                       }
@@ -223,9 +223,11 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
-          ListView4 {}  // Guages
-          ListView2 {}
-          ListView3 {}  // New simple view
+          ListView4 {}  // Streaming
+          ListView2 {}  // Settings
+          ListView3 {}  // Graph
+
+
           //ListView0 {}  // Your original grid content
           //ListView1 {}  // New simple view
       }

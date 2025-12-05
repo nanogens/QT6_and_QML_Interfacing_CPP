@@ -123,10 +123,10 @@
 #define POWER_QUERY_MSGLGT 0x07
 #define POWER_QUERY_MSGID 0x0C
 
-#define POWER_RESP_MSGLGT 0x17
+#define POWER_RESP_MSGLGT 0x0F
 #define POWER_RESP_MSGID 0x0D
 
-#define POWER_SET_MSGLGT 0x07
+#define POWER_SET_MSGLGT 0x0F
 #define POWER_SET_MSGID 0x0E
 
 // Re-check this -- just using some bogus values for now
@@ -143,30 +143,30 @@
 #define SAMPLING_QUERY_MSGLGT 0x07
 #define SAMPLING_QUERY_MSGID 0x12
 
-#define SAMPLING_RESP_MSGLGT 0x17
+#define SAMPLING_RESP_MSGLGT 0x0D
 #define SAMPLING_RESP_MSGID 0x13
 
-#define SAMPLING_SET_MSGLGT 0x07
+#define SAMPLING_SET_MSGLGT 0x0D
 #define SAMPLING_SET_MSGID 0x14
 
 // Re-check this -- just using some bogus values for now
 #define ACTIVATION_QUERY_MSGLGT 0x07
 #define ACTIVATION_QUERY_MSGID 0x15
 
-#define ACTIVATION_RESP_MSGLGT 0x17
+#define ACTIVATION_RESP_MSGLGT 0x0D
 #define ACTIVATION_RESP_MSGID 0x16
 
-#define ACTIVATION_SET_MSGLGT 0x07
+#define ACTIVATION_SET_MSGLGT 0x0D
 #define ACTIVATION_SET_MSGID 0x17
 
 // Re-check this -- just using some bogus values for now
 #define NOTES_QUERY_MSGLGT 0x07
 #define NOTES_QUERY_MSGID 0x18
 
-#define NOTES_RESP_MSGLGT 0x07
+#define NOTES_RESP_MSGLGT 0x29
 #define NOTES_RESP_MSGID 0x19
 
-#define NOTES_SET_MSGLGT 0x07
+#define NOTES_SET_MSGLGT 0x29
 #define NOTES_SET_MSGID 0x1A
 
 // Re-check this -- just using some bogus values for now
@@ -174,19 +174,19 @@
 #define CLOUD_QUERY_MSGID 0x1B
 
 #define CLOUD_RESP_MSGLGT 0x07
-#define CLOUD_RESP_MSGID 0x1C
+#define CLOUD_RESP_MSGID 0x0D
 
 #define CLOUD_SET_MSGLGT 0x07
-#define CLOUD_SET_MSGID 0x1D
+#define CLOUD_SET_MSGID 0x0D
 
 // Re-check this -- just using some bogus values for now
 #define MISC_QUERY_MSGLGT 0x07
 #define MISC_QUERY_MSGID 0x1E
 
-#define MISC_RESP_MSGLGT 0x07
+#define MISC_RESP_MSGLGT 0x0D
 #define MISC_RESP_MSGID 0x1F
 
-#define MISC_SET_MSGLGT 0x07
+#define MISC_SET_MSGLGT 0x0D
 #define MISC_SET_MSGID 0x20
 
 // Re-check this -- just using some bogus values for now

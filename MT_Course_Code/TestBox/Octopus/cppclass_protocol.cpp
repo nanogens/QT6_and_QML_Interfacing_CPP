@@ -401,19 +401,106 @@ void CppClass::CTD_Readings_Processed_Query(void)
 
 // QML Page 2 ===============================================
 
+void CppClass::Instrument_Set(QVariantList &list, int i, QByteArray &byteArray)
+{
+    int bytePos_index = 0;
+
+    instrument.boxselection = INSTRUMENT;  // Box Selection - 1 byte
+    // Box - 1 byte
+    if(i == 1)
+    {
+        instrument.device = ((list.at(i).toString().toUtf8()).toInt());
+        qDebug() << "Instrument.device : " << instrument.device;
+    }
+    // Serial Number - 13 bytes
+    else if(i == 2)
+    {
+        byteArray = list.at(i).toString().toUtf8();
+        bytePos_index = 0;
+        for (char c : byteArray)
+        {
+            if(bytePos_index < MAX_INSTRUMENT_SERIALNUMBER_ARRAY)
+            {
+                instrument.serialnumber[bytePos_index] = c;
+                bytePos_index++;
+            }
+        }
+        // Check if insufficient number of characters
+        if(bytePos_index < MAX_INSTRUMENT_SERIALNUMBER_ARRAY)
+        {
+            qDebug() << "Insufficient number of serial characters";
+            error.errorcode = 1;
+        }
+        else  // print it out
+        {
+            //for(int s=0; s < bytePos_index; s++)
+            //{
+            //qDebug() << instrument.serialnumber[s];
+            //}
+            error.errorcode = 0;
+        }
+
+        // if everything is alright, we can send it
+        if((error.errorcode == 0) && (writePos == 0))
+        {
+            SendHeader(INSTRUMENT_SET_MSGLGT, INSTRUMENT_SET_MSGID);
+            AddByteToSend(instrument.boxselection, false); // Box Selection
+            AddByteToSend(0x00, false); // Reserved (instrument.reserved)
+            AddByteToSend(instrument.device, false); // Devices
+            for(int r=0; r < MAX_INSTRUMENT_SERIALNUMBER_ARRAY; r++) // Serial
+            {
+                AddByteToSend(instrument.serialnumber[r], false);
+            }
+            for(int r=0; r < MAX_INSTRUMENT_USAGE_ARRAY; r++) // Usage (instrument.usage[r]
+            {
+                AddByteToSend(0x00, false);
+            }
+            AddByteToSend(send.crcsend, true);
+
+            // mutex lock the 485 line so we have exclusive control over it
+            std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+            writePos = send.writepos; // triggers send
+
+            qDebug() << "Bytes sent!";
+        }
+    }
+}
+
+
+
+
+
 void CppClass::Instrument_Query(void)
 {
+  SendHeader(INSTRUMENT_QUERY_MSGLGT, INSTRUMENT_QUERY_MSGID);
+  AddByteToSend(send.crcsend, true);
 
+  std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+  writePos = send.writepos; // triggers send
+
+  qDebug() << "Instrument_Query Sent!";
 }
 
 void CppClass::Communication_Query(void)
 {
+  SendHeader(COMMUNICATION_QUERY_MSGLGT, COMMUNICATION_QUERY_MSGID);
+  AddByteToSend(send.crcsend, true);
 
+  std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+  writePos = send.writepos; // triggers send
+
+  qDebug() << "Communication_Query Sent!";
 }
 
 void CppClass::Power_Query(void)
 {
+  SendHeader(COMMUNICATION_QUERY_MSGLGT, COMMUNICATION_QUERY_MSGID);
+  AddByteToSend(send.crcsend, true);
 
+  std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+  writePos = send.writepos; // triggers send
+
+  qDebug() << "Communication_Query Sent!";
 }
 
 void CppClass::Timing_Query(void)

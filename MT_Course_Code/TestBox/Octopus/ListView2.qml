@@ -39,11 +39,12 @@ Item {
     property real calenderButtonFontSize: 21 * scaleFactor
     property real calendarLabelFontSize: 21 * scaleFactor
     property real calendarSpinBoxFontSize: 20 * scaleFactor
-    property real calendarTitleFontSize: 27 * scaleFactor
+    property real calendarTitleFontSize: 28 * scaleFactor
     property real calendarDayFontSize: 22 * scaleFactor
     property real calendarMonthFontSize: 22 * scaleFactor
     property real calendarDateFontSize: 20 * scaleFactor
     property real cellboxTitleFontSize: 24 * scaleFactor
+    property real cellboxButtonFontSize: 18 * scaleFactor
     property real buttonFontSize: 20 * scaleFactor
 
     // Add these properties to store the instrument data from C++
@@ -352,6 +353,13 @@ Item {
                             font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
+                            onClicked:
+                            {
+                                var selection = iNSTRUMENT;  // Box 0
+                                var arr = [selection];
+                                var obj = {Selection : selection}
+                                CppClass.processOutgoingMsg(arr, obj);
+                            }
                         }
                         Button {
                             id: button2Id
@@ -372,7 +380,7 @@ Item {
                                     Instrument_Serial_Number: selected_Instrument_Serial_Number
                                 };
                                 //CppClass.passFromQmlToCpp3(arr, obj);
-                                CppClass.ProcessOutgoingMsg(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
                     }
@@ -555,7 +563,7 @@ Item {
                                     Communication_Connection: selected_Communication_Connection,
                                     Communication_BaudRate: selected_Communication_BaudRate
                                 };
-                                CppClass.ProcessOutgoingMsg(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
                     }
@@ -917,9 +925,9 @@ Item {
                             Layout.column: 0
                         }
                         Button {
-                            text: "Set Logger Date/Time"
+                            text: "Sync to Logger"
                             implicitHeight: 36 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: 18 * scaleFactor
                             Layout.row: 3; Layout.column: 2
                             Layout.fillWidth: true
                             onClicked: {
@@ -1257,9 +1265,9 @@ Item {
                             Layout.row: 1; Layout.column: 1
                         }
                         Button {
-                            text: "Set Date/Time (Start)"
+                            text: "Set Start Schedule"
                             implicitHeight: 36 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: cellboxButtonFontSize
                             Layout.row: 1; Layout.column: 2
                             Layout.fillWidth: true
                             onClicked: {
@@ -1282,9 +1290,9 @@ Item {
                             Layout.row: 2; Layout.column: 1
                         }
                         Button {
-                            text: "Set Date/Time (End)"
+                            text: "Set End Schedule"
                             implicitHeight: 36 * scaleFactor
-                            font.pixelSize: 16 * scaleFactor
+                            font.pixelSize: cellboxButtonFontSize
                             Layout.row: 2; Layout.column: 2
                             Layout.fillWidth: true
                             onClicked: {
@@ -1670,14 +1678,14 @@ Item {
 
                         // Row 2:
                         Label {
-                            text: "  Login  . . . . . . . . . . . . . ."
+                            text: "  Login  . . . . . . . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 2
                             Layout.column: 0
                         }
                         Label {
-                            text: "Manish" // current_Cloud_Login
+                            text: "Zaid" // current_Cloud_Login
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 2
                             Layout.column: 1
@@ -1696,14 +1704,14 @@ Item {
 
                         // Row 3:
                         Label {
-                            text: "  Password  . . . . . . . . . ."
+                            text: "  Password  . . . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 3
                             Layout.column: 0
                         }
                         Label {
-                            text: "Qwerty" // current_Cloud_Password
+                            text: "XXXXXX" // current_Cloud_Password
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 3
                             Layout.column: 1
@@ -1848,7 +1856,7 @@ Item {
 
                         // Row 1: Recording Mode
                         Label {
-                            text: "  Some Stuff . . . . . . . . ."
+                            text: "  Some Stuff  . . . . . . ."
                             font.bold: true
                             font.pixelSize: generalFontSize * scaleFactor
                             Layout.row: 1
