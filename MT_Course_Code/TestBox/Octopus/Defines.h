@@ -59,8 +59,8 @@
 
 
 
-
-// boxes
+/*
+// boxes -- page 2
 #define INSTRUMENT 0     // Cell A
 #define COMMUNICATIONS 1 // Cell B
 #define POWER 2          // Cell C
@@ -70,6 +70,7 @@
 #define NOTES 6          // Cell G
 #define CLOUD 7          // Cell H
 #define MISCELLENEOUS 8  // Cell I
+*/
 
 // message header
 #define DLE 0x10

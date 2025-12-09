@@ -184,7 +184,7 @@ void CppClass::CTD_Readings_Processed_Resp(void)
   ctd.conductivity[0]         = uartshadow.payload[6];
   ctd.conductivity[1]         = uartshadow.payload[7];
   ctd.reserved1               = uartshadow.payload[8];
-  ctd.reserved2               = uartshadow.payload[9];
+  ctd.reedswitch              = uartshadow.payload[9];
 
 
   // Pressure (mbar) to Depth (m) calculation
@@ -205,7 +205,10 @@ void CppClass::CTD_Readings_Processed_Resp(void)
   qDebug() << "Emitting ctdreadingsprocessedData:" << ctdreadingsprocessedData;
 
   // Emit the signal to send the data to QML
-  emit ctdreadingsprocessedDataReceived(ctdreadingsprocessedData);  
+  emit ctdreadingsprocessedDataReceived(ctdreadingsprocessedData);
+
+  // This function emits the state of the ring switch to the QML front end
+  ringSwitch(ctd.reedswitch);
 
   qDebug() << "CTD_Readings_Processed_Resp Bytes Stored!";
 }
@@ -405,7 +408,7 @@ void CppClass::Instrument_Set(QVariantList &list, int i, QByteArray &byteArray)
 {
     int bytePos_index = 0;
 
-    instrument.boxselection = INSTRUMENT;  // Box Selection - 1 byte
+    instrument.boxselection = INSTRUMENT_SET_MSGID;  // Box Selection - 1 byte
     // Box - 1 byte
     if(i == 1)
     {
@@ -505,30 +508,66 @@ void CppClass::Power_Query(void)
 
 void CppClass::Timing_Query(void)
 {
+    SendHeader(TIMING_QUERY_MSGLGT, TIMING_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Timing_Query Sent!";
 }
 
 void CppClass::Sampling_Query(void)
 {
+    SendHeader(SAMPLING_QUERY_MSGLGT, SAMPLING_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Sampling_Query Sent!";
 }
 
 void CppClass::Activation_Query(void)
 {
+    SendHeader(ACTIVATION_QUERY_MSGLGT, ACTIVATION_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Activation_Query Sent!";
 }
 
 void CppClass::Notes_Query(void)
 {
+    SendHeader(NOTES_QUERY_MSGLGT, NOTES_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Notes_Query Sent!";
 }
 
 void CppClass::Cloud_Query(void)
 {
+    SendHeader(CLOUD_QUERY_MSGLGT, CLOUD_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Cloud_Query Sent!";
 }
 
 void CppClass::Misc_Query(void)
 {
+    SendHeader(MISC_QUERY_MSGLGT, MISC_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Misc_Query Sent!";
 }

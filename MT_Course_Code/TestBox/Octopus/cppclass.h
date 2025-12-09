@@ -204,7 +204,7 @@ struct CTD
     uint8_t temperature[2] = {0};
     uint8_t conductivity[2] = {0};
     uint8_t reserved1 = 0;
-    uint8_t reserved2 = 0;
+    uint8_t reedswitch = 0; // 1 = ACTIVATED, 0 = DEACTIVATED
 };
 
 struct SubmersibleInfo
@@ -298,7 +298,7 @@ public:
     // Q_INVOKABLE methods
     Q_INVOKABLE void passFromQmlToCpp(QVariantList list, QVariantMap map);
     Q_INVOKABLE void passFromQmlToCpp2(const QVariantList &files);
-    Q_INVOKABLE void passFromQmlToCpp3(QVariantList list, QVariantMap map);
+    //Q_INVOKABLE void passFromQmlToCpp3(QVariantList list, QVariantMap map);
     Q_INVOKABLE void passFromQmlToCpp3prev(QVariantList list, QVariantMap map);
     Q_INVOKABLE QVariantList getVariantListFromCpp();
     Q_INVOKABLE QVariantMap getVariantMapFromCpp();
@@ -306,6 +306,7 @@ public:
     Q_INVOKABLE void startComm();
     Q_INVOKABLE void stopComm();
     Q_INVOKABLE void processOutgoingMsg(QVariantList list, QVariantMap map);
+    Q_INVOKABLE void ringSwitch(bool active);
 
     // Property binding
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
@@ -332,6 +333,9 @@ signals:
 
     void ctdreadingsprocessedDataReceived(const QVariantMap &data);
     void submersibleinfoprocessedDataReceived(const QVariantMap &data);
+
+signals:
+    void ringStateChanged(bool active);
 
 public slots:
     void triggerJSCall();
@@ -441,6 +445,7 @@ public:
     void Notes_Query();
     void Cloud_Query();
     void Misc_Query();
+
 };
 
 #endif // CPPCLASS_H

@@ -13,8 +13,9 @@ Item {
     id: listview2
     anchors.fill: parent  // Critical: Make Item fill the entire window
 
+    /*
     // Define statements (must match Defines.h)
-    readonly property int iNSTRUMENT: 0      // Cell A
+    readonly property int iNSTRUMENT_READ: 0 // Cell A
     readonly property int cOMMUNICATIONS: 1  // B
     readonly property int pOWER: 2           // C
     readonly property int tIME: 3            // D
@@ -23,6 +24,12 @@ Item {
     readonly property int nOTES: 6           // G
     readonly property int cLOUD: 7           // H
     readonly property int mISCELLENEOUS: 8   // I
+    */
+
+    // Define statements (must match Defines.h)
+    readonly property int iNSTRUMENT_QUERY_MSGID: 0x06
+    readonly property int iNSTRUMENT_SET_MSGID: 0x08
+
 
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
     readonly property int aRRAY_IP_MAX: 11
@@ -355,9 +362,10 @@ Item {
                             Layout.column: 1
                             onClicked:
                             {
-                                var selection = iNSTRUMENT;  // Box 0
-                                var arr = [selection];
-                                var obj = {Selection : selection}
+                                var selection = iNSTRUMENT_QUERY_MSGID;  // Box 0 - Query
+                                var dummybyte = 0 // For Queries, this is needed to progress down the chain in processOutgoingMsg
+                                var arr = [selection, dummybyte];
+                                var obj = {Selection : selection, Dummybyte : dummybyte}
                                 CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
@@ -370,7 +378,7 @@ Item {
                             Layout.row: 5
                             Layout.column: 2
                             onClicked: {
-                                var selection = iNSTRUMENT;  // Box 0
+                                var selection = iNSTRUMENT_SET_MSGID;  // Box 0 - Set
                                 var selected_Instrument_Device = id_Instrument_Device_ComboBox.currentIndex;
                                 var selected_Instrument_Serial_Number = text_Instrument_SerialNumber.text;
                                 var arr = [selection, selected_Instrument_Device, selected_Instrument_Serial_Number];
@@ -780,7 +788,7 @@ Item {
                                     Selection : selection,
                                     Power_Connection: selected_Power_BatteryType
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
                     }
@@ -1165,7 +1173,7 @@ Item {
                                     Sampling_Mode : selected_Sampling_Mode,
                                     Sampling_Rate : selected_Sampling_Rate
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
                     }
@@ -1397,7 +1405,7 @@ Item {
                                     StartMinute: startDateTime ? startDateTime.getMinutes() : 0,
                                     StartSecond: startDateTime ? startDateTime.getSeconds() : 0
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
                     }
@@ -1560,7 +1568,7 @@ Item {
                                     Selection : selection,
                                     Sampling_Notes_Text : selected_Notes_Text,
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                             Layout.alignment: Qt.AlignCenter
                         }
@@ -1928,7 +1936,7 @@ Item {
                                     Selection : selection,
                                     Miscelleneous_SomeStuff: selected_Miscelleneous_SomeStuff
                                 };
-                                CppClass.passFromQmlToCpp3(arr, obj);
+                                CppClass.processOutgoingMsg(arr, obj);
                             }
                         }
                     }

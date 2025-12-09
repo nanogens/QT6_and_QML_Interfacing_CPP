@@ -576,6 +576,7 @@ void CppClass::passFromQmlToCpp2(const QVariantList &files)
     }
 }
 
+/*
 // Called from the QML when we need to send out query / setting
 void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
 {
@@ -750,6 +751,7 @@ void CppClass::passFromQmlToCpp3(QVariantList list, QVariantMap map)
         }
     }
 }
+*/
 
 // Adds a byte to the queue that is to be sent.
 // Note: The writeBuffer is only sent when triggered to do so (by setting writePos).
@@ -822,7 +824,7 @@ QVariantList CppClass::getVariantListFromCpp()
     QVariantList list;
     list << 123.3 << QColor(Qt::cyan) << "Qt is great" << 10;
 
-    setPortName("COM3");
+    setPortName("COM5");  // MT was COM3
     startCommunication(m_portName.toUtf8().constData());
     return list;
 }
@@ -1080,11 +1082,16 @@ void CppClass::stopFileMonitoring() {
 
 void CppClass::startComm()
 {
-    setPortName("COM3");
+    setPortName("COM5"); // COM8 on tablet
     if(startCommunication(m_portName.toUtf8().constData()) == true)
     {
         emit runningChanged();  // Emit signal when status changes
     }
+}
+
+void CppClass::ringSwitch(bool active)
+{
+  emit ringStateChanged(active);
 }
 
 void CppClass::stopComm()

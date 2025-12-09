@@ -91,7 +91,7 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
             switch (x)  // tell you which box was selected (accordingly extract info expected from each box)
             {
             // SET
-            case INSTRUMENT:
+            case INSTRUMENT_SET_MSGID:
                 Instrument_Set(list, i, byteArray);
                 break;
 
@@ -103,6 +103,7 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 break;
 
             case INSTRUMENT_QUERY_MSGID:
+                qDebug() << "in INSTRUMENT_QUERY_MSGID";
                 Instrument_Query();
                 break;
 

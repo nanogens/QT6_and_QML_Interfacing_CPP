@@ -26,7 +26,7 @@ Item {
     property real refSize: 40
     property real generalFontSize: 18
     // for the list (text) below each of the 3 guages
-    property real listFontSize: 20  // Change this value to adjust font size on all 3 lists
+    property real listFontSize: 25  // Change this value to adjust font size on all 3 lists
 
     // ADD LINE PROPERTIES:
     property real lineOpacity: 0.7
@@ -55,6 +55,9 @@ Item {
 
     // Add this with your other properties
     property bool isConnected: false  // Track if RS-485 is connected
+    // Add ring button state property
+    property bool ringActive: false   // Will be controlled by C++ backend
+    property bool acceptRingStateChanges: false  // NEW: Only accept ring state changes when streaming
 
     // Label initialization
     property string label_Instrument_SerialNumber: "N/A"
@@ -100,7 +103,7 @@ Item {
         repeat: false
         running: false
         onTriggered: {
-            packetReceived = false;
+            packetReceived = false; // <-- This should already be here
             console.log("Packet timeout - no valid packets received");
         }
     }
@@ -138,7 +141,11 @@ Item {
             console.log("Cleared all reading lists - starting fresh stream");
 
             // Reset packet state to false when starting new stream
-            packetReceived = false; // Add this line
+            packetReceived = false; // <-- This should already be here
+
+            // NEW: Start accepting ring state changes
+            acceptRingStateChanges = true;
+            ringActive = false; // Reset ring state when starting new stream
 
             // Start periodic messaging and reading updates
             rs485Timer.start();
@@ -149,11 +156,15 @@ Item {
         }
         else
         {
+            // NEW: Stop accepting ring state changes BEFORE stopping timers
+            acceptRingStateChanges = false;
+            ringActive = false; // Force ring state to deactivated
+
             // Stop periodic messaging and timeout timer
             rs485Timer.stop();
             packetTimeoutTimer.stop();
             updateTimer.running = false; // Stop reading updates
-            packetReceived = false;
+            packetReceived = false; // <-- Add this line
             console.log("Stopped periodic RS-485 messages and reading updates");
         }
 
@@ -173,28 +184,15 @@ Item {
 
     // Function to add new readings when gauge values change
     function updateReadingLists() {
-        // Only add readings if stream is active
-        if (!streamActive) {
+        // Only add readings if stream is active AND valid packets are being received
+        if (!streamActive || !packetReceived) {
             return;
         }
 
-        // Update temperature readings if value changed
-        //if (tempGauge.value !== prevTempValue) {
-            addReading(tempReadings, tempGauge.value, tempGauge.unit);
-            prevTempValue = tempGauge.value;
-        //}
-
-        // Update depth readings if value changed
-        //if (depthGauge.value !== prevDepthValue) {
-            addReading(depthReadings, depthGauge.value, depthGauge.unit);
-            prevDepthValue = depthGauge.value;
-        //}
-
-        // Update conductivity readings if value changed
-        //if (condGauge.value !== prevCondValue) {
-            addReading(condReadings, condGauge.value, condGauge.unit);
-            prevCondValue = condGauge.value;
-        //}
+        // Add readings regardless of whether values changed (allow duplicates)
+        addReading(tempReadings, tempGauge.value, tempGauge.unit);
+        addReading(depthReadings, depthGauge.value, depthGauge.unit);
+        addReading(condReadings, condGauge.value, condGauge.unit);
     }
 
     function addReading(model, value, unit) {
@@ -216,6 +214,18 @@ Item {
         console.log("After - isConnected:", isConnected, "streamActive:", streamActive);
         console.log("RS-485 connection state:", connected ? "Connected" : "Disconnected");
 
+        // NEW: Stop accepting ring state changes when disconnected
+        if (!connected) {
+            acceptRingStateChanges = false;
+            ringActive = false;
+        } else {
+            // When connected but not streaming, also don't accept ring state changes
+            if (!streamActive) {
+                acceptRingStateChanges = false;
+                ringActive = false;
+            }
+        }
+
         // Force reset streaming state whenever connection changes
         resetStreamState();
     }
@@ -230,6 +240,8 @@ Item {
         packetTimeoutTimer.stop();
         updateTimer.running = false;
         packetReceived = false;
+        acceptRingStateChanges = false; // NEW: Stop accepting ring state changes
+        ringActive = false; // NEW: Force ring state to deactivated
 
         console.log("After reset - streamActive:", streamActive);
         console.log("Resetting stream state to default");
@@ -281,8 +293,6 @@ Item {
         }
     }
 
-
-
     // Add this to ListView4.qml to sync with CppClass.running
     Connections {
         target: CppClass
@@ -299,7 +309,20 @@ Item {
                 packetTimeoutTimer.stop();
                 updateTimer.running = false;
                 packetReceived = false;
+                acceptRingStateChanges = false;  // NEW: Stop accepting ring state changes
                 console.log("Stream forcibly deactivated due to disconnection");
+            }
+        }
+
+        // ADD THIS CONNECTION FOR RING STATE
+        function onRingStateChanged(active) {
+            // NEW: Only accept ring state changes if streaming is active AND we're connected
+            if (acceptRingStateChanges && streamActive && isConnected) {
+                console.log("Ring state changed from C++:", active);
+                ringActive = active;
+                ringButton.ringActive = active;
+            } else {
+                console.log("Ignoring ring state change (stream not active or not accepting changes):", active);
             }
         }
     }
@@ -319,10 +342,6 @@ Item {
         addReading(tempReadings, tempGauge.value, tempGauge.unit);
         addReading(depthReadings, depthGauge.value, depthGauge.unit);
         addReading(condReadings, condGauge.value, condGauge.unit);
-
-        prevDepthValue = depthGauge.value;
-        prevTempValue = tempGauge.value;
-        prevCondValue = condGauge.value;
     }
 
     Rectangle {
@@ -341,9 +360,9 @@ Item {
 
             // Mark that we received a valid packet and restart timeout timer
             if (streamActive) {
-                packetReceived = !packetReceived; // Toggle the state
+                packetReceived = true; // SET to true when packet arrives
                 packetTimeoutTimer.restart();
-                console.log("Valid packet received - toggling stream button state. New state:", packetReceived);
+                console.log("Valid packet received - packetReceived set to true");
             }
 
             // Optional: Log the updates for debugging
@@ -1015,6 +1034,38 @@ Item {
 
                     transitions: Transition {
                         NumberAnimation { property: "scale"; duration: 100 }
+                    }
+                }
+
+                // Ring Switch Button - set by C++ backend
+                // This button is a visual indicator only (not clickable)
+                Item {
+                    id: ringButton
+                    width: 175
+                    height: 56
+                    anchors {
+                        top: streamButton.bottom
+                        topMargin: 10  // Adjust this value for spacing between buttons
+                        right: parent.right
+                        rightMargin: 30
+                    }
+
+                    Image {
+                        id: ringButtonImage
+                        anchors.fill: parent
+                        source: {
+                            // Show Ring_Deactivate_Button.png if streaming is NOT active OR if not connected
+                            if (!streamActive || !isConnected) {
+                                return "qrc:/Octopus/images/Ring_Deactivate_Button.png";
+                            }
+
+                            // Only show Ring_Activate_Button.png if streaming is active AND connected AND ringActive is true
+                            return ringActive ?
+                                "qrc:/Octopus/images/Ring_Activate_Button.png" :
+                                "qrc:/Octopus/images/Ring_Deactivate_Button.png";
+                        }
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
                     }
                 }
 
