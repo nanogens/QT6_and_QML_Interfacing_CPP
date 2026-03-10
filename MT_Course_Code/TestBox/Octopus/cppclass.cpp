@@ -824,7 +824,7 @@ QVariantList CppClass::getVariantListFromCpp()
     QVariantList list;
     list << 123.3 << QColor(Qt::cyan) << "Qt is great" << 10;
 
-    setPortName("COM5");  // MT was COM3
+    setPortName("COM3");  // COM5 for tablet
     startCommunication(m_portName.toUtf8().constData());
     return list;
 }
@@ -1082,7 +1082,7 @@ void CppClass::stopFileMonitoring() {
 
 void CppClass::startComm()
 {
-    setPortName("COM5"); // COM8 on tablet
+    setPortName("COM8"); // COM5 on tablet
     if(startCommunication(m_portName.toUtf8().constData()) == true)
     {
         emit runningChanged();  // Emit signal when status changes

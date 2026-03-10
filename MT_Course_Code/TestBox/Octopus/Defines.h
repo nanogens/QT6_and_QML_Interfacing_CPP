@@ -221,5 +221,17 @@
 #define SUBMERSIBLE_INFO_RESP_MSGLGT 0x4A
 #define SUBMERSIBLE_INFO_RESP_MSGID 0x29
 
+// Logging
+#define LOG_QUERY_SHOWFILES_MSGID 0x50
+#define LOG_QUERY_SHOWFILES_MSGLGT 0x07
+
+#define LOG_RESP_SHOWFILES_MSGID 0x51
+#define LOG_RESP_SHOWFILES_MSGLGT 0x07 // change this - has to change dynanmically
+
+#define LOG_QUERY_READSPECIFICFILE_MSGID 0x52
+#define LOG_QUERY_READSPECIFICFILE_MSGLGT 0x08 // change this - 2 bits specify if just file metadata or metadata and data, 4 bits specify which file.
+
+#define LOG_RESP_READSPECIFICFILE_MSGID 0x53
+#define LOG_RESP_READSPECIFICFILE_MSGLGT 0x07 // change this - has to change dynamically
 
 #endif // DEFINES_H

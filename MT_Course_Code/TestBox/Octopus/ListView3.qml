@@ -12,6 +12,8 @@ GridLayout {
     flow: GridLayout.TopToBottom
     rows: 2
 
+    // Local ----------------------------------------------------------------
+
     // 1. Folder Dialog
     FolderDialog {
         id: folderDialog
@@ -59,6 +61,22 @@ GridLayout {
         // The roles will be defined by the data we append
     }
 
+
+    // Device ----------------------------------------------------------------
+
+    function triggerDeviceDialog()
+    {
+        // Print the message to the console
+        console.log("Device Dialog function triggered: Sending data to C++ backend.")
+
+        var selection = "55";
+
+        var arr = [selection];
+        var obj = {
+            Selection : selection
+        };
+        CppClass.processOutgoingMsg(arr, obj);
+    }
 
 
     // Connections to C++ backend
@@ -300,6 +318,7 @@ GridLayout {
                         text: "Device"
                         Layout.fillWidth: true
                         implicitHeight: 40
+                        onClicked: triggerDeviceDialog()
                     }
                     Button {
                         text: "Local"

@@ -446,6 +446,10 @@ public:
     void Cloud_Query();
     void Misc_Query();
 
+public:
+    void Log_Showfiles_Query();
+    void Log_ReadSpecificFile_Query();
+
 };
 
 #endif // CPPCLASS_H

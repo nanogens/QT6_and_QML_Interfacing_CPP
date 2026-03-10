@@ -107,8 +107,16 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 Instrument_Query();
                 break;
 
+            // ------------------------------------------------------------------------
+            case LOG_QUERY_SHOWFILES_MSGID:
+                Log_Showfiles_Query();
+                break;
 
+            case LOG_QUERY_READSPECIFICFILE_MSGID:
+                Log_ReadSpecificFile_Query();
+                break;
 
+            //
 
             default:
                 qDebug() << "Error : x should have a value";
