@@ -471,14 +471,16 @@ void CppClass::Instrument_Set(QVariantList &list, int i, QByteArray &byteArray)
 
 // QML Page 3 ===============================================
 
-void CppClass::Log_Showfiles_Query()
+void CppClass::Log_ShowFiles_Query()
 {
     error.errorcode = 0;
+
+    qDebug() << "In Log_Showfiles_Query() now...";
 
     // if everything is alright, we can send it
     if((error.errorcode == 0) && (writePos == 0))
     {
-        SendHeader(LOG_QUERY_SHOWFILES_MSGLGT, LOG_QUERY_SHOWFILES_MSGID);
+        SendHeader(LOG_SHOWFILES_QUERY_MSGLGT, LOG_SHOWFILES_QUERY_MSGID);
         AddByteToSend(send.crcsend, true);
 
         // mutex lock the 485 line so we have exclusive control over it
@@ -489,9 +491,19 @@ void CppClass::Log_Showfiles_Query()
     }
 }
 
+void CppClass::Log_ShowFiles_Resp()
+{
+  qDebug() << "Log_ShowFiles_Resp!";
+}
+
 void CppClass::Log_ReadSpecificFile_Query()
 {
+  qDebug() << "Log_ReadSpecificFile_Query!";
+}
 
+void CppClass::Log_ReadSpecificFile_Resp()
+{
+  qDebug() << "Log_ReadSpecificFile_Resp!";
 }
 
 void CppClass::Instrument_Query(void)

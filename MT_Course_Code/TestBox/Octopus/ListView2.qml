@@ -30,7 +30,6 @@ Item {
     readonly property int iNSTRUMENT_QUERY_MSGID: 0x06
     readonly property int iNSTRUMENT_SET_MSGID: 0x08
 
-
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
     readonly property int aRRAY_IP_MAX: 11
     readonly property int aRRAY_LOGIN_MAX: 13

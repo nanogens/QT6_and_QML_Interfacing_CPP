@@ -8,6 +8,10 @@ import Qt.labs.folderlistmodel 2.15
 import QtQuick.Dialogs
 
 GridLayout {
+
+    // Define statements (must match Defines.h)
+    readonly property int lOG_QUERY_SHOWFILES_MSGID: 0x50
+
     anchors.fill: parent
     flow: GridLayout.TopToBottom
     rows: 2
@@ -69,12 +73,14 @@ GridLayout {
         // Print the message to the console
         console.log("Device Dialog function triggered: Sending data to C++ backend.")
 
-        var selection = "55";
+        var selection = lOG_QUERY_SHOWFILES_MSGID;
+        var dummybyte = 0;
 
-        var arr = [selection];
+        var arr = [selection, dummybyte];
         var obj = {
-            Selection : selection
+            Selection : selection, dummybyte
         };
+
         CppClass.processOutgoingMsg(arr, obj);
     }
 

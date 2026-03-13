@@ -447,9 +447,10 @@ public:
     void Misc_Query();
 
 public:
-    void Log_Showfiles_Query();
+    void Log_ShowFiles_Query();
+    void Log_ShowFiles_Resp();
     void Log_ReadSpecificFile_Query();
-
+    void Log_ReadSpecificFile_Resp();
 };
 
 #endif // CPPCLASS_H

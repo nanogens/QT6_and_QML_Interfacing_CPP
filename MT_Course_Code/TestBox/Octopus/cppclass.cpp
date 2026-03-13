@@ -483,6 +483,9 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == CLOUD_RESP_MSGID) ||
             (messageidglobal == MISC_RESP_MSGID) ||
 
+            (messageidglobal == LOG_SHOWFILES_RESP_MSGID) ||
+            (messageidglobal == LOG_READSPECIFICFILE_RESP_MSGID) ||
+
             (messageidglobal == CTD_VARIABLES_RESP_MSGID) ||
             (messageidglobal == CTD_READINGS_RAW_RESP_MSGID) ||
             (messageidglobal == CTD_READINGS_PROCESSED_RESP_MSGID) ||
@@ -1082,7 +1085,7 @@ void CppClass::stopFileMonitoring() {
 
 void CppClass::startComm()
 {
-    setPortName("COM8"); // COM5 on tablet
+    setPortName("COM2"); // COM5 on tablet
     if(startCommunication(m_portName.toUtf8().constData()) == true)
     {
         emit runningChanged();  // Emit signal when status changes

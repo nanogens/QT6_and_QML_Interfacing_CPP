@@ -18,7 +18,7 @@ void CppClass::ProcessIncomingMsg(void)
 
 
 
-
+        // Page 1
         case INSTRUMENT_RESP_MSGID:
             Instrument_Resp();
             uartshadow.messageid = 0;
@@ -43,6 +43,18 @@ void CppClass::ProcessIncomingMsg(void)
             Notes_Resp();
             uartshadow.messageid = 0;
             break;
+
+        // Page 2
+        case LOG_SHOWFILES_RESP_MSGID:
+            Log_ShowFiles_Resp();
+            uartshadow.messageid = 0;
+            break;
+
+        case LOG_READSPECIFICFILE_RESP_MSGID:
+            Log_ReadSpecificFile_Resp();
+            uartshadow.messageid = 0;
+            break;
+
 
 
         case CTD_READINGS_PROCESSED_RESP_MSGID:
@@ -72,6 +84,8 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
 
     // Reset all errorcodes.  Error codes checked prior to sending packet.
     error.errorcode = 0;
+
+    qDebug() << "In processOutgoingMsg now...";
 
     for( int i{0} ; i < list.size(); i++)
     {
@@ -108,11 +122,12 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 break;
 
             // ------------------------------------------------------------------------
-            case LOG_QUERY_SHOWFILES_MSGID:
-                Log_Showfiles_Query();
+            case LOG_SHOWFILES_QUERY_MSGID:
+                qDebug() << "About to enter Log_Showfiles_Query() now...";
+                Log_ShowFiles_Query();
                 break;
 
-            case LOG_QUERY_READSPECIFICFILE_MSGID:
+            case LOG_READSPECIFICFILE_QUERY_MSGID:
                 Log_ReadSpecificFile_Query();
                 break;
 
