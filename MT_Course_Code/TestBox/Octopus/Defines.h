@@ -226,12 +226,18 @@
 #define LOG_SHOWFILES_QUERY_MSGLGT 0x07
 
 #define LOG_SHOWFILES_RESP_MSGID 0x51
-#define LOG_SHOWFILES_RESP_MSGLGT 0x0C // change this - has to change dynanmically
+#define LOG_SHOWFILES_RESP_MSGLGT 0x0C
 
 #define LOG_READSPECIFICFILE_QUERY_MSGID 0x52
-#define LOG_READSPECIFICFILE_QUERY_MSGLGT 0x08 // change this - 2 bits specify if just file metadata or metadata and data, 4 bits specify which file.
+#define LOG_READSPECIFICFILE_QUERY_MSGLGT 0x08
 
 #define LOG_READSPECIFICFILE_RESP_MSGID 0x53
-#define LOG_READSPECIFICFILE_RESP_MSGLGT 0x07 // change this - has to change dynamically
+#define LOG_READSPECIFICFILE_RESP_MSGLGT 0x0C
+
+#define LOG_TRANSFER_QUERY_MSGID 0x54
+#define LOG_TRANSFER_QUERY_MSGLGT 0x07
+
+#define LOG_TRANSFER_RESP_MSGID 0x55
+#define LOG_TRANSFER_RESP_MSGLGT 0x8C
 
 #endif // DEFINES_H
