@@ -45,12 +45,14 @@ void CppClass::ProcessIncomingMsg(void)
             break;
 
         // Page 2
+        // Show files on EEPROM
         case LOG_SHOWFILES_RESP_MSGID:
             //Log_ShowFiles_Resp();
             Log_ReadSpecificFile_Resp();
             uartshadow.messageid = 0;
             break;
 
+        // Retrieves specific file from files shown (need to show first then)
         case LOG_READSPECIFICFILE_RESP_MSGID:
             Log_ReadSpecificFile_Resp();
             uartshadow.messageid = 0;
