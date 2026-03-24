@@ -14,6 +14,8 @@
 #include <QQmlContext>
 #include "cppclass.h"
 
+using namespace Qt::StringLiterals;
+
 int main(int argc, char *argv[])
 {
     // Qt Charts uses Qt Graphics View Framework for drawing, therefore QApplication must be used.
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    const QUrl url(u"qrc:/Octopus/Main.qml"_qs);
+    const QUrl url(u"qrc:/Octopus/Main.qml"_s);
     engine.load(url);
 
     if (engine.rootObjects().isEmpty()) {

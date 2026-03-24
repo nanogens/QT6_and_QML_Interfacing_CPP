@@ -16,7 +16,7 @@
 
 #define BUFFER_SIZE 256
 #define ACCEPT_1BYTE_AT_A_TIME_ONLY 1
-#define MAX_UART_ARRAY 100
+#define MAX_UART_ARRAY 200
 
 // Array size - Page 1 (Streaming)
 //#define MAX_INSTRUMENT_SERIALNUMBER_ARRAY 13
@@ -57,6 +57,16 @@
 // Misc
 
 
+
+
+// Log / Graphing
+#define FILENUM_ARRAY 4   // 4 files max             (0=first file, 1=second file, 2=third file, 3=fourth file)
+#define FILENAME_ARRAY 8  // 8 letters in file name  (ABCDEFGH)
+#define FILESIZE_ARRAY 4  // 4 numbers in file size  (in bytes) (4 bytes needed for 32Mbits)
+#define FILEDATE_ARRAY 8  // 8 numbers in file date  (YY/MM/DD HH:MM:SS AM/PM) (7 bytes needed + 1 extra)
+// Log / Graphing - Data
+#define QUADRANTS 4
+#define QUADRANTBYTES 128
 
 
 /*
@@ -226,18 +236,18 @@
 #define LOG_SHOWFILES_QUERY_MSGLGT 0x07
 
 #define LOG_SHOWFILES_RESP_MSGID 0x51
-#define LOG_SHOWFILES_RESP_MSGLGT 0x0C
+#define LOG_SHOWFILES_RESP_MSGLGT 0x1D
 
-#define LOG_READSPECIFICFILE_QUERY_MSGID 0x52
-#define LOG_READSPECIFICFILE_QUERY_MSGLGT 0x08
+#define LOG_READSPECIFICFILE_SET_MSGID 0x52
+#define LOG_READSPECIFICFILE_SET_MSGLGT 0x08
 
 #define LOG_READSPECIFICFILE_RESP_MSGID 0x53
-#define LOG_READSPECIFICFILE_RESP_MSGLGT 0x0C
+#define LOG_READSPECIFICFILE_RESP_MSGLGT 0x2D
 
-#define LOG_TRANSFER_QUERY_MSGID 0x54
-#define LOG_TRANSFER_QUERY_MSGLGT 0x07
+#define LOG_TRANSMITDATA_SET_MSGID 0x54
+#define LOG_TRANSMITDATA_SET_MSGLGT 0x08
 
-#define LOG_TRANSFER_RESP_MSGID 0x55
-#define LOG_TRANSFER_RESP_MSGLGT 0x8C
+#define LOG_TRANSMITDATA_RESP_MSGID 0x55
+#define LOG_TRANSMITDATA_RESP_MSGLGT 0x8C
 
 #endif // DEFINES_H

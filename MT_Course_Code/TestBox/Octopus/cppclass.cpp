@@ -148,6 +148,51 @@ void CppClass::Inits(void)
     {
         uartshadow.payload[counter.y0] = 0;
     }
+
+    // Log / Graphing Init
+
+    // Log_ShowFiles
+    logshowfiles.reserved = 0;
+    logshowfiles.fileindex = 0;
+    for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
+    {
+      for(counter.y1 = 0; counter.y1 < FILENAME_ARRAY; counter.y1++)
+      {
+        logshowfiles.filename[counter.y0][counter.y1]; // 4, 8
+      }
+    }
+    for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
+    {
+      for(counter.y1 = 0; counter.y1 < FILESIZE_ARRAY; counter.y1++)
+      {
+        logshowfiles.filesize[counter.y0][counter.y1]; // 4, 4
+      }
+    }
+    for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
+    {
+      for(counter.y1 = 0; counter.y1 < FILEDATE_ARRAY; counter.y1++)
+      {
+        logshowfiles.filedate[counter.y0][counter.y1]; // 4, 8
+      }
+    }
+
+    // Log_ShowFiles
+    logreadspecificfile.whichfile = 0;
+    logreadspecificfile.reserved = 0;
+
+    // Log_Transmit
+    logtransmitdata.command = 0;
+    logtransmitdata.pagenumber_high = 0;
+    logtransmitdata.pagenumber_low = 0;
+    logtransmitdata.reserved = 0;
+    logtransmitdata.pagebitmap = 0;
+    for(counter.y0 = 0; counter.y0 < QUADRANTS; counter.y0++)
+    {
+      for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++)
+      {
+        logtransmitdata.pagedata_rq[counter.y0][counter.y1]; // 4, 128
+      }
+    }
 }
 
 HANDLE CppClass::openCommPort(const char* portName, DWORD baudRate)

@@ -473,38 +473,129 @@ void CppClass::Instrument_Set(QVariantList &list, int i, QByteArray &byteArray)
 
 void CppClass::Log_ShowFiles_Query()
 {
-    error.errorcode = 0;
+  error.errorcode = 0;
 
-    qDebug() << "In Log_Showfiles_Query() now...";
+  qDebug() << "In Log_Showfiles_Query() now...";
 
-    // if everything is alright, we can send it
-    if((error.errorcode == 0) && (writePos == 0))
-    {
-        SendHeader(LOG_SHOWFILES_QUERY_MSGLGT, LOG_SHOWFILES_QUERY_MSGID);
-        AddByteToSend(send.crcsend, true);
+  // if everything is alright, we can send it
+  if((error.errorcode == 0) && (writePos == 0))
+  {
+    SendHeader(LOG_SHOWFILES_QUERY_MSGLGT, LOG_SHOWFILES_QUERY_MSGID);
+    AddByteToSend(send.crcsend, true);
 
-        // mutex lock the 485 line so we have exclusive control over it
-        std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
-        writePos = send.writepos; // triggers send
+    // mutex lock the 485 line so we have exclusive control over it
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
 
-        qDebug() << "Bytes sent!";
-    }
+    qDebug() << "Bytes sent!";
+  }
 }
 
 void CppClass::Log_ShowFiles_Resp()
 {
+  logshowfiles.reserved  = uartshadow.payload[0];
+  logshowfiles.fileindex = uartshadow.payload[1];
+
+  // Need FILENUM_ARRAY (4) of the block below for 4 files
+  logshowfiles.filename[0][0]  = uartshadow.payload[2];
+  logshowfiles.filename[0][1]  = uartshadow.payload[3];
+  logshowfiles.filename[0][2]  = uartshadow.payload[4];
+  logshowfiles.filename[0][3]  = uartshadow.payload[5];
+  logshowfiles.filename[0][4]  = uartshadow.payload[6];
+  logshowfiles.filename[0][5]  = uartshadow.payload[7];
+  logshowfiles.filename[0][6]  = uartshadow.payload[8];
+  logshowfiles.filename[0][7]  = uartshadow.payload[9];
+
+  logshowfiles.filesize[0][0]  = uartshadow.payload[10];
+  logshowfiles.filesize[0][1]  = uartshadow.payload[11];
+  logshowfiles.filesize[0][2]  = uartshadow.payload[12];
+  logshowfiles.filesize[0][3]  = uartshadow.payload[13];
+
+  logshowfiles.filedate[0][0]  = uartshadow.payload[14];
+  logshowfiles.filedate[0][1]  = uartshadow.payload[15];
+  logshowfiles.filedate[0][2]  = uartshadow.payload[16];
+  logshowfiles.filedate[0][3]  = uartshadow.payload[17];
+  logshowfiles.filedate[0][4]  = uartshadow.payload[18];
+  logshowfiles.filedate[0][5]  = uartshadow.payload[19];
+  logshowfiles.filedate[0][6]  = uartshadow.payload[20];
+  logshowfiles.filedate[0][7]  = uartshadow.payload[21];
+
   qDebug() << "Log_ShowFiles_Resp!";
+
+  qDebug() << "\nlogshowfiles.filedate[0][7]: " << logshowfiles.filedate[0][7];
 }
 
-void CppClass::Log_ReadSpecificFile_Query()
+void CppClass::Log_ReadSpecificFile_Set()
 {
-  qDebug() << "Log_ReadSpecificFile_Query!";
+  error.errorcode = 0;
+
+  qDebug() << "In Log_ReadSpecificFile_Set() now...";
+
+  // if everything is alright, we can send it
+  if((error.errorcode == 0) && (writePos == 0))
+  {
+      SendHeader(LOG_READSPECIFICFILE_SET_MSGLGT, LOG_READSPECIFICFILE_SET_MSGID);
+      AddByteToSend(logreadspecificfile.whichfile, true);
+      AddByteToSend(send.crcsend, true);
+
+      // mutex lock the 485 line so we have exclusive control over it
+      std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+      writePos = send.writepos; // triggers send
+
+      qDebug() << "Bytes sent!";
+  }
+
+  qDebug() << "Log_ReadSpecificFile_Set!";
 }
 
 void CppClass::Log_ReadSpecificFile_Resp()
 {
+  logreadspecificfile.reserved   = uartshadow.payload[0];
+  logreadspecificfile.unknown[0] = uartshadow.payload[1]; // upto 36
+
   qDebug() << "Log_ReadSpecificFile_Resp!";
 }
+
+void CppClass::Log_TransmitData_Set()
+{
+  logtransmitdata.whichfile_quadrant = 0; // TEMPORARY (you must select from 0 to 3)
+
+  error.errorcode = 0;
+
+  // if everything is alright, we can send it
+  if((error.errorcode == 0) && (writePos == 0))
+  {
+    SendHeader(LOG_TRANSMITDATA_SET_MSGLGT, LOG_TRANSMITDATA_SET_MSGID);
+    AddByteToSend(logtransmitdata.whichfile_quadrant, true);
+    AddByteToSend(send.crcsend, true);
+
+    // mutex lock the 485 line so we have exclusive control over it
+    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+    writePos = send.writepos; // triggers send
+
+    qDebug() << "Bytes sent!";
+  }
+
+  qDebug() << "Log_Transmit_Set!";
+}
+
+void CppClass::Log_TransmitData_Resp()
+{
+  logtransmitdata.command         = uartshadow.payload[0]; // Command (1 = QUERY, 2 = RESP, 3 = RESEND, 4 = TERMINATE) -- put in #define;
+  logtransmitdata.pagenumber_high = uartshadow.payload[1];
+  logtransmitdata.pagenumber_low  = uartshadow.payload[2];
+  logtransmitdata.reserved        = uartshadow.payload[3];
+  logtransmitdata.pagebitmap      = uartshadow.payload[4];
+  if((logtransmitdata.whichfile_quadrant >= 0) && (logtransmitdata.whichfile_quadrant < 4))
+  {
+    for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++) // 128 bytes put into its respective quadrant (0 to 3) in the array
+    {
+      logtransmitdata.pagedata_rq[logtransmitdata.whichfile_quadrant][counter.y1];
+    }
+  }
+  qDebug() << "Log_Transmit_Resp!";
+}
+
 
 void CppClass::Instrument_Query(void)
 {

@@ -46,7 +46,8 @@ void CppClass::ProcessIncomingMsg(void)
 
         // Page 2
         case LOG_SHOWFILES_RESP_MSGID:
-            Log_ShowFiles_Resp();
+            //Log_ShowFiles_Resp();
+            Log_ReadSpecificFile_Resp();
             uartshadow.messageid = 0;
             break;
 
@@ -55,8 +56,15 @@ void CppClass::ProcessIncomingMsg(void)
             uartshadow.messageid = 0;
             break;
 
+        // Transmits quadrants of 128 bytes of a 512 byte page
+        case LOG_TRANSMITDATA_RESP_MSGID:
+            Log_TransmitData_Resp();
+            uartshadow.messageid = 0;
+            break;
 
 
+
+        // Streaming Related?
         case CTD_READINGS_PROCESSED_RESP_MSGID:
             CTD_Readings_Processed_Resp();
             uartshadow.messageid = 0;
@@ -127,8 +135,12 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 Log_ShowFiles_Query();
                 break;
 
-            case LOG_READSPECIFICFILE_QUERY_MSGID:
-                Log_ReadSpecificFile_Query();
+            case LOG_READSPECIFICFILE_SET_MSGID:
+                Log_ReadSpecificFile_Set();
+                break;
+
+            case LOG_TRANSMITDATA_SET_MSGID:
+                Log_TransmitData_Set();
                 break;
 
             //
@@ -138,8 +150,6 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 break;
             }
         }
-
-
     }
 }
 

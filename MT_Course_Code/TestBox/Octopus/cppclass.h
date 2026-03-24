@@ -41,8 +41,10 @@ struct FileData {
 // Structures as proper class members rather than global variables
 struct Counter
 {
-    uint8_t y0 = 0;
-    uint8_t yi = 0;
+    uint8_t y0 = 0; // use only in main loops
+    uint8_t y1 = 0; // use only in main loops
+
+    uint8_t yi = 0; // use only in interrupts
 };
 
 struct Send
@@ -254,6 +256,41 @@ struct SubmersibleInfo
 };
 
 
+// From QML page 3 =====================================================
+
+struct LogShowFiles
+{
+  // Resp
+  uint8_t reserved;
+  uint8_t fileindex;
+  uint8_t filename[FILENUM_ARRAY][FILENAME_ARRAY]; // 4, 8
+  uint8_t filesize[FILENUM_ARRAY][FILESIZE_ARRAY]; // 4, 4
+  uint8_t filedate[FILENUM_ARRAY][FILEDATE_ARRAY]; // 4, 8
+};
+
+struct LogReadSpecificFile
+{
+  // Set
+  uint8_t whichfile;
+  // Resp
+  uint8_t reserved;
+  uint8_t unknown[36];
+};
+
+struct LogTransmitData
+{
+  // Set
+  uint8_t whichfile_quadrant;
+  // Resp
+  uint8_t command;
+  uint8_t pagenumber_high;
+  uint8_t pagenumber_low;
+  uint8_t reserved;
+  uint8_t pagebitmap;
+  uint8_t pagedata_rq[QUADRANTS][QUADRANTBYTES];  // 4 x 128 bytes
+};
+
+
 
 
 
@@ -384,6 +421,10 @@ private:
     CTD ctd;
     SubmersibleInfo submersibleinfo;
 
+    // page 3 Log / Graph
+    LogShowFiles logshowfiles;
+    LogReadSpecificFile logreadspecificfile;
+    LogTransmitData logtransmitdata;
 
     // Existing private members
     HANDLE m_hPort = INVALID_HANDLE_VALUE;
@@ -449,8 +490,10 @@ public:
 public:
     void Log_ShowFiles_Query();
     void Log_ShowFiles_Resp();
-    void Log_ReadSpecificFile_Query();
-    void Log_ReadSpecificFile_Resp();
+    void Log_ReadSpecificFile_Set();
+    void Log_ReadSpecificFile_Resp();    
+    void Log_TransmitData_Set();
+    void Log_TransmitData_Resp();
 };
 
 #endif // CPPCLASS_H
