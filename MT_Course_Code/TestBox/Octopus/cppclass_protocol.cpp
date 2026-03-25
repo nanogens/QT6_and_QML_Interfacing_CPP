@@ -586,10 +586,11 @@ void CppClass::Log_TransmitData_Resp()
   logtransmitdata.pagenumber_low  = uartshadow.payload[2];
   logtransmitdata.reserved        = uartshadow.payload[3];
   logtransmitdata.pagebitmap      = uartshadow.payload[4];
-  if((logtransmitdata.whichfile_quadrant >= 0) && (logtransmitdata.whichfile_quadrant < 4))
+  if((logtransmitdata.whichfile_quadrant >= 0) && (logtransmitdata.whichfile_quadrant < QUADRANTS))
   {
     for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++) // 128 bytes put into its respective quadrant (0 to 3) in the array
     {
+      // logtransmitdata.whichfile_quadrant is set by the set message
       logtransmitdata.pagedata_rq[logtransmitdata.whichfile_quadrant][counter.y1];
     }
   }
