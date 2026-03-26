@@ -566,6 +566,8 @@ void CppClass::Log_TransmitData_Set()
   if((error.errorcode == 0) && (writePos == 0))
   {
     SendHeader(LOG_TRANSMITDATA_SET_MSGLGT, LOG_TRANSMITDATA_SET_MSGID);
+
+
     AddByteToSend(logtransmitdata.whichfile_quadrant, true);
     AddByteToSend(send.crcsend, true);
 
