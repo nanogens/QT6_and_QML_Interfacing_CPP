@@ -69,6 +69,8 @@
 #define QUADRANTBYTES 128
 
 
+// --- END OF ARRAY SIZES ---
+
 /*
 // boxes -- page 2
 #define INSTRUMENT 0     // Cell A
