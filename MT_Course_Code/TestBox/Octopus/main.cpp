@@ -31,6 +31,9 @@ int main(int argc, char *argv[])
     // Register the Backend class as a QML type
     //qmlRegisterType<CppClass>("com.example.backend", 1, 0, "Backend");
 
+    qRegisterMetaType<QVariantList>("QVariantList");
+    qRegisterMetaType<QVariantMap>("QVariantMap");
+
     // Set the Material style before loading QML
     // Try both methods
     qputenv("QT_QUICK_CONTROLS_STYLE", "Material");

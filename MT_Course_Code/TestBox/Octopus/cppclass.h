@@ -261,9 +261,9 @@ struct SubmersibleInfo
 struct LogShowFiles
 {
   // Resp
-  uint8_t reserved;
-  uint8_t fileindex;
-  uint8_t filename[FILENUM_ARRAY][FILENAME_ARRAY]; // 4, 8
+  uint8_t reserved[FILENUM_ARRAY];
+  uint8_t fileindex[FILENUM_ARRAY];
+  uint8_t filename[FILENAME_ARRAY][FILENAME_ARRAY]; // 4, 8
   uint8_t filesize[FILENUM_ARRAY][FILESIZE_ARRAY]; // 4, 4
   uint8_t filedate[FILENUM_ARRAY][FILEDATE_ARRAY]; // 4, 8
 };
@@ -318,6 +318,34 @@ class CppClass : public QObject
 {
     Q_OBJECT
 
+signals:
+    void runningChanged();
+    void dataReceived(const QByteArray &data);
+    void fileDataReady(const QVariantMap &metadata, const QVariantList &dataPoints);
+    void newDataPointsAdded(const QVariantList &newPoints);
+
+    // Add these signals to the signals section
+    void deviceFileListReady(const QVariantList &deviceFiles);
+    void deviceFileDownloaded(const QVariantMap &fileData);
+
+    // Declare a signal that emits the QVariantMap
+    void instrumentDataReceived(const QVariantMap &data);
+    void communicationDataReceived(const QVariantMap &data);
+    void powerDataReceived(const QVariantMap &data);
+    void timingDataReceived(const QVariantMap &data);
+    void samplingDataReceived(const QVariantMap &data);
+    void activationDataReceived(const QVariantMap &data);
+    void notesDataReceived(const QVariantMap &data);
+    void cloudDataReceived(const QVariantMap &data);
+
+    void ctdreadingsprocessedDataReceived(const QVariantMap &data);
+    void submersibleinfoprocessedDataReceived(const QVariantMap &data);
+
+    void ringStateChanged(bool active);
+
+    // Test signal
+    void testSignal(QString message);
+
 public:
     explicit CppClass(QObject *parent = nullptr);
     ~CppClass();
@@ -350,29 +378,9 @@ public:
 
     void setQmlRootObject(QObject *value);
 
-signals:
-    void runningChanged();
-    void dataReceived(const QByteArray &data);
-    void fileDataReady(const QVariantMap &metadata, const QVariantList &dataPoints);
-    void newDataPointsAdded(const QVariantList &newPoints);
+public:
+    void sendDeviceFileListToQML(void);
 
-signals:
-    // Declare a signal that emits the QVariantMap
-    void instrumentDataReceived(const QVariantMap &data);
-    void communicationDataReceived(const QVariantMap &data);
-    void powerDataReceived(const QVariantMap &data);
-    void timingDataReceived(const QVariantMap &data);
-    void samplingDataReceived(const QVariantMap &data);
-    void activationDataReceived(const QVariantMap &data);
-    void notesDataReceived(const QVariantMap &data);
-    void cloudDataReceived(const QVariantMap &data);
-
-
-    void ctdreadingsprocessedDataReceived(const QVariantMap &data);
-    void submersibleinfoprocessedDataReceived(const QVariantMap &data);
-
-signals:
-    void ringStateChanged(bool active);
 
 public slots:
     void triggerJSCall();

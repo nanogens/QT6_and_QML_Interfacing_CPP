@@ -152,8 +152,14 @@ void CppClass::Inits(void)
     // Log / Graphing Init
 
     // Log_ShowFiles
-    logshowfiles.reserved = 0;
-    logshowfiles.fileindex = 0;
+    for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
+    {
+      logshowfiles.reserved[counter.y0] = 0;
+    }
+    for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
+    {
+      logshowfiles.fileindex[counter.y0] = 0;
+    }
     for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
     {
       for(counter.y1 = 0; counter.y1 < FILENAME_ARRAY; counter.y1++)
@@ -475,7 +481,7 @@ void CppClass::IncomingByteCheck(void)
                 }
             }
 
-            qDebug() << "About to check CRC for SET msg";
+            qDebug() << "About to check CRC for RESP msg";
             qDebug() << "Calculated CRC : " << uart.crcset;
             qDebug() << "Message CRC : " << uart.crcmsg;
 

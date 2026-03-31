@@ -1,4 +1,8 @@
 #include "cppclass.h"
+#include <QDateTime>
+#include <QDate>
+#include <QTime>
+#include <QDebug>
 
 void CppClass::Version_Resp(void)
 {
@@ -493,36 +497,49 @@ void CppClass::Log_ShowFiles_Query()
 
 void CppClass::Log_ShowFiles_Resp()
 {
-  logshowfiles.reserved  = uartshadow.payload[0];
-  logshowfiles.fileindex = uartshadow.payload[1];
+  for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
+  {
+    // Calculate offset for this file's data (22 bytes per file)
+    int offset = counter.y0 * 22;  // 1 reserved + 1 fileindex + 8 filename + 4 filesize + 8 filedate = 22
 
-  // Need FILENUM_ARRAY (4) of the block below for 4 files
-  logshowfiles.filename[0][0]  = uartshadow.payload[2];
-  logshowfiles.filename[0][1]  = uartshadow.payload[3];
-  logshowfiles.filename[0][2]  = uartshadow.payload[4];
-  logshowfiles.filename[0][3]  = uartshadow.payload[5];
-  logshowfiles.filename[0][4]  = uartshadow.payload[6];
-  logshowfiles.filename[0][5]  = uartshadow.payload[7];
-  logshowfiles.filename[0][6]  = uartshadow.payload[8];
-  logshowfiles.filename[0][7]  = uartshadow.payload[9];
-
-  logshowfiles.filesize[0][0]  = uartshadow.payload[10];
-  logshowfiles.filesize[0][1]  = uartshadow.payload[11];
-  logshowfiles.filesize[0][2]  = uartshadow.payload[12];
-  logshowfiles.filesize[0][3]  = uartshadow.payload[13];
-
-  logshowfiles.filedate[0][0]  = uartshadow.payload[14];
-  logshowfiles.filedate[0][1]  = uartshadow.payload[15];
-  logshowfiles.filedate[0][2]  = uartshadow.payload[16];
-  logshowfiles.filedate[0][3]  = uartshadow.payload[17];
-  logshowfiles.filedate[0][4]  = uartshadow.payload[18];
-  logshowfiles.filedate[0][5]  = uartshadow.payload[19];
-  logshowfiles.filedate[0][6]  = uartshadow.payload[20];
-  logshowfiles.filedate[0][7]  = uartshadow.payload[21];
-
+    // reserved
+    logshowfiles.reserved[counter.y0]     = uartshadow.payload[offset + 0];
+    // fileindex
+    logshowfiles.fileindex[counter.y0]    = uartshadow.payload[offset + 1];
+    // filename
+    logshowfiles.filename[counter.y0][0]  = uartshadow.payload[offset + 2];
+    logshowfiles.filename[counter.y0][1]  = uartshadow.payload[offset + 3];
+    logshowfiles.filename[counter.y0][2]  = uartshadow.payload[offset + 4];
+    logshowfiles.filename[counter.y0][3]  = uartshadow.payload[offset + 5];
+    logshowfiles.filename[counter.y0][4]  = uartshadow.payload[offset + 6];
+    logshowfiles.filename[counter.y0][5]  = uartshadow.payload[offset + 7];
+    logshowfiles.filename[counter.y0][6]  = uartshadow.payload[offset + 8];
+    logshowfiles.filename[counter.y0][7]  = uartshadow.payload[offset + 9];
+    // filesize
+    logshowfiles.filesize[counter.y0][0]  = uartshadow.payload[offset + 10];
+    logshowfiles.filesize[counter.y0][1]  = uartshadow.payload[offset + 11];
+    logshowfiles.filesize[counter.y0][2]  = uartshadow.payload[offset + 12];
+    logshowfiles.filesize[counter.y0][3]  = uartshadow.payload[offset + 13];
+    // filedate
+    logshowfiles.filedate[counter.y0][0]  = uartshadow.payload[offset + 14];
+    logshowfiles.filedate[counter.y0][1]  = uartshadow.payload[offset + 15];
+    logshowfiles.filedate[counter.y0][2]  = uartshadow.payload[offset + 16];
+    logshowfiles.filedate[counter.y0][3]  = uartshadow.payload[offset + 17];
+    logshowfiles.filedate[counter.y0][4]  = uartshadow.payload[offset + 18];
+    logshowfiles.filedate[counter.y0][5]  = uartshadow.payload[offset + 19];
+    logshowfiles.filedate[counter.y0][6]  = uartshadow.payload[offset + 20];
+    logshowfiles.filedate[counter.y0][7]  = uartshadow.payload[offset + 21];
+  }
   qDebug() << "Log_ShowFiles_Resp!";
 
-  qDebug() << "\nlogshowfiles.filedate[0][7]: " << logshowfiles.filedate[0][7];
+  // Print test output
+  for(counter.y0 = 0; counter.y0 < 21; counter.y0++)
+  {
+    //qDebug() << "\nuartshadow.payload[0][" << counter.y0 << "]: " << uartshadow.payload[counter.y0];
+  }
+
+  // After parsing all files, send to QML
+  sendDeviceFileListToQML();
 }
 
 void CppClass::Log_ReadSpecificFile_Set()
@@ -535,7 +552,8 @@ void CppClass::Log_ReadSpecificFile_Set()
   if((error.errorcode == 0) && (writePos == 0))
   {
       SendHeader(LOG_READSPECIFICFILE_SET_MSGLGT, LOG_READSPECIFICFILE_SET_MSGID);
-      AddByteToSend(logreadspecificfile.whichfile, true);
+      //AddByteToSend(logreadspecificfile.whichfile, true);  // logreadspecificfile.whichfile is the file clicked on
+      AddByteToSend(0x00, true); // for now, we fix logreadspecificfile.whichfile to 0.
       AddByteToSend(send.crcsend, true);
 
       // mutex lock the 485 line so we have exclusive control over it
@@ -698,3 +716,115 @@ void CppClass::Misc_Query(void)
 
     qDebug() << "Misc_Query Sent!";
 }
+
+
+void CppClass::sendDeviceFileListToQML()
+{
+    emit testSignal("sendDeviceFileListToQML called");
+
+    QVariantList deviceFilesList;
+
+    for (int i = 0; i < FILENUM_ARRAY; i++) {
+        // Check if file has valid data (non-zero file size)
+        uint32_t fileSize = 0;
+        fileSize |= (logshowfiles.filesize[i][0] << 24);
+        fileSize |= (logshowfiles.filesize[i][1] << 16);
+        fileSize |= (logshowfiles.filesize[i][2] << 8);
+        fileSize |= (logshowfiles.filesize[i][3]);
+
+        // Skip files with zero size (no file present)
+        if (fileSize == 0) {
+            continue;
+        }
+
+        // Parse filename (ASCII, 8 bytes)
+        QString fileName;
+        for (int j = 0; j < FILENAME_ARRAY; j++) {
+            if (logshowfiles.filename[i][j] != 0) {
+                fileName += QChar(logshowfiles.filename[i][j]);
+            }
+        }
+        fileName = fileName.trimmed();
+
+        // Parse file date
+        int year = logshowfiles.filedate[i][0];  // 0x1A = 26 -> 2026
+        int month = logshowfiles.filedate[i][1];        // 0x02 = 2
+        int day = logshowfiles.filedate[i][2];          // 0x1B = 27
+        int hour = logshowfiles.filedate[i][3];         // 0x18 = 24
+        int minute = logshowfiles.filedate[i][4];       // 0x0D = 13
+        int second = logshowfiles.filedate[i][5];       // 0x1E = 30
+        int ampm = logshowfiles.filedate[i][6];         // 0x01 = PM
+
+        // Convert from 12-hour format to 24-hour format
+        // First, normalize hour value - if it's 24, treat as 12
+        if (hour > 12) {
+            hour = hour - 12;  // 24 -> 12
+        }
+
+        // Convert based on AM/PM
+        if (ampm == 1) {  // PM
+            if (hour != 12) {
+                hour += 12;  // 12 PM stays 12, 1 PM -> 13, etc.
+            }
+        } else {  // AM
+            if (hour == 12) {
+                hour = 0;  // 12 AM -> 0
+            }
+        }
+
+        // Create date/time
+        QDateTime fileDateTime;
+        fileDateTime.setDate(QDate(year, month, day));
+
+        // Check if time is valid before setting
+        if (QTime(hour, minute, second).isValid()) {
+            fileDateTime.setTime(QTime(hour, minute, second));
+        } else {
+            // Fallback to default time if invalid
+            qDebug() << "Warning: Invalid time for file" << i << ":"
+                     << hour << ":" << minute << ":" << second << "AM/PM=" << ampm;
+            fileDateTime.setTime(QTime(0, 0, 0));
+        }
+
+        // Create QVariantMap for this file
+        QVariantMap fileInfo;
+        fileInfo["fileName"] = fileName;
+        fileInfo["fileSizeBytes"] = (qint64)fileSize;
+        fileInfo["fileIndex"] = i;
+        fileInfo["source"] = "device";
+
+        // Create a sub-map for date/time
+        QVariantMap dateTimeMap;
+        dateTimeMap["year"] = year;
+        dateTimeMap["month"] = month;
+        dateTimeMap["day"] = day;
+        dateTimeMap["hour"] = hour;
+        dateTimeMap["minute"] = minute;
+        dateTimeMap["second"] = second;
+        dateTimeMap["ampm"] = ampm;
+        fileInfo["fileDateTime"] = dateTimeMap;
+        fileInfo["fileDateTimeTimestamp"] = fileDateTime.toMSecsSinceEpoch();
+
+        deviceFilesList.append(fileInfo);
+
+        // Debug output
+        qDebug() << "Device File" << i << ":"
+                 << "Name=" << fileName
+                 << "Size=" << fileSize
+                 << "Raw Date Bytes: YY=" << year-2000 << "MM=" << month << "DD=" << day
+                 << "HH=" << logshowfiles.filedate[i][3]
+                 << "MM=" << minute << "SS=" << second << "AMPM=" << ampm
+                 << "Converted=" << fileDateTime.toString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    qDebug() << "Sending" << deviceFilesList.size() << "device files to QML";
+
+
+    qDebug() << "=== ABOUT TO EMIT onDeviceFileListReady signal ===";
+    qDebug() << "Number of files to send:" << deviceFilesList.size();
+
+    emit deviceFileListReady(deviceFilesList);
+
+    qDebug() << "=== Signal emitted successfully ===";
+}
+
