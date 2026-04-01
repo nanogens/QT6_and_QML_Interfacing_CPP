@@ -3,6 +3,7 @@
 #include <QDate>
 #include <QTime>
 #include <QDebug>
+#include <cmath>
 
 void CppClass::Version_Resp(void)
 {
@@ -403,9 +404,6 @@ void CppClass::CTD_Readings_Processed_Query(void)
   qDebug() << "CTD_Readings_Processed_Query Sent!";
 }
 
-
-
-
 // QML Page 2 ===============================================
 
 void CppClass::Instrument_Set(QVariantList &list, int i, QByteArray &byteArray)
@@ -542,28 +540,25 @@ void CppClass::Log_ShowFiles_Resp()
   sendDeviceFileListToQML();
 }
 
-void CppClass::Log_ReadSpecificFile_Set()
+void CppClass::Log_ReadSpecificFile_Set(uint8_t fileIndex)
 {
-  error.errorcode = 0;
+    error.errorcode = 0;
 
-  qDebug() << "In Log_ReadSpecificFile_Set() now...";
+    qDebug() << "In Log_ReadSpecificFile_Set() now, downloading file index:" << fileIndex;
 
-  // if everything is alright, we can send it
-  if((error.errorcode == 0) && (writePos == 0))
-  {
-      SendHeader(LOG_READSPECIFICFILE_SET_MSGLGT, LOG_READSPECIFICFILE_SET_MSGID);
-      //AddByteToSend(logreadspecificfile.whichfile, true);  // logreadspecificfile.whichfile is the file clicked on
-      AddByteToSend(0x00, true); // for now, we fix logreadspecificfile.whichfile to 0.
-      AddByteToSend(send.crcsend, true);
+    // if everything is alright, we can send it
+    if((error.errorcode == 0) && (writePos == 0))
+    {
+        SendHeader(LOG_READSPECIFICFILE_SET_MSGLGT, LOG_READSPECIFICFILE_SET_MSGID);
+        AddByteToSend(fileIndex, false);  // Send the actual file index
+        AddByteToSend(send.crcsend, true);
 
-      // mutex lock the 485 line so we have exclusive control over it
-      std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
-      writePos = send.writepos; // triggers send
+        // mutex lock the 485 line so we have exclusive control over it
+        std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+        writePos = send.writepos; // triggers send
 
-      qDebug() << "Bytes sent!";
-  }
-
-  qDebug() << "Log_ReadSpecificFile_Set!";
+        qDebug() << "Bytes sent!";
+    }
 }
 
 void CppClass::Log_ReadSpecificFile_Resp()
@@ -574,49 +569,57 @@ void CppClass::Log_ReadSpecificFile_Resp()
   qDebug() << "Log_ReadSpecificFile_Resp!";
 }
 
-void CppClass::Log_TransmitData_Set()
+void CppClass::Log_TransmitData_Set(uint8_t fileIndex, uint16_t pageNumber, uint8_t quadrant)
 {
-  logtransmitdata.whichfile_quadrant = 0; // TEMPORARY (you must select from 0 to 3)
+    error.errorcode = 0;
 
-  error.errorcode = 0;
+    // Calculate sector and page based on file index and page number
+    // For file 0: sectors 3-2049 (2047 sectors total)
+    // For file 1: sectors 2050-4096 (2047 sectors)
+    // For file 2: sectors 4097-6143 (2047 sectors)
+    // For file 3: sectors 6144-8190 (2047 sectors)
 
-  // if everything is alright, we can send it
-  if((error.errorcode == 0) && (writePos == 0))
-  {
-    SendHeader(LOG_TRANSMITDATA_SET_MSGLGT, LOG_TRANSMITDATA_SET_MSGID);
+    // Each sector has 8 pages (512 bytes each)
+    // So total pages per file = 2047 sectors * 8 pages = 16376 pages
 
-
-    AddByteToSend(logtransmitdata.whichfile_quadrant, true);
-    AddByteToSend(send.crcsend, true);
-
-    // mutex lock the 485 line so we have exclusive control over it
-    std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
-    writePos = send.writepos; // triggers send
-
-    qDebug() << "Bytes sent!";
-  }
-
-  qDebug() << "Log_Transmit_Set!";
-}
-
-void CppClass::Log_TransmitData_Resp()
-{
-  logtransmitdata.command         = uartshadow.payload[0]; // Command (1 = QUERY, 2 = RESP, 3 = RESEND, 4 = TERMINATE) -- put in #define;
-  logtransmitdata.pagenumber_high = uartshadow.payload[1];
-  logtransmitdata.pagenumber_low  = uartshadow.payload[2];
-  logtransmitdata.reserved        = uartshadow.payload[3];
-  logtransmitdata.pagebitmap      = uartshadow.payload[4];
-  if((logtransmitdata.whichfile_quadrant >= 0) && (logtransmitdata.whichfile_quadrant < QUADRANTS))
-  {
-    for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++) // 128 bytes put into its respective quadrant (0 to 3) in the array
-    {
-      // logtransmitdata.whichfile_quadrant is set by the set message
-      logtransmitdata.pagedata_rq[logtransmitdata.whichfile_quadrant][counter.y1];
+    uint32_t startSector = 0;
+    switch(fileIndex) {
+    case 0: startSector = 3; break;
+    case 1: startSector = 2050; break;
+    case 2: startSector = 4097; break;
+    case 3: startSector = 6144; break;
+    default: startSector = 3; break;
     }
-  }
-  qDebug() << "Log_Transmit_Resp!";
-}
 
+    // Calculate sector and page within sector
+    uint32_t sectorOffset = pageNumber / 8;
+    uint32_t pageInSector = pageNumber % 8;
+    uint32_t actualSector = startSector + sectorOffset;
+
+    qDebug() << "In Log_TransmitData_Set() now, file:" << fileIndex
+             << "page:" << pageNumber
+             << "quadrant:" << quadrant
+             << "sector:" << actualSector
+             << "page_in_sector:" << pageInSector;
+
+    if((error.errorcode == 0) && (writePos == 0))
+    {
+        SendHeader(LOG_TRANSMITDATA_SET_MSGLGT, LOG_TRANSMITDATA_SET_MSGID);
+        AddByteToSend(fileIndex, false);                          // filenumber_s
+        AddByteToSend((actualSector >> 8) & 0xFF, false);         // sector_high_s
+        AddByteToSend(actualSector & 0xFF, false);                // sector_low_s
+        AddByteToSend(pageInSector, false);                       // page_s
+        AddByteToSend(0, false);                                  // reserved0_s
+        AddByteToSend(0, false);                                  // reserved1_s
+        AddByteToSend(quadrant, false);                           // quadrant_s
+        AddByteToSend(send.crcsend, true);
+
+        std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+        writePos = send.writepos;
+
+        qDebug() << "Bytes sent!";
+    }
+}
 
 void CppClass::Instrument_Query(void)
 {
@@ -828,3 +831,35 @@ void CppClass::sendDeviceFileListToQML()
     qDebug() << "=== Signal emitted successfully ===";
 }
 
+void CppClass::Log_TransmitData_Resp()
+{
+  logtransmitdata.filenumber_r = uartshadow.payload[0];   // file list ranges from 0 to 3 indicating which file data is being tranferred
+  logtransmitdata.sector_high_r = uartshadow.payload[1];  // the high byte of the sector from which the data has been obtained (total of high and low byte is from 0 to 8191)
+  logtransmitdata.sector_low_r = uartshadow.payload[2];   // the low byte of the sector from which the data has been obtained
+  logtransmitdata.page_r = uartshadow.payload[3];         // the page number from which the data has been obtained (0 to 7)
+  logtransmitdata.reserved0_r = uartshadow.payload[4];    // reserved for future use
+  logtransmitdata.reserved1_r = uartshadow.payload[5];    // reserved for future use
+  logtransmitdata.quadrant_r = uartshadow.payload[6];     // each page is divided into four 128 byte quadrants.  this tells you from which quadrant the data has been obtained (0 to 3)
+
+  // Extract the 128-byte page data
+  QByteArray pageData;
+  // The page data starts at payload[7] (after the header bytes)
+  int dataStartOffset = 7;  // Adjust based on your protocol
+  for (int i = 0; i < QUADRANTBYTES; i++) {
+      if (dataStartOffset + i < MAX_UART_ARRAY)
+      {
+        pageData.append(uartshadow.payload[dataStartOffset + i]);
+      }
+  }
+
+  qDebug() << "Log_TransmitData_Resp: File Index: " << logtransmitdata.filenumber_r
+           << "Page: " << logtransmitdata.page_r
+           << "Received records (approx): " << (pageData.size() >> 4) << " records";
+
+  // Emit signal to QML with the page data
+  QVariantList pageDataList;
+  for (char byte : pageData) {
+      pageDataList.append((int)(unsigned char)byte);
+  }
+  emit deviceFilePageReceived(logtransmitdata.filenumber_r, (logtransmitdata.sector_high_r << 8) + logtransmitdata.sector_low_r, logtransmitdata.page_r, logtransmitdata.quadrant_r, pageDataList);
+}

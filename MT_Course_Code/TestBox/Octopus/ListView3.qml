@@ -11,15 +11,33 @@ GridLayout {
     // Define message IDs (must match Defines.h)
     readonly property int lOG_QUERY_SHOWFILES_MSGID: 0x50
     readonly property int lOG_SET_READSPECIFICFILE_MSGID: 0x52
+    readonly property int lOG_TRANSMITDATA_SET_MSGID: 0x54
 
     // Source selection state
     property string selectedSource: ""  // "", "device", "local", "cloud"
     property var currentFileList: []     // Store current files from active source
     property var selectedFileData: null   // Currently selected file data
 
+    // Show status in file details area
+    property string downloadStatus: ""
+
+    // Download state properties
+    property bool isDownloading: false
+    property int currentDownloadFileIndex: -1
+
+    // To accumulate page data in QML
+    property int totalQuadrantsToDownload: 0
+    property int downloadedQuadrants: 0
+    property int currentPage: 0
+    property int currentQuadrant: 0
+    property var currentPageData: []  // Store 4 quadrants for current page
+    property var currentDownloadData: []  // Store complete pages
+
+
+
     anchors.fill: parent
     flow: GridLayout.TopToBottom
-    rows: 2
+    rows: 2    
 
     // Local Folder Dialog
     FolderDialog {
@@ -130,15 +148,21 @@ GridLayout {
     }
 
     // Update device file list from C++ data
+    // Update device file list from C++ data
     function updateDeviceFileList(deviceFiles) {
         fileListModel.clear();
         var filesData = [];
 
         for (var i = 0; i < deviceFiles.length; i++) {
+            // Calculate total pages needed for this file (512 bytes per page)
+            var fileSizeBytes = deviceFiles[i].fileSizeBytes;
+            var quadrantsNeeded = Math.ceil(fileSizeBytes / 128);  // 128 bytes per quadrant
+
             var fileInfo = {
                 fileName: deviceFiles[i].fileName,
-                fileSize: formatFileSize(deviceFiles[i].fileSizeBytes),
-                fileSizeBytes: deviceFiles[i].fileSizeBytes,
+                fileSize: formatFileSize(fileSizeBytes),
+                fileSizeBytes: fileSizeBytes,
+                totalQuadrants: quadrantsNeeded,  // Store total quadrants
                 fileDateTime: deviceFiles[i].fileDateTime,
                 fileDateTimeTimestamp: deviceFiles[i].fileDateTimeTimestamp,
                 fileIndex: deviceFiles[i].fileIndex,
@@ -153,6 +177,7 @@ GridLayout {
                 timeClosed: formatDeviceDateTime(fileInfo.fileDateTime),
                 source: "device",
                 fileIndex: fileInfo.fileIndex,
+                totalQuadrants: quadrantsNeeded,  // Keep naming consistent
                 fileDateTimeTimestamp: fileInfo.fileDateTimeTimestamp
             };
             fileListModel.append(displayInfo);
@@ -329,13 +354,197 @@ GridLayout {
         }
     }
 
+
+    // Start downloading a device file
+    function startDeviceFileDownload(fileIndex, fileName) {
+        if (isDownloading) {
+            console.log("Download already in progress, canceling first");
+            cancelDownload();
+        }
+
+        // Find the selected file to get total pages
+        var selectedFile = null;
+        for (var i = 0; i < currentFileList.length; i++) {
+            if (currentFileList[i].fileIndex === fileIndex) {
+                selectedFile = currentFileList[i];
+                break;
+            }
+        }
+
+        if (!selectedFile) {
+            console.log("Error: Could not find file with index", fileIndex);
+            return;
+        }
+
+        isDownloading = true;
+        currentDownloadFileIndex = fileIndex;
+        downloadedQuadrants = 0;
+        totalQuadrantsToDownload = selectedFile.totalQuadrants;
+        currentPage = 0;
+        currentQuadrant = 0;
+        currentPageData = [];
+        currentDownloadData = [];  // // Clear previous download data, Store complete pages
+
+        // Update UI
+        downloadProgress.visible = true;
+        downloadStatusText.visible = true;
+        downloadStatusText.text = "Downloading " + fileName + "...";
+        downloadStatusText.color = "#4CAF50";
+        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";  // Change this
+        loadButton.enabled = false;
+        loadButton.text = "Downloading...";
+        downloadProgress.value = 0;
+
+        // Start the download process - Request first quadrant
+        requestQuadrant(fileIndex, 0, 0);  // page 0, quadrant 0
+    }
+
+    // Request a specific page of the device file
+    function requestDeviceFilePage(fileIndex, pageNumber) {
+        requestQuadrant(fileIndex, pageNumber, 0);  // Start with quadrant 0
+    }
+
+    // Cancel ongoing download
+    function cancelDownload() {
+        isDownloading = false;
+        currentDownloadFileIndex = -1;
+        downloadedQuadrants = 0;  // Change this
+
+        downloadProgress.visible = false;
+        downloadStatusText.visible = false;
+        fileDetailsText.text = "Download cancelled";
+        loadButton.enabled = true;
+        loadButton.text = "Download & Graph";
+    }
+
+    function requestQuadrant(fileIndex, pageNumber, quadrantNumber) {
+        console.log("Requesting page:", pageNumber, "quadrant:", quadrantNumber);
+        var arr = [lOG_TRANSMITDATA_SET_MSGID, fileIndex, pageNumber, quadrantNumber];
+        CppClass.processOutgoingMsg(arr, {});  // Pass empty object instead of null
+    }
+
+    function finishDeviceFileDownload() {
+        // Assemble all pages into complete file data
+        var completeFileData = [];
+        for (var i = 0; i < totalQuadrantsToDownload; i++) {  // Change this
+            if (currentDownloadData[i]) {
+                completeFileData = completeFileData.concat(currentDownloadData[i]);
+            }
+        }
+
+        // Parse the complete file data
+        var fileContent = parseDeviceFileData(completeFileData);
+
+        // Graph the data
+        if (fileContent && fileContent.points) {
+            updateChart(fileContent.points);
+
+            // Update metadata display
+            if (fileContent.metadata) {
+                deviceInfo.text = fileContent.metadata.device + " - " + fileContent.metadata.serialNumber;
+                timeInfo.text = fileContent.metadata.instrumentTime + " " + fileContent.metadata.timeZone;
+            }
+        }
+
+        // Reset UI
+        isDownloading = false;
+        currentDownloadFileIndex = -1;
+        currentDownloadData = [];
+        downloadProgress.visible = false;
+        downloadStatusText.visible = false;
+        downloadStatusText.text = "";
+        fileDetailsText.text = "Download complete: " + selectedFileData.fileName;
+        loadButton.enabled = true;
+        loadButton.text = "Download & Graph";
+    }
+
+    function parseDeviceFileData(rawData) {
+        // Convert raw byte array to text and parse
+        var text = "";
+        for (var i = 0; i < rawData.length; i++) {
+            text += String.fromCharCode(rawData[i]);
+        }
+
+        // Parse metadata and CSV data (same as local file parsing)
+        var lines = text.split('\n');
+        var metadata = {};
+        var dataPoints = [];
+        var readingMetadata = true;
+
+        for (var line of lines) {
+            line = line.trim();
+            if (line === "") continue;
+
+            if (readingMetadata && line.indexOf(":") !== -1) {
+                var colonIndex = line.indexOf(":");
+                var key = line.substring(0, colonIndex).trim();
+                var value = line.substring(colonIndex + 1).trim();
+                metadata[key] = value;
+            } else if (line.indexOf(",") !== -1) {
+                readingMetadata = false;
+                var parts = line.split(",");
+                if (parts.length >= 3) {
+                    dataPoints.push({
+                        time: parts[0].trim(),
+                        temperature: parseFloat(parts[1]),
+                        depth: parseFloat(parts[2])
+                    });
+                }
+            }
+        }
+
+        return {
+            metadata: metadata,
+            points: dataPoints
+        };
+    }
+
+    // function to handle page data received
+    function handleDeviceFilePageReceived(fileIndex, pageNumber, quadrantNumber, pageData) {
+        if (!isDownloading || currentDownloadFileIndex !== fileIndex) return;
+
+        // Store quadrant in current page buffer
+        currentPageData[quadrantNumber] = pageData;
+        downloadedQuadrants++;
+        currentQuadrant = quadrantNumber;
+
+        // Update progress
+        var progress = (downloadedQuadrants / totalQuadrantsToDownload) * 100;
+        downloadProgress.value = progress;
+
+        // Check if we have all 4 quadrants for current page
+        if (currentPageData.length === 4) {
+            // Assemble complete page (512 bytes)
+            var completePage = [];
+            for (var i = 0; i < 4; i++) {
+                completePage = completePage.concat(currentPageData[i]);
+            }
+            currentDownloadData[currentPage] = completePage;
+            currentPageData = [];
+            currentPage++;
+
+            // Check if download complete
+            if (downloadedQuadrants >= totalQuadrantsToDownload) {
+                finishDeviceFileDownload();
+                return;
+            }
+        }
+
+        // Request next quadrant
+        var nextQuadrant = (currentQuadrant + 1) % 4;
+        var nextPage = currentPage;
+        if (nextQuadrant === 0) nextPage++;
+
+        requestQuadrant(fileIndex, nextPage, nextQuadrant);
+    }
+
     // Connections to C++ backend
     Connections {
         target: CppClass
 
         onTestSignal: function(message) {
             console.log("*** TEST SIGNAL RECEIVED:", message);
-        }
+        }    
 
         // Note: Now it's onDeviceFileListReady (single "on" from QML)
         onDeviceFileListReady: function(deviceFiles) {
@@ -351,11 +560,8 @@ GridLayout {
             }
         }
 
-        onDeviceFileDownloaded: function(fileData) {
-            console.log("Device file downloaded, loading for graphing");
-            if (fileData && fileData.points) {
-                updateChart(fileData.points);
-            }
+        onDeviceFilePageReceived: function(fileIndex, sectorNumber, pageNumber, quadrantNumber, pageData) {
+            handleDeviceFilePageReceived(fileIndex, pageNumber, quadrantNumber, pageData);
         }
 
         onFileDataReady: function(metadata, dataPoints) {
@@ -572,7 +778,7 @@ GridLayout {
                 // File Details Area
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 80
+                    Layout.preferredHeight: 100  // Increased height to accommodate progress
                     color: "#f0f0f0"
                     border.color: "#cccccc"
                     radius: 4
@@ -594,6 +800,25 @@ GridLayout {
                             text: "No file selected"
                             font.pixelSize: 16
                             color: "#666666"
+                            wrapMode: Text.WordWrap
+                        }
+
+                        // Progress bar for device file download
+                        ProgressBar {
+                            id: downloadProgress
+                            width: parent.width
+                            visible: false
+                            from: 0
+                            to: 100
+                            value: 0
+                        }
+
+                        Text {
+                            id: downloadStatusText
+                            text: ""
+                            font.pixelSize: 14
+                            color: "#4CAF50"
+                            visible: false
                             wrapMode: Text.WordWrap
                         }
                     }
@@ -627,8 +852,9 @@ GridLayout {
                                 console.log("Loading local file:", selectedFileData.fullPath);
                                 loadLocalFile(selectedFileData.fullPath);
                             } else if (selectedFileData.source === "device") {
-                                console.log("Downloading device file with index:", selectedFileData.fileIndex);
-                                requestDeviceFile(selectedFileData.fileIndex);
+                                console.log("Starting download of device file with index:", selectedFileData.fileIndex);
+                                // Start download
+                                startDeviceFileDownload(selectedFileData.fileIndex, selectedFileData.fileName);
                             }
                         } else {
                             console.log("No file selected!");

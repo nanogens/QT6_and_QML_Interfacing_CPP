@@ -187,11 +187,24 @@ void CppClass::Inits(void)
     logreadspecificfile.reserved = 0;
 
     // Log_Transmit
-    logtransmitdata.command = 0;
-    logtransmitdata.pagenumber_high = 0;
-    logtransmitdata.pagenumber_low = 0;
-    logtransmitdata.reserved = 0;
-    logtransmitdata.pagebitmap = 0;
+    // Set
+    logtransmitdata.filenumber_s = 0;   // file list ranges from 0 to 3 indicating which file data is being requested
+    logtransmitdata.sector_high_s = 0;  // the high byte of the sector from which the data has been requested (total of high and low byte is from 0 to 8191)
+    logtransmitdata.sector_low_s = 0;   // the low byte of the sector from which the data has been requested
+    logtransmitdata.page_s = 0;         // the page number from which the data has been requested (0 to 7)
+    logtransmitdata.reserved0_s = 0;    // reserved for future use
+    logtransmitdata.reserved1_s = 0;    // reserved for future use
+    logtransmitdata.quadrant_s = 0;     // each page is divided into four 128 byte quadrants.  this tells you from which quadrant the data has been requested (0 to 3)
+
+    // Resp
+    logtransmitdata.filenumber_r = 0;   // file list ranges from 0 to 3 indicating which file data is being tranferred
+    logtransmitdata.sector_high_r = 0;  // the high byte of the sector from which the data has been obtained (total of high and low byte is from 0 to 8191)
+    logtransmitdata.sector_low_r = 0;   // the low byte of the sector from which the data has been obtained
+    logtransmitdata.page_r = 0;         // the page number from which the data has been obtained (0 to 7)
+    logtransmitdata.reserved0_r = 0;    // reserved for future use
+    logtransmitdata.reserved1_r = 0;    // reserved for future use
+    logtransmitdata.quadrant_r = 0;     // each page is divided into four 128 byte quadrants.  this tells you from which quadrant the data has been obtained (0 to 3)
+
     for(counter.y0 = 0; counter.y0 < QUADRANTS; counter.y0++)
     {
       for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++)

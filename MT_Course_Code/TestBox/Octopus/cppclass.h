@@ -280,14 +280,24 @@ struct LogReadSpecificFile
 struct LogTransmitData
 {
   // Set
-  uint8_t whichfile_quadrant;
+  uint8_t filenumber_s;   // file list ranges from 0 to 3 indicating which file data is being requested
+  uint8_t sector_high_s;  // the high byte of the sector from which the data has been requested (total of high and low byte is from 0 to 8191)
+  uint8_t sector_low_s;   // the low byte of the sector from which the data has been requested
+  uint8_t page_s;         // the page number from which the data has been requested (0 to 7)
+  uint8_t reserved0_s;    // reserved for future use
+  uint8_t reserved1_s;    // reserved for future use
+  uint8_t quadrant_s;     // each page is divided into four 128 byte quadrants.  this tells you from which quadrant the data has been requested (0 to 3)
+
   // Resp
-  uint8_t command;
-  uint8_t pagenumber_high;
-  uint8_t pagenumber_low;
-  uint8_t reserved;
-  uint8_t pagebitmap;
-  uint8_t pagedata_rq[QUADRANTS][QUADRANTBYTES];  // 4 x 128 bytes
+  uint8_t filenumber_r;     // file list ranges from 0 to 3 indicating which file data is being tranferred
+  uint8_t sector_high_r;  // the high byte of the sector from which the data has been obtained (total of high and low byte is from 0 to 8191)
+  uint8_t sector_low_r;   // the low byte of the sector from which the data has been obtained
+  uint8_t page_r;         // the page number from which the data has been obtained (0 to 7)
+  uint8_t reserved0_r;    // reserved for future use
+  uint8_t reserved1_r;    // reserved for future use
+  uint8_t quadrant_r;     // each page is divided into four 128 byte quadrants.  this tells you from which quadrant the data has been obtained (0 to 3)
+
+  uint8_t pagedata_rq[QUADRANTS][QUADRANTBYTES];  // QUADRANTS = 4, QUADRANTBYTES = 128 bytes per quadrant (Note: All 4 quadrants represent one 512 byte page)
 };
 
 
@@ -345,6 +355,9 @@ signals:
 
     // Test signal
     void testSignal(QString message);
+
+    void deviceFilePageReceived(int fileIndex, int sectorNumber, int pageNumber, int quadrantNumber, const QVariantList &pageData);
+    void deviceFileDownloadComplete(int fileIndex, int sectorNumber, int pageNumber, int quadrantNumber, const QVariantMap &fileData);
 
 public:
     explicit CppClass(QObject *parent = nullptr);
@@ -498,10 +511,13 @@ public:
 public:
     void Log_ShowFiles_Query();
     void Log_ShowFiles_Resp();
-    void Log_ReadSpecificFile_Set();
-    void Log_ReadSpecificFile_Resp();    
-    void Log_TransmitData_Set();
+    void Log_ReadSpecificFile_Set(uint8_t fileIndex);
+    void Log_ReadSpecificFile_Resp();
+    void Log_TransmitData_Set(uint8_t fileIndex, uint16_t pageNumber, uint8_t quadrant);
     void Log_TransmitData_Resp();
+
+public:
+    void processDeviceFilePage(const QByteArray& pageData, int fileIndex, int pageNumber);
 };
 
 #endif // CPPCLASS_H

@@ -137,14 +137,24 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 break;
 
             case LOG_READSPECIFICFILE_SET_MSGID:
-                Log_ReadSpecificFile_Set();
+            {
+                uint8_t fileIndex = list.at(i).toInt(); // curly braces needed due to variable declaration within switch-case
+                qDebug() << "About to read specific file with index:" << fileIndex;
+                Log_ReadSpecificFile_Set(fileIndex);
                 break;
+            }
 
             case LOG_TRANSMITDATA_SET_MSGID:
-                Log_TransmitData_Set();
+            {
+                if (list.size() >= 4) {
+                    uint8_t fileIdx = list.at(1).toInt();
+                    uint16_t pageNum = list.at(2).toInt();
+                    uint8_t quadrant = list.at(3).toInt();
+                    Log_TransmitData_Set(fileIdx, pageNum, quadrant);
+                }
                 break;
+            }
 
-            //
 
             default:
                 qDebug() << "Error : x should have a value";
