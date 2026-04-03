@@ -27,8 +27,8 @@ void CppClass::ProcessIncomingMsg(void)
             Communication_Resp();
             uartshadow.messageid = 0;
             break;
-        case TIMING_RESP_MSGID:
-            Timing_Resp();
+        case TIME_RESP_MSGID:
+            Time_Resp();
             uartshadow.messageid = 0;
             break;
         case SAMPLING_RESP_MSGID:
@@ -118,6 +118,10 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 Instrument_Set(list, i, byteArray);
                 break;
 
+            case TIME_SET_MSGID:
+                Time_Set(list, i, byteArray);
+                break;
+
             // ------------------------------------------------------------------------
 
             // QUERY
@@ -129,6 +133,9 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 qDebug() << "in INSTRUMENT_QUERY_MSGID";
                 Instrument_Query();
                 break;
+
+
+
 
             // ------------------------------------------------------------------------
             case LOG_SHOWFILES_QUERY_MSGID:

@@ -30,6 +30,9 @@ Item {
     readonly property int iNSTRUMENT_QUERY_MSGID: 0x06
     readonly property int iNSTRUMENT_SET_MSGID: 0x08
 
+    readonly property int tIME_QUERY_MSGID: 0x0F
+    readonly property int tIME_SET_MSGID: 0x11
+
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
     readonly property int aRRAY_IP_MAX: 11
     readonly property int aRRAY_LOGIN_MAX: 13
@@ -124,7 +127,6 @@ Item {
     property date syncDateTime : new Date()
     property bool syncEnabled : false
     property date instrumentDateTime : new Date()
-
 
 
 
@@ -913,7 +915,6 @@ Item {
                             Layout.row: 2; Layout.column: 2
                             Layout.fillWidth: true
                             checked: syncEnabled
-
                             onCheckedChanged: {
                                 syncEnabled = checked;
                                 if (checked) {
@@ -982,6 +983,70 @@ Item {
                             font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 2
+                            onClicked: {
+                                // If Sync to Computer is checked, update instrumentDateTime to current computer time
+                                if (syncCheckBox.checked) {
+                                    instrumentDateTime = new Date();
+                                    // Don't update the label here - we'll update it after sending
+                                }
+
+                                var selection = tIME_SET_MSGID;  // Box D - Time
+
+                                // Get the datetime from instrumentDateTime (now has latest time if sync was enabled)
+                                var datetime = instrumentDateTime;
+
+                                // Extract components
+                                var year = datetime.getFullYear() % 100;  // 2-digit year (26 for 2026)
+                                var month = datetime.getMonth() + 1;
+                                var day = datetime.getDate();
+                                var hour = datetime.getHours();
+                                var minute = datetime.getMinutes();
+                                var second = datetime.getSeconds();
+
+                                // Convert to 12-hour format
+                                var ampm = hour >= 12 ? 1 : 0;
+                                var hour12 = hour % 12;
+                                if (hour12 === 0) hour12 = 12;
+
+                                // Calculate weekday (1=Monday, 7=Sunday)
+                                var jsWeekday = datetime.getDay();  // 0=Sunday, 1=Monday, ..., 6=Saturday
+                                var weekday;
+                                if (jsWeekday === 0) {
+                                    weekday = 7;  // Sunday becomes 7
+                                } else {
+                                    weekday = jsWeekday;  // Monday=1, Tuesday=2, etc.
+                                }
+
+                                // Send as a single object
+                                var timeData = {
+                                    Year: year,
+                                    Month: month,
+                                    Day: day,
+                                    Hour: hour12,
+                                    Minute: minute,
+                                    Second: second,
+                                    AMPM: ampm,
+                                    WeekDay: weekday
+                                };
+
+                                var arr = [selection, timeData];
+                                var obj = {
+                                    Selection: selection,
+                                    TimeData: timeData
+                                };
+
+                                // Send to C++ backend first (no delay)
+                                CppClass.processOutgoingMsg(arr, obj);
+
+                                // Now update the label to show the time that was sent
+                                // This ensures the label is updated AFTER sending
+                                label_Time_SetDateTimeInstrument.text = datetime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+
+                                // If Sync to Computer was checked, also update the computer time display
+                                if (syncCheckBox.checked) {
+                                    label_Time_ComputerTime.text = datetime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+                                }
+                            }
                         }
                     }
                 }

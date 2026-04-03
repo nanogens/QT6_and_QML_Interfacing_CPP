@@ -139,12 +139,12 @@ void CppClass::Power_Resp(void)
     emit powerDataReceived(powerData);
 }
 
-void CppClass::Timing_Resp(void)
+void CppClass::Time_Resp(void)
 {
-    timing.boxselection = uartshadow.payload[0];
-    timing.reserved = uartshadow.payload[1];
+    time.boxselection = uartshadow.payload[0];
+    time.reserved = uartshadow.payload[1];
 
-    qDebug() << "Timing_Resp Bytes Stored!";
+    qDebug() << "Time_Resp Bytes Stored!";
 }
 
 void CppClass::Sampling_Resp(void)
@@ -471,6 +471,57 @@ void CppClass::Instrument_Set(QVariantList &list, int i, QByteArray &byteArray)
     }
 }
 
+void CppClass::Time_Set(QVariantList &list, int i, QByteArray &byteArray)
+{
+    qDebug() << "In Time_Set() now...";
+
+    // Get the time data from the list (i == 1 contains the QVariantMap)
+    if(i == 1)
+    {
+        QVariantMap timeData = list.at(i).toMap();
+        time.boxselection = TIME_SET_MSGID;
+        time.reserved = 0x00;
+        time.instrclock_year = timeData["Year"].toInt();
+        time.instrclock_month = timeData["Month"].toInt();
+        time.instrclock_day = timeData["Day"].toInt();
+        time.instrclock_hour = timeData["Hour"].toInt();
+        time.instrclock_minute = timeData["Minute"].toInt();
+        time.instrclock_second = timeData["Second"].toInt();
+        time.instrclock_ampm = timeData["AMPM"].toInt();
+        time.instrclock_weekday = timeData["WeekDay"].toInt();
+
+        qDebug() << "Year:" << time.instrclock_year;
+        qDebug() << "Month:" << time.instrclock_month;
+        qDebug() << "Day:" << time.instrclock_day;
+        qDebug() << "Hour:" << time.instrclock_hour;
+        qDebug() << "Minute:" << time.instrclock_minute;
+        qDebug() << "Second:" << time.instrclock_second;
+        qDebug() << "AM/PM:" << (time.instrclock_ampm == 1 ? "PM" : "AM");
+        qDebug() << "Weekday" << (time.instrclock_weekday);
+
+        if((error.errorcode == 0) && (writePos == 0))
+        {
+            SendHeader(TIME_SET_MSGLGT, TIME_SET_MSGID);
+            AddByteToSend(time.boxselection, false); // Box Selection
+            AddByteToSend(time.reserved, false);     // Reserved
+            AddByteToSend(time.instrclock_year, false);
+            AddByteToSend(time.instrclock_month, false);
+            AddByteToSend(time.instrclock_day, false);
+            AddByteToSend(time.instrclock_hour, false);
+            AddByteToSend(time.instrclock_minute, false);
+            AddByteToSend(time.instrclock_second, false);
+            AddByteToSend(time.instrclock_ampm, false);
+            AddByteToSend(time.instrclock_weekday, false);
+            AddByteToSend(send.crcsend, true);
+
+            std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
+            writePos = send.writepos;
+
+            qDebug() << "Time_Set bytes sent!";
+        }
+    }
+}
+
 // QML Page 3 ===============================================
 
 void CppClass::Log_ShowFiles_Query()
@@ -654,15 +705,15 @@ void CppClass::Power_Query(void)
   qDebug() << "Communication_Query Sent!";
 }
 
-void CppClass::Timing_Query(void)
+void CppClass::Time_Query(void)
 {
-    SendHeader(TIMING_QUERY_MSGLGT, TIMING_QUERY_MSGID);
+    SendHeader(TIME_QUERY_MSGLGT, TIME_QUERY_MSGID);
     AddByteToSend(send.crcsend, true);
 
     std::lock_guard<std::mutex> lock(m_serialData.outgoingMutex);
     writePos = send.writepos; // triggers send
 
-    qDebug() << "Timing_Query Sent!";
+    qDebug() << "Time_Query Sent!";
 }
 
 void CppClass::Sampling_Query(void)

@@ -540,7 +540,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
             (messageidglobal == INSTRUMENT_RESP_MSGID) ||
             (messageidglobal == COMMUNICATION_RESP_MSGID) ||
             (messageidglobal == POWER_RESP_MSGID) ||
-            (messageidglobal == TIMING_RESP_MSGID) ||
+            (messageidglobal == TIME_RESP_MSGID) ||
             (messageidglobal == SAMPLING_RESP_MSGID) ||
             (messageidglobal == ACTIVATION_RESP_MSGID) ||
             (messageidglobal == NOTES_RESP_MSGID) ||

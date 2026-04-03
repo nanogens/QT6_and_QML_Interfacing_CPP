@@ -109,21 +109,10 @@ struct Power
     uint8_t powerremaining[MAX_POWER_POWERREMAINING_ARRAY] = {0};
 };
 
-struct Timing
+struct Time
 {
     uint8_t reserved = 0;
     uint8_t boxselection = 0;
-
-    uint8_t compclock_year = 0;    // 0-99 (00-99)
-    uint8_t compclock_month = 0;  // 1-12
-    uint8_t compclock_day = 0;     // 1-31
-    uint8_t compclock_hour = 0;    // 0-23 (24-hour format)
-    uint8_t compclock_minute = 0;  // 0-59
-    uint8_t compclock_second = 0;  // 0-59
-    uint8_t compclock_ampm = 0;    // 0=AM, 1=PM (optional, since we're using 24-hour)
-    // Additional variables for full year and weekday
-    uint8_t compclock_full_year[MAX_TIMING_COMPCLOCK_FULLYEAR_ARRAY] = {0}; // Full year (2025)
-    uint8_t compclock_weekday = 0;    // 1=Monday, 7=Sunday
 
     uint8_t instrclock_year = 0;
     uint8_t instrclock_month = 0;
@@ -131,9 +120,7 @@ struct Timing
     uint8_t instrclock_hour = 0;
     uint8_t instrclock_minute = 0;
     uint8_t instrclock_second = 0;
-    uint8_t instrclock_ampm = 0;  // 0=AM, 1=PM
-    // Additional variables for full year and weekday
-    uint8_t instrclock_full_year[MAX_TIMING_INSTRCLOCK_FULLYEAR_ARRAY] = {0}; // Full year (2025)
+    uint8_t instrclock_ampm = 0;       // 0=AM, 1=PM
     uint8_t instrclock_weekday = 0;    // 1=Monday, 7=Sunday
 };
 
@@ -342,7 +329,7 @@ signals:
     void instrumentDataReceived(const QVariantMap &data);
     void communicationDataReceived(const QVariantMap &data);
     void powerDataReceived(const QVariantMap &data);
-    void timingDataReceived(const QVariantMap &data);
+    void timeDataReceived(const QVariantMap &data);
     void samplingDataReceived(const QVariantMap &data);
     void activationDataReceived(const QVariantMap &data);
     void notesDataReceived(const QVariantMap &data);
@@ -431,7 +418,7 @@ private:
     Instrument instrument;
     Communication communication;
     Power power;
-    Timing timing;
+    Time time;
     Sampling sampling;
     Activation activation;
     Notes notes;
@@ -479,12 +466,12 @@ private:
     void Status_Resp();
 
     void Instrument_Set(QVariantList& list, int i, QByteArray& byteArray);
-
+    void Time_Set(QVariantList& list, int i, QByteArray& byteArray);
 
     void Instrument_Resp();
     void Communication_Resp();
     void Power_Resp();
-    void Timing_Resp();
+    void Time_Resp();
     void Sampling_Resp();
     void Activation_Resp();
     void Notes_Resp();
@@ -501,7 +488,7 @@ public:
     void Instrument_Query();
     void Communication_Query();
     void Power_Query();
-    void Timing_Query();
+    void Time_Query();
     void Sampling_Query();
     void Activation_Query();
     void Notes_Query();
