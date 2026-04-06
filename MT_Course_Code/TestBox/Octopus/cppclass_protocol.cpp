@@ -139,12 +139,42 @@ void CppClass::Power_Resp(void)
     emit powerDataReceived(powerData);
 }
 
-void CppClass::Time_Resp(void)
+void CppClass::Time_Resp()
 {
+    // Make sure these indices match your actual payload layout
     time.boxselection = uartshadow.payload[0];
     time.reserved = uartshadow.payload[1];
+    time.instrclock_year = uartshadow.payload[2];
+    time.instrclock_month = uartshadow.payload[3];
+    time.instrclock_day = uartshadow.payload[4];
+    time.instrclock_hour = uartshadow.payload[5];
+    time.instrclock_minute = uartshadow.payload[6];
+    time.instrclock_second = uartshadow.payload[7];
+    time.instrclock_ampm = uartshadow.payload[8];
+    time.instrclock_weekday = uartshadow.payload[9];
 
     qDebug() << "Time_Resp Bytes Stored!";
+    qDebug() << "Year:" << time.instrclock_year;
+    qDebug() << "Month:" << time.instrclock_month;
+    qDebug() << "Day:" << time.instrclock_day;
+    qDebug() << "Hour:" << time.instrclock_hour;
+    qDebug() << "Minute:" << time.instrclock_minute;
+    qDebug() << "Second:" << time.instrclock_second;
+    qDebug() << "AM/PM:" << (time.instrclock_ampm == 1 ? "PM" : "AM");
+    qDebug() << "Weekday:" << time.instrclock_weekday;
+
+    // Create QVariantMap to send to QML
+    QVariantMap timeData;
+    timeData["year"] = time.instrclock_year;
+    timeData["month"] = time.instrclock_month;
+    timeData["day"] = time.instrclock_day;
+    timeData["hour"] = time.instrclock_hour;
+    timeData["minute"] = time.instrclock_minute;
+    timeData["second"] = time.instrclock_second;
+    timeData["ampm"] = time.instrclock_ampm;
+    timeData["weekday"] = time.instrclock_weekday;
+
+    emit timeDataReceived(timeData);
 }
 
 void CppClass::Sampling_Resp(void)

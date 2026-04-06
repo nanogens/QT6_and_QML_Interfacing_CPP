@@ -134,7 +134,9 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 Instrument_Query();
                 break;
 
-
+            case TIME_QUERY_MSGID:
+                Time_Query();
+                break;
 
 
             // ------------------------------------------------------------------------

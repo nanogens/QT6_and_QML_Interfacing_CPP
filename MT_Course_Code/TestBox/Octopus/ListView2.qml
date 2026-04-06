@@ -33,6 +33,9 @@ Item {
     readonly property int tIME_QUERY_MSGID: 0x0F
     readonly property int tIME_SET_MSGID: 0x11
 
+    readonly property int sAMPLING_QUERY_MSGID: 0x12
+    readonly property int sAMPLING_RESP_MSGID: 0x13
+
     readonly property int aRRAY_SERIALNUMBER_MAX: 13
     readonly property int aRRAY_IP_MAX: 11
     readonly property int aRRAY_LOGIN_MAX: 13
@@ -159,11 +162,57 @@ Item {
         console.log("Updated Usage:", label_Instrument_Usage);
     }
 
+    function onTimeDataReceived(data) {
+        console.log("Time data received from instrument:", JSON.stringify(data));
+
+        // Build a date string from the received data
+        var year = 2000 + data.year;
+        var month = data.month;
+        var day = data.day;
+        var hour = data.hour;
+        var minute = data.minute;
+        var second = data.second;
+        var ampm = data.ampm;
+
+        // Convert 12-hour to 24-hour for JavaScript Date object
+        var hour24 = hour;
+        if (ampm === 1 && hour !== 12) {
+            hour24 = hour + 12;
+        } else if (ampm === 0 && hour === 12) {
+            hour24 = 0;
+        }
+
+        // Create a Date object for instrument time
+        var instrumentDate = new Date(year, month - 1, day, hour24, minute, second);
+
+        // Update ONLY the Instrument Clock label
+        label_Time_SetDateTimeInstrument.text = instrumentDate.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+
+        // Update the instrumentDateTime property
+        instrumentDateTime = instrumentDate;
+
+        // Uncheck the "Sync to Computer" checkbox since we're showing instrument time
+        syncCheckBox.checked = false;
+        syncEnabled = false;
+    }
+
+    // Add this Timer in the root of ListView2.qml (outside any other components)
+    Timer {
+        id: computerTimeTimer
+        interval: 1000  // Update every second
+        running: true
+        repeat: true
+        onTriggered: {
+            var now = new Date();
+            label_Time_ComputerTime.text = now.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+        }
+    }
 
     Component.onCompleted:
     {
-        // Connect the C++ signal to your QML function
+        // Connect the C++ signals to your QML functions
         CppClass.instrumentDataReceived.connect(onInstrumentDataReceived);
+        CppClass.timeDataReceived.connect(onTimeDataReceived);  // Add this line
         console.log("Connected to C++ signals");
     }
 
@@ -974,6 +1023,18 @@ Item {
                             font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
+                            onClicked: {
+                                // Update computer time label immediately
+                                var now = new Date();
+                                label_Time_ComputerTime.text = now.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+
+                                // Send query to instrument
+                                var selection = tIME_QUERY_MSGID;
+                                var dummybyte = 0;
+                                var arr = [selection, dummybyte];
+                                var obj = {Selection: selection, Dummybyte: dummybyte};
+                                CppClass.processOutgoingMsg(arr, obj);
+                            }
                         }
                         Button {
                             id: button8Id
@@ -1218,6 +1279,14 @@ Item {
                             font.pixelSize: buttonFontSize
                             Layout.row: 5
                             Layout.column: 1
+                            onClicked: {
+                                // Send query to instrument
+                                var selection = sAMPLING_QUERY_MSGID;
+                                var dummybyte = 0;
+                                var arr = [selection, dummybyte];
+                                var obj = {Selection: selection, Dummybyte: dummybyte};
+                                CppClass.processOutgoingMsg(arr, obj);
+                            }
                         }
                         Button {
                             id: button10Id
@@ -1228,7 +1297,7 @@ Item {
                             Layout.row: 5
                             Layout.column: 2
                             onClicked: {
-                                var selection = "4";
+                                var selection = sAMPLING_SET_MSGID;
                                 var selected_Sampling_Mode = id_Sampling_Mode_ComboBox.currentIndex;
                                 var selected_Sampling_Rate = id_Sampling_Rate_ComboBox.currentIndex;
                                 var arr = [selection, selected_Sampling_Mode, selected_Sampling_Rate];
