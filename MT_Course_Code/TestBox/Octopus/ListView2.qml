@@ -982,7 +982,7 @@ Item {
                             Layout.column: 0
                         }
                         Button {
-                            text: "Sync to Logger"
+                            text: "Sync to Future Time"
                             implicitHeight: 36 * scaleFactor
                             font.pixelSize: 18 * scaleFactor
                             Layout.row: 3; Layout.column: 2
