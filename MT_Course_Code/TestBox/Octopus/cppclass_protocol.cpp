@@ -655,20 +655,22 @@ void CppClass::Log_TransmitData_Set(uint8_t fileIndex, uint16_t pageNumber, uint
     error.errorcode = 0;
 
     // Calculate sector and page based on file index and page number
-    // For file 0: sectors 3-2049 (2047 sectors total)
-    // For file 1: sectors 2050-4096 (2047 sectors)
-    // For file 2: sectors 4097-6143 (2047 sectors)
-    // For file 3: sectors 6144-8190 (2047 sectors)
-
+    // For file 0: sectors 3 – 258 (256 sectors total)
+    // For file 1: sectors 259 – 514 (256 sectors)
+    // For file 2: sectors 515 – 770 (256 sectors)
+    // For file 3: sectors 771 – 1023 (256 sectors)
+    //
     // Each sector has 8 pages (512 bytes each)
-    // So total pages per file = 2047 sectors * 8 pages = 16376 pages
+    // So total pages per file = 1024 sectors * 8 pages = 8192 pages
+    // Total number of bytes = 8192 pages * 512 bytes = 4,194,304 bytes
+    // Total number of bits = 4,194,304 * 8 = 33,554,432 bits or 32 Mbits
 
     uint32_t startSector = 0;
     switch(fileIndex) {
     case 0: startSector = 3; break;
-    case 1: startSector = 2050; break;
-    case 2: startSector = 4097; break;
-    case 3: startSector = 6144; break;
+    case 1: startSector = 259; break;
+    case 2: startSector = 515; break;
+    case 3: startSector = 771; break;
     default: startSector = 3; break;
     }
 
