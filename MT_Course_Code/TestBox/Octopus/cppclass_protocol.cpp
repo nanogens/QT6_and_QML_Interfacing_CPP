@@ -644,10 +644,22 @@ void CppClass::Log_ReadSpecificFile_Set(uint8_t fileIndex)
 
 void CppClass::Log_ReadSpecificFile_Resp()
 {
-  logreadspecificfile.reserved   = uartshadow.payload[0];
-  logreadspecificfile.unknown[0] = uartshadow.payload[1]; // upto 36
+    uint8_t reserved = uartshadow.payload[0];
+    uint8_t fileNumber = uartshadow.payload[1];
+    uint8_t statusByte = uartshadow.payload[2];  // First byte of 128-byte metadata
 
-  qDebug() << "Log_ReadSpecificFile_Resp!";
+    bool isValid = (statusByte == 0x10);
+    bool isEmpty = (statusByte == 0xFF);
+
+    QByteArray metadata;
+    for (int i = 0; i < 128; i++) {
+        metadata.append(uartshadow.payload[2 + i]);
+    }
+
+    qDebug() << "Log_ReadSpecificFile_Resp: File" << fileNumber
+             << "Valid:" << isValid << "Empty:" << isEmpty;
+
+    emit deviceFileMetadataReceived(fileNumber, isValid, metadata);
 }
 
 void CppClass::Log_TransmitData_Set(uint8_t fileIndex, uint16_t pageNumber, uint8_t quadrant)
@@ -946,3 +958,5 @@ void CppClass::Log_TransmitData_Resp()
   }
   emit deviceFilePageReceived(logtransmitdata.filenumber_r, (logtransmitdata.sector_high_r << 8) + logtransmitdata.sector_low_r, logtransmitdata.page_r, logtransmitdata.quadrant_r, pageDataList);
 }
+
+

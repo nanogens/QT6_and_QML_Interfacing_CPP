@@ -148,7 +148,6 @@ GridLayout {
     }
 
     // Update device file list from C++ data
-    // Update device file list from C++ data
     function updateDeviceFileList(deviceFiles) {
         fileListModel.clear();
         var filesData = [];
@@ -580,6 +579,15 @@ GridLayout {
             console.log("Calling updateChart with", dataPoints.length, "points");
             updateChart(dataPoints);
         }
+
+        onDeviceFileMetadataReceived: function(fileIndex, isValid, metadata) {
+            if (isValid) {
+                fileDetailsText.text = "File " + fileIndex + ": Has valid data";
+                // TODO: Parse and display more metadata
+            } else {
+                fileDetailsText.text = "File " + fileIndex + ": Empty slot";
+            }
+        }
     }
 
     // Left Column - File Operations
@@ -752,17 +760,18 @@ GridLayout {
                                 // Update file details area
                                 fileDetailsText.text = "Selected: " + selectedFile.fileName;
 
-                                // For local files, show Load button and optionally auto-load
+                                // For local files, show Load button
                                 if (selectedFile.source === "local") {
                                     loadButton.visible = true;
                                     loadButton.text = "Load & Graph";
-                                    // Auto-load local files (or keep manual? I'll make it manual but you can change)
-                                    // loadLocalFile(selectedFile.fullPath);
                                 }
-                                // For device files, show Load button for manual download
+                                // For device files, show Load button AND request metadata
                                 else if (selectedFile.source === "device") {
                                     loadButton.visible = true;
                                     loadButton.text = "Download & Graph";
+
+                                    // ADD THIS LINE: Request metadata for the selected device file
+                                    requestDeviceFile(selectedFile.fileIndex);
                                 }
 
                                 console.log("Selected file:", selectedFile.fileName, "from source:", selectedFile.source);
