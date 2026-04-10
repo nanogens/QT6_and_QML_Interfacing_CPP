@@ -342,28 +342,34 @@ void CppClass::readwriteThread()
         timeouts.ReadTotalTimeoutConstant = 10;
         SetCommTimeouts(m_hPort, &timeouts);
 
+        static QElapsedTimer readTimer;
+        static int totalBytesRead = 0;
+
         DWORD bytesReadLocal;
-        if (ReadFile(m_hPort, readBuffer, ACCEPT_1BYTE_AT_A_TIME_ONLY, &bytesReadLocal, NULL))  // ACCEPT_1BYTE_AT_A_TIME_ONLY = 1, it was BUFFER_SIZE
+        if (ReadFile(m_hPort, readBuffer, ACCEPT_1BYTE_AT_A_TIME_ONLY, &bytesReadLocal, NULL))
         {
             if (bytesReadLocal > 0)
             {
-                // Process received data...
-                std::lock_guard<std::mutex> lock(m_serialData.incomingMutex);
+                readTimer.start();
+
+                // Process each byte individually through the state machine
                 for (DWORD i = 0; i < bytesReadLocal; i++)
                 {
-                    m_serialData.incoming.push(readBuffer[i]);
-                }
-                emit dataReceived(QByteArray(reinterpret_cast<const char*>(readBuffer), bytesReadLocal));
+                    // Put single byte into shadow buffer
+                    bytesReadShadow = 1;
+                    readBufferShadow[0] = readBuffer[i];
 
-                // copy bytes to shadow buffer and get outta here
-                bytesReadShadow = bytesReadLocal;
-                for(counter.yi = 0; counter.yi < bytesReadShadow; counter.yi++)
-                {
-                    readBufferShadow[counter.yi] = readBuffer[counter.yi];
+                    // Process this one byte
+                    IncomingByteCheck();
+                    ProcessIncomingMsg();
                 }
-                //qDebug() << readBufferShadow[0]; // test printout of bytes received
-                IncomingByteCheck();
-                ProcessIncomingMsg();
+
+                int processTime = readTimer.elapsed();
+                totalBytesRead += bytesReadLocal;
+
+                if (processTime > 10) {
+                    qDebug() << "Slow batch:" << bytesReadLocal << "bytes took" << processTime << "ms";
+                }
             }
         }
         else
@@ -386,7 +392,7 @@ void CppClass::FalseHeader(void)
     if(readBufferShadow[0] == DLE)
     {
         uart.got = 1;
-        qDebug() << "DLE";
+        //qDebug() << "DLE";
     }
     else
     {
@@ -409,7 +415,7 @@ void CppClass::IncomingByteCheck(void)
             if(readBufferShadow[0] == STX)
             {
                 uart.got = 2;
-                qDebug() << "STX";
+                //qDebug() << "STX";
             }
             else
             {
@@ -422,7 +428,7 @@ void CppClass::IncomingByteCheck(void)
             if(readBufferShadow[0] == DEST)
             {
                 uart.got = 3;
-                qDebug() << "DEST";
+                //qDebug() << "DEST";
             }
             else
             {
@@ -435,7 +441,7 @@ void CppClass::IncomingByteCheck(void)
             if(readBufferShadow[0] == SOURCE)
             {
                 uart.got = 4;
-                qDebug() << "SOURCE";
+                //qDebug() << "SOURCE";
             }
             else
             {
@@ -448,7 +454,7 @@ void CppClass::IncomingByteCheck(void)
             // Make a function to check message length
             uart.messagelength = readBufferShadow[0];
             uart.got = 5;
-            qDebug() << "Message LGT" << uart.messagelength;
+            //qDebug() << "Message LGT" << uart.messagelength;
         }
         else if(uart.got == 5)
         {
@@ -456,7 +462,7 @@ void CppClass::IncomingByteCheck(void)
             // Make a function to check message id
             uart.messageidglobal = readBufferShadow[0];
             uart.got = 6;
-            qDebug() << "Message ID" << uart.messageidglobal;
+            //qDebug() << "Message ID" << uart.messageidglobal;
         }
         // Setting - next 2 blocks
         else if(
@@ -482,7 +488,7 @@ void CppClass::IncomingByteCheck(void)
             )
         {
             uart.crcmsg = readBufferShadow[0]; // the crc at the end of Set Working Parameters
-            qDebug() << "CRCMSG : " << readBufferShadow[0];
+            //qDebug() << "CRCMSG : " << readBufferShadow[0];
             // it is DEST + SOURCE and not SOURCE + DEST because dest & source values are in relation to what we send not receive.
             uart.crcset = DLE + STX + DEST + SOURCE + uart.messagelength + uart.messageidglobal;
 
@@ -494,9 +500,9 @@ void CppClass::IncomingByteCheck(void)
                 }
             }
 
-            qDebug() << "About to check CRC for RESP msg";
-            qDebug() << "Calculated CRC : " << uart.crcset;
-            qDebug() << "Message CRC : " << uart.crcmsg;
+            //qDebug() << "About to check CRC for RESP msg";
+            //qDebug() << "Calculated CRC : " << uart.crcset;
+            //qDebug() << "Message CRC : " << uart.crcmsg;
 
             if(uart.crcset == uart.crcmsg) //uart.crcmsg)  // if it equals the crc of the message packet
             {
@@ -509,7 +515,7 @@ void CppClass::IncomingByteCheck(void)
                     uartshadow.payload[counter.yi] = uart.payload[counter.yi];
                 }
                 uartshadow.messageid = uart.messageidglobal;
-                qDebug() << "SETTING SUCCESSFULLY RECEIVED!";
+                //qDebug() << "SETTING SUCCESSFULLY RECEIVED!";
             }
             else
             {

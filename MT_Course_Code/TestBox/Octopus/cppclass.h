@@ -347,6 +347,14 @@ signals:
     void deviceFileDownloadComplete(int fileIndex, int sectorNumber, int pageNumber, int quadrantNumber, const QVariantMap &fileData);
     void deviceFileMetadataReceived(int fileIndex, bool isValid, const QByteArray &metadata);
 
+private:
+    struct FileMetadataBuffer {
+        QByteArray quadrants[4];
+        bool received[4] = {false, false, false, false};
+        int fileNumber = -1;
+    };
+    FileMetadataBuffer m_metadataBuffer;
+
 public:
     explicit CppClass(QObject *parent = nullptr);
     ~CppClass();

@@ -644,22 +644,68 @@ void CppClass::Log_ReadSpecificFile_Set(uint8_t fileIndex)
 
 void CppClass::Log_ReadSpecificFile_Resp()
 {
-    uint8_t reserved = uartshadow.payload[0];
-    uint8_t fileNumber = uartshadow.payload[1];
-    uint8_t statusByte = uartshadow.payload[2];  // First byte of 128-byte metadata
+    uint8_t fileNumber = uartshadow.payload[0];
+    uint8_t quadrant = uartshadow.payload[1];
 
-    bool isValid = (statusByte == 0x10);
-    bool isEmpty = (statusByte == 0xFF);
+    static QElapsedTimer timer;
+    static bool timerStarted = false;
 
-    QByteArray metadata;
-    for (int i = 0; i < 128; i++) {
-        metadata.append(uartshadow.payload[2 + i]);
+    // On first quadrant (quadrant 0), start timer
+    if (quadrant == 0 && !timerStarted) {
+        timer.start();
+        timerStarted = true;
     }
 
-    qDebug() << "Log_ReadSpecificFile_Resp: File" << fileNumber
-             << "Valid:" << isValid << "Empty:" << isEmpty;
+    // Extract the 128-byte quadrant data
+    QByteArray quadrantData;
+    quadrantData.reserve(QUADRANTBYTES);
+    for (int i = 0; i < QUADRANTBYTES; i++) {
+        quadrantData.append(uartshadow.payload[2 + i]);
+    }
 
-    emit deviceFileMetadataReceived(fileNumber, isValid, metadata);
+    // Check if this is a new file or continuing previous
+    if (m_metadataBuffer.fileNumber != fileNumber) {
+        m_metadataBuffer = FileMetadataBuffer();
+        m_metadataBuffer.fileNumber = fileNumber;
+        timerStarted = false;  // Reset for new file
+        if (quadrant == 0) {
+            timer.start();
+            timerStarted = true;
+        }
+    }
+
+    // Store this quadrant
+    m_metadataBuffer.quadrants[quadrant] = quadrantData;
+    m_metadataBuffer.received[quadrant] = true;
+
+    // Check if we have all 4 quadrants
+    bool allReceived = true;
+    for (int i = 0; i < QUADRANTS; i++) {
+        if (!m_metadataBuffer.received[i]) {
+            allReceived = false;
+            break;
+        }
+    }
+
+    if (allReceived) {
+        #ifdef ENABLE_TIMING_DEBUG
+        qDebug() << "Time to receive all 4 quadrants:" << timer.elapsed() << "ms";
+        #endif
+
+        QByteArray fullMetadata;
+        fullMetadata.reserve(512);
+        for (int i = 0; i < QUADRANTS; i++) {
+            fullMetadata.append(m_metadataBuffer.quadrants[i]);
+        }
+
+        uint8_t statusByte = (fullMetadata.size() > 0) ? (uint8_t)fullMetadata[0] : FILE_SLOT_EMPTY;
+        bool isValid = (statusByte == FILE_SLOT_OCCUPIED);
+
+        emit deviceFileMetadataReceived(fileNumber, isValid, fullMetadata);
+
+        m_metadataBuffer = FileMetadataBuffer();
+        timerStarted = false;
+    }
 }
 
 void CppClass::Log_TransmitData_Set(uint8_t fileIndex, uint16_t pageNumber, uint8_t quadrant)

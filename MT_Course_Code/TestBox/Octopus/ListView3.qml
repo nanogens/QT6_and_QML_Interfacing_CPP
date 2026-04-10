@@ -33,11 +33,12 @@ GridLayout {
     property var currentPageData: []  // Store 4 quadrants for current page
     property var currentDownloadData: []  // Store complete pages
 
-
+    // Graph related properties
+    property var currentDataPoints: []  // Store current data for replotting
 
     anchors.fill: parent
-    flow: GridLayout.TopToBottom
-    rows: 2    
+    columns: 2
+    rows: 1
 
     // Local Folder Dialog
     FolderDialog {
@@ -90,7 +91,7 @@ GridLayout {
         // Clear current state and set source to device
         clearAndSetSource("device");
 
-        // Send request to C++ for device files
+        // Always request fresh device files from instrument
         var selection = lOG_QUERY_SHOWFILES_MSGID;
         var dummybyte = 0;
         var arr = [selection, dummybyte];
@@ -186,7 +187,6 @@ GridLayout {
         console.log("Device file list updated with", fileListModel.count, "files");
     }
 
-    // Clear ListView and reset state
     function clearAndSetSource(source) {
         console.log("Clearing ListView and setting source to:", source);
 
@@ -197,8 +197,12 @@ GridLayout {
         // Clear file details area
         fileDetailsText.text = "No file selected";
 
-        // Clear file list model
+        // Clear the graph when switching sources
+        clearGraph();
+
+        // Clear file list model and cached data
         fileListModel.clear();
+        currentFileList = [];
 
         // Set new source
         selectedSource = source;
@@ -279,26 +283,19 @@ GridLayout {
 
     // Update chart with data points
     function updateChart(points) {
-        console.log("=== updateChart called with", points.length, "points ===");
-
         if (!points || points.length === 0) {
             console.log("No points to chart");
+            clearGraph();  // Add this line
             return;
         }
 
-        // Log first few points
-        for (var i = 0; i < Math.min(3, points.length); i++) {
-            console.log("Point", i, ":", points[i].time, points[i].depth, points[i].temperature);
-        }
+        // Store for replotting when checkboxes change
+        currentDataPoints = points;
 
         // Clear existing data
         depthSeries.clear();
         temperatureSeries.clear();
-
-        if (points.length === 0) {
-            console.log("No points to chart");
-            return;
-        }
+        conductivitySeries.clear();
 
         var minTime = Number.MAX_VALUE;
         var maxTime = Number.MIN_VALUE;
@@ -306,39 +303,63 @@ GridLayout {
         var maxDepth = Number.MIN_VALUE;
         var minTemp = Number.MAX_VALUE;
         var maxTemp = Number.MIN_VALUE;
+        var minCond = Number.MAX_VALUE;
+        var maxCond = Number.MIN_VALUE;
 
-        // Add points and find ranges
         for (var i = 0; i < points.length; i++) {
             var point = points[i];
             var timeMinutes = timeStringToMinutes(point.time);
             var depth = point.depth;
             var temp = point.temperature;
+            var cond = point.conductivity;
 
-            depthSeries.append(timeMinutes, depth);
-            temperatureSeries.append(timeMinutes, temp);
+            if (showDepthCheckBox.checked) {
+                depthSeries.append(timeMinutes, depth);
+            }
+            if (showTempCheckBox.checked) {
+                temperatureSeries.append(timeMinutes, temp);
+            }
+            if (showCondCheckBox.checked) {
+                conductivitySeries.append(timeMinutes, cond);
+            }
 
-            // Update ranges
             minTime = Math.min(minTime, timeMinutes);
             maxTime = Math.max(maxTime, timeMinutes);
             minDepth = Math.min(minDepth, depth);
             maxDepth = Math.max(maxDepth, depth);
             minTemp = Math.min(minTemp, temp);
             maxTemp = Math.max(maxTemp, temp);
+            minCond = Math.min(minCond, cond);
+            maxCond = Math.max(maxCond, cond);
         }
 
-        // Set axis ranges with some padding
+        // Update axes with padding
         axisX.min = Math.max(0, minTime - 5);
         axisX.max = maxTime + 5;
 
-        axisYDepth.min = Math.max(0, minDepth - 5);
-        axisYDepth.max = maxDepth + 5;
+        if (showDepthCheckBox.checked && minDepth !== Number.MAX_VALUE) {
+            axisYDepth.min = Math.max(0, minDepth - 5);
+            axisYDepth.max = maxDepth + 5;
+            axisYDepth.visible = true;
+        } else {
+            axisYDepth.visible = false;
+        }
 
-        axisYTemp.min = Math.max(-40, minTemp - 2);
-        axisYTemp.max = Math.min(85, maxTemp + 2);
+        if (showTempCheckBox.checked && minTemp !== Number.MAX_VALUE) {
+            axisYTemp.min = Math.max(-40, minTemp - 2);
+            axisYTemp.max = Math.min(85, maxTemp + 2);
+            axisYTemp.visible = true;
+        } else {
+            axisYTemp.visible = false;
+        }
 
-        console.log("Chart updated - Time range:", minTime.toFixed(1), "to", maxTime.toFixed(1), "minutes");
-        console.log("Depth range:", minDepth.toFixed(1), "to", maxDepth.toFixed(1), "m");
-        console.log("Temperature range:", minTemp.toFixed(1), "to", maxTemp.toFixed(1), "°C");
+        if (showCondCheckBox.checked && minCond !== Number.MAX_VALUE) {
+            axisYCond.min = Math.max(0, minCond - 2);
+            axisYCond.max = maxCond + 2;
+            axisYCond.visible = true;
+        } else {
+            axisYCond.visible = false;
+        }
     }
 
     function addToChart(newPoints) {
@@ -352,7 +373,6 @@ GridLayout {
             temperatureSeries.append(timeMinutes, point.temperature);
         }
     }
-
 
     // Start downloading a device file
     function startDeviceFileDownload(fileIndex, fileName) {
@@ -440,8 +460,8 @@ GridLayout {
 
             // Update metadata display
             if (fileContent.metadata) {
-                deviceInfo.text = fileContent.metadata.device + " - " + fileContent.metadata.serialNumber;
-                timeInfo.text = fileContent.metadata.instrumentTime + " " + fileContent.metadata.timeZone;
+                //deviceInfo.text = fileContent.metadata.device + " - " + fileContent.metadata.serialNumber;
+                //timeInfo.text = fileContent.metadata.instrumentTime + " " + fileContent.metadata.timeZone;
             }
         }
 
@@ -537,6 +557,28 @@ GridLayout {
         requestQuadrant(fileIndex, nextPage, nextQuadrant);
     }
 
+    function clearGraph() {
+        // Clear all series
+        depthSeries.clear();
+        temperatureSeries.clear();
+        conductivitySeries.clear();
+
+        // Clear stored data points
+        currentDataPoints = [];
+
+        // Reset axes to default ranges
+        axisX.min = 0;
+        axisX.max = 200;
+        axisYDepth.min = 0;
+        axisYDepth.max = 100;
+        axisYTemp.min = 0;
+        axisYTemp.max = 30;
+        axisYCond.min = 0;
+        axisYCond.max = 60;
+
+        console.log("Graph cleared");
+    }
+
     // Connections to C++ backend
     Connections {
         target: CppClass
@@ -565,46 +607,52 @@ GridLayout {
 
         onFileDataReady: function(metadata, dataPoints) {
             console.log("=== onFileDataReady called ===");
-            console.log("Metadata received:", JSON.stringify(metadata, null, 2));
-            console.log("Data points count:", dataPoints.length);
 
             if (dataPoints.length === 0) {
                 console.log("WARNING: No data points to display!");
                 return;
             }
 
-            deviceInfo.text = metadata.device + " - " + metadata.serialNumber;
-            timeInfo.text = metadata.instrumentTime + " " + metadata.timeZone;
+            // Remove these two lines - deviceInfo and timeInfo no longer exist
+            // deviceInfo.text = metadata.device + " - " + metadata.serialNumber;
+            // timeInfo.text = metadata.instrumentTime + " " + metadata.timeZone;
 
             console.log("Calling updateChart with", dataPoints.length, "points");
             updateChart(dataPoints);
         }
 
         onDeviceFileMetadataReceived: function(fileIndex, isValid, metadata) {
+            console.log("Metadata received for file:", fileIndex, "isValid:", isValid);
             if (isValid) {
                 fileDetailsText.text = "File " + fileIndex + ": Has valid data";
-                // TODO: Parse and display more metadata
             } else {
                 fileDetailsText.text = "File " + fileIndex + ": Empty slot";
             }
         }
     }
 
-    // Left Column - File Operations
-    CellBox {
-        title: 'File Operations'
-        ColumnLayout {
-            anchors.fill: parent
+    // Left Column - File Operations and Details
+    ColumnLayout {
+        id: leftColumn
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        spacing: 10
 
-            GridLayout {
-                columns: 1
-                columnSpacing: 20
-                rowSpacing: 10
-                Layout.alignment: Qt.AlignTop
+        // File Operations Box - now fits content tightly
+        CellBox {
+            title: 'File Operations'
+            Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight  // Let it size to content
+            Layout.maximumHeight: parent.height * 0.5  // Cap at 50% if needed
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 10
 
                 // Source selection buttons
                 RowLayout {
                     spacing: 10
+                    Layout.fillWidth: true
 
                     Button {
                         id: deviceButton
@@ -626,7 +674,6 @@ GridLayout {
                             if (selectedSource !== "device") {
                                 triggerDeviceDialog();
                             } else {
-                                // Refresh device list if same button clicked again
                                 triggerDeviceDialog();
                             }
                         }
@@ -652,7 +699,6 @@ GridLayout {
                             if (selectedSource !== "local") {
                                 folderDialog.open();
                             } else {
-                                // Refresh local file list if same button clicked again
                                 if (folderModel.folder.toString() !== "") {
                                     clearAndSetSource("local");
                                     Qt.callLater(function() {
@@ -671,7 +717,7 @@ GridLayout {
                         text: "Cloud"
                         Layout.fillWidth: true
                         implicitHeight: 40
-                        enabled: false  // Disabled for now
+                        enabled: false
 
                         contentItem: Text {
                             text: parent.text
@@ -684,18 +730,17 @@ GridLayout {
 
                         onClicked: {
                             console.log("Cloud button clicked - not implemented yet");
-                            // Future implementation
                         }
                     }
                 }
 
-                // File List View
+                // File List View - fixed height based on content
                 ListView {
                     id: fileListView
                     currentIndex: -1
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: 300
+                    implicitHeight: contentHeight + 10  // Height based on content
+                    Layout.maximumHeight: 300
                     clip: true
                     spacing: 2
                     model: fileListModel
@@ -757,20 +802,14 @@ GridLayout {
                                 var selectedFile = fileListModel.get(index);
                                 selectedFileData = selectedFile;
 
-                                // Update file details area
                                 fileDetailsText.text = "Selected: " + selectedFile.fileName;
 
-                                // For local files, show Load button
                                 if (selectedFile.source === "local") {
                                     loadButton.visible = true;
                                     loadButton.text = "Load & Graph";
-                                }
-                                // For device files, show Load button AND request metadata
-                                else if (selectedFile.source === "device") {
+                                } else if (selectedFile.source === "device") {
                                     loadButton.visible = true;
                                     loadButton.text = "Download & Graph";
-
-                                    // ADD THIS LINE: Request metadata for the selected device file
                                     requestDeviceFile(selectedFile.fileIndex);
                                 }
 
@@ -783,92 +822,101 @@ GridLayout {
                         policy: ScrollBar.AsNeeded
                     }
                 }
+            }
+        }
 
-                // File Details Area
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 100  // Increased height to accommodate progress
-                    color: "#f0f0f0"
-                    border.color: "#cccccc"
-                    radius: 4
+        // File Details Area - now gets more space
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true  // Takes remaining vertical space
+            Layout.minimumHeight: 150
+            color: "#2a2a2a"
+            border.color: "#555555"
+            border.width: 1
+            radius: 6
 
-                    Column {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 5
+            Column {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 8
 
-                        Text {
-                            text: "File Details"
-                            font.bold: true
-                            font.pixelSize: 18
-                            color: "#333333"
-                        }
-
-                        Text {
-                            id: fileDetailsText
-                            text: "No file selected"
-                            font.pixelSize: 16
-                            color: "#666666"
-                            wrapMode: Text.WordWrap
-                        }
-
-                        // Progress bar for device file download
-                        ProgressBar {
-                            id: downloadProgress
-                            width: parent.width
-                            visible: false
-                            from: 0
-                            to: 100
-                            value: 0
-                        }
-
-                        Text {
-                            id: downloadStatusText
-                            text: ""
-                            font.pixelSize: 14
-                            color: "#4CAF50"
-                            visible: false
-                            wrapMode: Text.WordWrap
-                        }
-                    }
+                Text {
+                    text: "File Details"
+                    font.bold: true
+                    font.pixelSize: 18
+                    color: "#FFA500"
                 }
 
-                // Load Button (appears when file is selected)
-                Button {
-                    id: loadButton
-                    text: "Load & Graph"
-                    Layout.fillWidth: true
-                    implicitHeight: 40
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: "#555555"
+                }
+
+                Text {
+                    id: fileDetailsText
+                    text: "No file selected"
+                    font.pixelSize: 16
+                    color: "#cccccc"
+                    wrapMode: Text.WordWrap
+                    width: parent.width
+                }
+
+                // Progress bar for device file download
+                ProgressBar {
+                    id: downloadProgress
+                    width: parent.width
                     visible: false
+                    from: 0
+                    to: 100
+                    value: 0
+                }
 
-                    contentItem: Text {
-                        text: parent.text
-                        font.pixelSize: 18
-                        font.bold: true
-                        color: "#FFFFFF"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
+                Text {
+                    id: downloadStatusText
+                    text: ""
+                    font.pixelSize: 14
+                    color: "#4CAF50"
+                    visible: false
+                    wrapMode: Text.WordWrap
+                    width: parent.width
+                }
+            }
+        }
 
-                    background: Rectangle {
-                        color: parent.enabled ? "#4CAF50" : "#cccccc"
-                        radius: 4
-                    }
+        // Load Button (below File Details)
+        Button {
+            id: loadButton
+            text: "Download & Graph"
+            Layout.fillWidth: true
+            implicitHeight: 50  // Increased from 40
+            visible: false
 
-                    onClicked: {
-                        if (selectedFileData) {
-                            if (selectedFileData.source === "local") {
-                                console.log("Loading local file:", selectedFileData.fullPath);
-                                loadLocalFile(selectedFileData.fullPath);
-                            } else if (selectedFileData.source === "device") {
-                                console.log("Starting download of device file with index:", selectedFileData.fileIndex);
-                                // Start download
-                                startDeviceFileDownload(selectedFileData.fileIndex, selectedFileData.fileName);
-                            }
-                        } else {
-                            console.log("No file selected!");
-                        }
+            contentItem: Text {
+                text: parent.text
+                font.pixelSize: 22  // Increased from 18
+                font.bold: true
+                color: "#FFFFFF"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                color: parent.enabled ? "#4CAF50" : "#cccccc"
+                radius: 6  // Slightly larger radius for taller button
+            }
+
+            onClicked: {
+                if (selectedFileData) {
+                    if (selectedFileData.source === "local") {
+                        console.log("Loading local file:", selectedFileData.fullPath);
+                        loadLocalFile(selectedFileData.fullPath);
+                    } else if (selectedFileData.source === "device") {
+                        console.log("Starting download of device file with index:", selectedFileData.fileIndex);
+                        startDeviceFileDownload(selectedFileData.fileIndex, selectedFileData.fileName);
                     }
+                } else {
+                    console.log("No file selected!");
                 }
             }
         }
@@ -876,6 +924,7 @@ GridLayout {
 
     // Right Column - Graph
     CellBox {
+        id: graphCellBox
         Layout.rowSpan: 2
         Layout.minimumWidth: 700
         title: 'Graph'
@@ -883,71 +932,208 @@ GridLayout {
 
         ColumnLayout {
             anchors.fill: parent
+            spacing: 2
 
-            Text {
-                id: deviceInfo
-                text: "Device: "
-                color: "white"
-                font.pixelSize: 20
-            }
+            // Parameter selection row - acts as legend
+            RowLayout {
+                spacing: 25
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 0
+                Layout.bottomMargin: 2
 
-            Text {
-                id: timeInfo
-                text: "Time: "
-                color: "white"
-                font.pixelSize: 18
+                CheckBox {
+                    id: showDepthCheckBox
+                    text: "Depth"
+                    checked: true
+                    font.pixelSize: 20
+                    font.bold: true
+
+                    indicator: Rectangle {
+                        implicitWidth: 24
+                        implicitHeight: 24
+                        x: 0
+                        y: parent.height / 2 - height / 2
+                        radius: 4
+                        border.color: "#cccccc"
+                        border.width: 2
+                        color: "transparent"
+
+                        // White check mark (outline style)
+                        Text {
+                            text: "✓"
+                            color: "#ffffff"
+                            font.pixelSize: 18
+                            anchors.centerIn: parent
+                            visible: showDepthCheckBox.checked
+                        }
+                    }
+
+                    contentItem: Text {
+                        text: showDepthCheckBox.text
+                        font: showDepthCheckBox.font
+                        color: "#1f77b4"
+                        leftPadding: 32
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onCheckedChanged: {
+                        if (currentDataPoints.length > 0) {
+                            updateChart(currentDataPoints);
+                        }
+                    }
+                }
+
+                CheckBox {
+                    id: showTempCheckBox
+                    text: "Temperature"
+                    checked: true
+                    font.pixelSize: 20
+                    font.bold: true
+
+                    indicator: Rectangle {
+                        implicitWidth: 24
+                        implicitHeight: 24
+                        x: 0
+                        y: parent.height / 2 - height / 2
+                        radius: 4
+                        border.color: "#cccccc"
+                        border.width: 2
+                        color: "transparent"
+
+                        Text {
+                            text: "✓"
+                            color: "#ffffff"
+                            font.pixelSize: 18
+                            anchors.centerIn: parent
+                            visible: showTempCheckBox.checked
+                        }
+                    }
+
+                    contentItem: Text {
+                        text: showTempCheckBox.text
+                        font: showTempCheckBox.font
+                        color: "#ff7f0e"
+                        leftPadding: 32
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onCheckedChanged: {
+                        if (currentDataPoints.length > 0) {
+                            updateChart(currentDataPoints);
+                        }
+                    }
+                }
+
+                CheckBox {
+                    id: showCondCheckBox
+                    text: "Conductivity"
+                    checked: false
+                    font.pixelSize: 20
+                    font.bold: true
+
+                    indicator: Rectangle {
+                        implicitWidth: 24
+                        implicitHeight: 24
+                        x: 0
+                        y: parent.height / 2 - height / 2
+                        radius: 4
+                        border.color: "#cccccc"
+                        border.width: 2
+                        color: "transparent"
+
+                        Text {
+                            text: "✓"
+                            color: "#ffffff"
+                            font.pixelSize: 18
+                            anchors.centerIn: parent
+                            visible: showCondCheckBox.checked
+                        }
+                    }
+
+                    contentItem: Text {
+                        text: showCondCheckBox.text
+                        font: showCondCheckBox.font
+                        color: "#2ca02c"
+                        leftPadding: 32
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onCheckedChanged: {
+                        if (currentDataPoints.length > 0) {
+                            updateChart(currentDataPoints);
+                        }
+                    }
+                }
             }
 
             TabBar {
                 id: bar
                 width: parent.width
+                implicitHeight: 36
+                Layout.bottomMargin: 2
                 TabButton {
-                    text: 'Area'
+                    text: 'Plot'
+                    font.pixelSize: 16
                 }
+                visible: false // This hides the entire Toolbar.  If we need it later, we can
             }
 
             StackLayout {
+                id: chartStack
                 width: parent.width
-                height: parent.height - y
-                anchors.top: bar.bottom
+                height: parent.height - bar.height - 45
                 currentIndex: bar.currentIndex
 
                 ChartView {
                     id: chartView
-                    width: 1600
-                    height: 800
+                    width: parent.width
+                    height: parent.height
                     theme: ChartView.ChartThemeDark
                     antialiasing: true
-                    legend.visible: false
+                    legend.visible: false  // Legend removed
 
+                    // X-Axis (Time)
                     ValueAxis {
                         id: axisX
                         titleText: "Time (minutes)"
+                        titleFont: Qt.font({ family: "Arial", pointSize: 18, bold: true })
+                        labelsFont: Qt.font({ family: "Arial", pointSize: 16 })
                         min: 0
                         max: 200
                         labelFormat: "%.0f"
-                        labelsFont: Qt.font({ family: "Arial", pointSize: 12, bold: true })
-                        titleFont: Qt.font({ family: "Arial", pointSize: 14, bold: true })
                     }
 
+                    // Left Y-Axis (Depth)
                     ValueAxis {
                         id: axisYDepth
                         titleText: "Depth (m)"
+                        titleFont: Qt.font({ family: "Arial", pointSize: 18, bold: true })
+                        labelsFont: Qt.font({ family: "Arial", pointSize: 16 })
                         min: 0
                         max: 100
-                        labelFormat: "%.0f"
-                        labelsFont: Qt.font({ family: "Arial", pointSize: 12, bold: true })
-                        titleFont: Qt.font({ family: "Arial", pointSize: 14, bold: true })
+                        visible: showDepthCheckBox.checked
                     }
 
+                    // Right Y-Axis (Temperature)
                     ValueAxis {
                         id: axisYTemp
                         titleText: "Temperature (°C)"
+                        titleFont: Qt.font({ family: "Arial", pointSize: 18, bold: true })
+                        labelsFont: Qt.font({ family: "Arial", pointSize: 16 })
                         min: 0
                         max: 30
-                        labelFormat: "%.1f"
-                        labelsFont: Qt.font({ family: "Arial", pointSize: 12, bold: true })
-                        titleFont: Qt.font({ family: "Arial", pointSize: 14, bold: true })
+                        visible: showTempCheckBox.checked
+                    }
+
+                    // Additional Right Y-Axis (Conductivity)
+                    ValueAxis {
+                        id: axisYCond
+                        titleText: "Conductivity (mS/cm)"
+                        titleFont: Qt.font({ family: "Arial", pointSize: 18, bold: true })
+                        labelsFont: Qt.font({ family: "Arial", pointSize: 16 })
+                        min: 0
+                        max: 60
+                        visible: showCondCheckBox.checked
                     }
 
                     LineSeries {
@@ -956,7 +1142,8 @@ GridLayout {
                         axisX: axisX
                         axisY: axisYDepth
                         color: "#1f77b4"
-                        width: 2
+                        width: 3
+                        visible: showDepthCheckBox.checked
                     }
 
                     LineSeries {
@@ -965,8 +1152,20 @@ GridLayout {
                         axisX: axisX
                         axisYRight: axisYTemp
                         color: "#ff7f0e"
-                        width: 2
+                        width: 3
                         style: Qt.DashLine
+                        visible: showTempCheckBox.checked
+                    }
+
+                    LineSeries {
+                        id: conductivitySeries
+                        name: "Conductivity"
+                        axisX: axisX
+                        axisYRight: axisYCond
+                        color: "#2ca02c"
+                        width: 3
+                        style: Qt.DotLine
+                        visible: showCondCheckBox.checked
                     }
                 }
             }

@@ -2,6 +2,9 @@
 #define DEFINES_H
 
 // define statements
+
+// #define ENABLE_TIMING_DEBUG  // Uncomment only when needed
+
 #define DLE 0x10
 #define STX 0x02
 #define SOURCE 0x00
@@ -15,7 +18,7 @@
 #define RESP 2
 
 #define BUFFER_SIZE 256
-#define ACCEPT_1BYTE_AT_A_TIME_ONLY 1
+#define ACCEPT_1BYTE_AT_A_TIME_ONLY 64
 #define MAX_UART_ARRAY 200
 
 // Array size - Page 1 (Streaming)
@@ -67,7 +70,8 @@
 // Log / Graphing - Data
 #define QUADRANTS 4
 #define QUADRANTBYTES 128
-
+#define FILE_SLOT_EMPTY   0xFF
+#define FILE_SLOT_OCCUPIED 0x99
 
 // --- END OF ARRAY SIZES ---
 
