@@ -175,20 +175,21 @@ GridLayout {
     }
 
     // Update device file list from C++ data
+    // Update device file list from C++ data
     function updateDeviceFileList(deviceFiles) {
         fileListModel.clear();
         var filesData = [];
 
         for (var i = 0; i < deviceFiles.length; i++) {
-            // Calculate total pages needed for this file (512 bytes per page)
-            var fileSizeBytes = deviceFiles[i].fileSizeBytes;
-            var quadrantsNeeded = Math.ceil(fileSizeBytes / 128);  // 128 bytes per quadrant
+            // The value is number of records
+            var recordCount = deviceFiles[i].fileSizeBytes;
+            // Each quadrant holds 4 records (128 bytes / 32 bytes per record)
+            var quadrantsNeeded = Math.ceil(recordCount / 4);
 
             var fileInfo = {
                 fileName: deviceFiles[i].fileName,
-                fileSize: formatFileSize(fileSizeBytes),
-                fileSizeBytes: fileSizeBytes,
-                totalQuadrants: quadrantsNeeded,  // Store total quadrants
+                recordCount: recordCount,
+                totalQuadrants: quadrantsNeeded,
                 fileDateTime: deviceFiles[i].fileDateTime,
                 fileDateTimeTimestamp: deviceFiles[i].fileDateTimeTimestamp,
                 fileIndex: deviceFiles[i].fileIndex,
@@ -199,11 +200,11 @@ GridLayout {
 
             var displayInfo = {
                 fileName: fileInfo.fileName,
-                fileSize: fileInfo.fileSize,
+                recordCount: fileInfo.recordCount + " records",
                 timeClosed: formatDeviceDateTime(fileInfo.fileDateTime),
                 source: "device",
                 fileIndex: fileInfo.fileIndex,
-                totalQuadrants: quadrantsNeeded,  // Keep naming consistent
+                totalQuadrants: quadrantsNeeded,
                 fileDateTimeTimestamp: fileInfo.fileDateTimeTimestamp
             };
             fileListModel.append(displayInfo);
@@ -215,6 +216,10 @@ GridLayout {
 
     function clearAndSetSource(source) {
         console.log("Clearing ListView and setting source to:", source);
+
+        // Ensure cancel button is hidden when switching sources
+        cancelButton.visible = false;
+        loadButton.visible = false;
 
         // Clear current selection
         fileListView.currentIndex = -1;
@@ -407,7 +412,7 @@ GridLayout {
             cancelDownload();
         }
 
-        // Find the selected file to get total pages
+        // Find the selected file to get total quadrants
         var selectedFile = null;
         for (var i = 0; i < currentFileList.length; i++) {
             if (currentFileList[i].fileIndex === fileIndex) {
@@ -428,20 +433,29 @@ GridLayout {
         currentPage = 0;
         currentQuadrant = 0;
         currentPageData = [];
-        currentDownloadData = [];  // // Clear previous download data, Store complete pages
+        currentDownloadData = [];
+
+        console.log("Records:", selectedFile.recordCount, "Quadrants:", totalQuadrantsToDownload);
+
+        // Clear the graph before starting new download
+        clearGraph();  // ← ADD THIS LINE
 
         // Update UI
         downloadProgress.visible = true;
         downloadStatusText.visible = true;
-        downloadStatusText.text = "Downloading " + fileName + "...";
+        downloadStatusText.text = "0%";
         downloadStatusText.color = "#4CAF50";
-        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";  // Change this
-        loadButton.enabled = false;
-        loadButton.text = "Downloading...";
-        downloadProgress.value = 0;
+        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
+        loadButton.visible = false;
+        cancelButton.visible = true;
+
+        // Disable source buttons during download
+        deviceButton.enabled = false;
+        localButton.enabled = false;
+        cloudButton.enabled = false;
 
         // Start the download process - Request first quadrant
-        requestQuadrant(fileIndex, 0, 0);  // page 0, quadrant 0
+        requestQuadrant(fileIndex, 0, 0);
     }
 
     // Request a specific page of the device file
@@ -469,6 +483,15 @@ GridLayout {
         fileDetailsText.text = "Download cancelled";
         loadButton.enabled = true;
         loadButton.text = "Download & Graph";
+
+        // Re-enable source buttons after cancel
+        deviceButton.enabled = true;
+        localButton.enabled = true;
+        cloudButton.enabled = true;
+
+        // Hide cancel button, show load button
+        cancelButton.visible = false;
+        loadButton.visible = true;
     }
 
     function requestQuadrant(fileIndex, pageNumber, quadrantNumber) {
@@ -487,9 +510,13 @@ GridLayout {
     }
 
     function finishDeviceFileDownload() {
+        // Show load button, hide cancel button after completion
+        loadButton.visible = true;
+        cancelButton.visible = false;
+
         // Assemble all pages into complete file data
         var completeFileData = [];
-        for (var i = 0; i < totalQuadrantsToDownload; i++) {  // Change this
+        for (var i = 0; i < totalQuadrantsToDownload; i++) {
             if (currentDownloadData[i]) {
                 completeFileData = completeFileData.concat(currentDownloadData[i]);
             }
@@ -501,12 +528,6 @@ GridLayout {
         // Graph the data
         if (fileContent && fileContent.points) {
             updateChart(fileContent.points);
-
-            // Update metadata display
-            if (fileContent.metadata) {
-                //deviceInfo.text = fileContent.metadata.device + " - " + fileContent.metadata.serialNumber;
-                //timeInfo.text = fileContent.metadata.instrumentTime + " " + fileContent.metadata.timeZone;
-            }
         }
 
         // Reset UI
@@ -519,6 +540,20 @@ GridLayout {
         fileDetailsText.text = "Download complete: " + selectedFileData.fileName;
         loadButton.enabled = true;
         loadButton.text = "Download & Graph";
+
+        // Re-enable source buttons after download completes
+        deviceButton.enabled = true;
+        localButton.enabled = true;
+        cloudButton.enabled = true;
+
+        // Clear the timeout timer
+        quadrantTimeout.stop();
+
+        // Reset retry tracking
+        retryCount = 0;
+        pendingFileIndex = -1;
+        pendingPage = -1;
+        pendingQuadrant = -1;
     }
 
     function parseDeviceFileData(rawData) {
@@ -580,9 +615,18 @@ GridLayout {
         downloadedQuadrants++;
         currentQuadrant = quadrantNumber;
 
-        // Update progress
+        // Check if download is complete BEFORE updating progress
+        if (downloadedQuadrants >= totalQuadrantsToDownload) {
+            console.log("All quadrants received - finishing download");
+            finishDeviceFileDownload();
+            return;
+        }
+
+        // Update progress (only if not complete)
         var progress = (downloadedQuadrants / totalQuadrantsToDownload) * 100;
         downloadProgress.value = progress;
+        downloadStatusText.text = progress.toFixed(1) + "%";  // Just percentage, no filename
+        fileDetailsText.text = "Downloading: " + selectedFileData.fileName + " (" + downloadedQuadrants + "/" + totalQuadrantsToDownload + " quadrants)";
 
         // Check if we have all 4 quadrants for current page
         if (currentPageData.length === 4) {
@@ -595,7 +639,7 @@ GridLayout {
             currentPageData = [];
             currentPage++;
 
-            // Check if download complete
+            // Check again if download complete after page assembly
             if (downloadedQuadrants >= totalQuadrantsToDownload) {
                 finishDeviceFileDownload();
                 return;
@@ -653,6 +697,9 @@ GridLayout {
         loadButton.enabled = true;
         loadButton.text = "Download & Graph";
 
+        // Hide cancel button
+        cancelButton.visible = false;
+
         // Clear any ongoing download
         if (isDownloading) {
             cancelDownload();
@@ -682,6 +729,10 @@ GridLayout {
         folderModel.folder = "";
 
         console.log("Reset complete");
+    }
+
+    function formatRecordCount(records) {
+        return records + " records";
     }
 
     // Connections to C++ backend
@@ -765,6 +816,7 @@ GridLayout {
                         text: "Device"
                         Layout.fillWidth: true
                         implicitHeight: 40
+                        enabled: true
 
                         contentItem: Text {
                             text: parent.text
@@ -790,6 +842,7 @@ GridLayout {
                         text: "Local"
                         Layout.fillWidth: true
                         implicitHeight: 40
+                        enabled: true
 
                         contentItem: Text {
                             text: parent.text
@@ -883,7 +936,7 @@ GridLayout {
                                 spacing: 2
 
                                 Text {
-                                    text: fileSize
+                                    text: source === "device" ? recordCount : fileSize
                                     font.pixelSize: 18
                                     horizontalAlignment: Text.AlignRight
                                 }
@@ -927,10 +980,10 @@ GridLayout {
             }
         }
 
-        // File Details Area - now gets more space
+        // File Details Area
         Rectangle {
             Layout.fillWidth: true
-            Layout.fillHeight: true  // Takes remaining vertical space
+            Layout.fillHeight: true
             Layout.minimumHeight: 150
             color: "#2a2a2a"
             border.color: "#555555"
@@ -945,7 +998,7 @@ GridLayout {
                 Text {
                     text: "File Details"
                     font.bold: true
-                    font.pixelSize: 18
+                    font.pixelSize: 24
                     color: "#FFA500"
                 }
 
@@ -958,7 +1011,7 @@ GridLayout {
                 Text {
                     id: fileDetailsText
                     text: "No file selected"
-                    font.pixelSize: 16
+                    font.pixelSize: 22
                     color: "#cccccc"
                     wrapMode: Text.WordWrap
                     width: parent.width
@@ -972,12 +1025,31 @@ GridLayout {
                     from: 0
                     to: 100
                     value: 0
+
+                    // Make the progress bar thicker
+                    background: Rectangle {
+                        implicitHeight: 12  // Add this - controls bar thickness
+                        radius: 6
+                        color: "#555555"
+                    }
+
+                    contentItem: Item {
+                        implicitHeight: 12  // Add this - matches background height
+
+                        Rectangle {
+                            width: downloadProgress.visualPosition * parent.width
+                            height: parent.height
+                            radius: 6
+                            color: "#4CAF50"
+                        }
+                    }
                 }
 
                 Text {
                     id: downloadStatusText
                     text: ""
-                    font.pixelSize: 14
+                    font.pixelSize: 20
+                    font.bold: true
                     color: "#4CAF50"
                     visible: false
                     wrapMode: Text.WordWrap
@@ -991,12 +1063,12 @@ GridLayout {
             id: loadButton
             text: "Download & Graph"
             Layout.fillWidth: true
-            implicitHeight: 50  // Increased from 40
+            implicitHeight: 50
             visible: false
 
             contentItem: Text {
                 text: parent.text
-                font.pixelSize: 22  // Increased from 18
+                font.pixelSize: 24
                 font.bold: true
                 color: "#FFFFFF"
                 horizontalAlignment: Text.AlignHCenter
@@ -1005,7 +1077,7 @@ GridLayout {
 
             background: Rectangle {
                 color: parent.enabled ? "#4CAF50" : "#cccccc"
-                radius: 6  // Slightly larger radius for taller button
+                radius: 6
             }
 
             onClicked: {
@@ -1020,6 +1092,43 @@ GridLayout {
                 } else {
                     console.log("No file selected!");
                 }
+            }
+        }
+
+        // Cancel Button (appears during download)
+        Button {
+            id: cancelButton
+            text: "Cancel"
+            Layout.fillWidth: true
+            implicitHeight: 50
+            visible: false
+            enabled: true
+
+            contentItem: Text {
+                text: parent.text
+                font.pixelSize: 24
+                font.bold: true
+                color: "#FFFFFF"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                color: "#d32f2f"  // Material Red
+                radius: 6
+
+                // Add a subtle hover effect
+                Rectangle {
+                    anchors.fill: parent
+                    color: "#ffffff"
+                    opacity: cancelButton.down ? 0.2 : (cancelButton.hovered ? 0.1 : 0)
+                    radius: 6
+                }
+            }
+
+            onClicked: {
+                console.log("Cancel button clicked - aborting download");
+                cancelDownload();
             }
         }
     }
