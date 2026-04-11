@@ -108,6 +108,55 @@ Item {
         }
     }
 
+    function resetToDefaultState() {
+        console.log("Resetting Streaming page to default state");
+
+        // Stop streaming if active
+        if (streamActive) {
+            streamActive = false;
+            rs485Timer.stop();
+            packetTimeoutTimer.stop();
+            updateTimer.running = false;
+            packetReceived = false;
+            acceptRingStateChanges = false;
+            ringActive = false;
+            console.log("Streaming stopped during reset");
+        }
+
+        // Clear all reading lists
+        tempReadings.clear();
+        depthReadings.clear();
+        condReadings.clear();
+        console.log("Cleared all reading lists");
+
+        // Reset gauge values to defaults
+        tempGauge.value = 0;
+        depthGauge.value = 0;
+        condGauge.value = 0;
+
+        // Reset label values to defaults
+        label_Instrument_Device = "N/A";
+        label_Instrument_SerialNumber = "N/A";
+        label_Instrument_Usage = "N/A";
+        label_Memory_Total = "N/A";
+        label_Memory_Used = "N/A";
+        label_Configuration_SurfacePressure = "N/A";
+        label_Messages_Received = "N/A";
+        label_Messages_Sent = "N/A";
+        label_Battery_Cell = "N/A";
+        label_Battery_Type = "N/A";
+        label_Battery_Usage = "N/A";
+        label_Time_Computer = "N/A";
+        label_Time_Device = "N/A";
+        label_Time_UpcomingRec = "N/A";
+
+        // Reset connection state tracking
+        isConnected = false;
+        pageActive = false;
+
+        console.log("Streaming page reset complete");
+    }
+
     // Function to send CTD Readings Processed Query
     function sendCTDReadingsProcessedQuery() {
         var selection = cTD_READINGS_PROCESSED_QUERY_MSGID;

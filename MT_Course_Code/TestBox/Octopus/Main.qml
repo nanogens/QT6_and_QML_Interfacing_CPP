@@ -107,6 +107,17 @@ ApplicationWindow
                       }
                       onClicked: {
                           if (CppClass) {
+                              // Reset ALL pages to default state
+                              if (streamingPage && streamingPage.resetToDefaultState) {
+                                  streamingPage.resetToDefaultState();
+                              }
+                              if (settingsPage && settingsPage.resetToDefaultState) {
+                                  settingsPage.resetToDefaultState();
+                              }
+                              if (graphPage && graphPage.resetToDefaultState) {
+                                  graphPage.resetToDefaultState();
+                              }
+
                               CppClass.startComm();
                               if (contentStack.currentItem && contentStack.currentItem.setConnectionState) {
                                   contentStack.currentItem.setConnectionState(true);
@@ -116,7 +127,6 @@ ApplicationWindow
                   }
 
                   ToolSeparator {}
-
 
                   // Disconnect button
                   ToolButton
@@ -138,6 +148,17 @@ ApplicationWindow
                           if (!CppClass) return;
 
                           console.log("=== Disconnect button clicked ===");
+
+                          // Reset ALL pages to default state on disconnect as well
+                          if (streamingPage && streamingPage.resetToDefaultState) {
+                              streamingPage.resetToDefaultState();
+                          }
+                          if (settingsPage && settingsPage.resetToDefaultState) {
+                              settingsPage.resetToDefaultState();
+                          }
+                          if (graphPage && graphPage.resetToDefaultState) {
+                              graphPage.resetToDefaultState();
+                          }
 
                           // Directly reset streaming state
                           if (contentStack.currentItem) {
@@ -223,9 +244,9 @@ ApplicationWindow
           anchors.fill: parent
           currentIndex: currentViewIndex
 
-          ListView4 {}  // Streaming
-          ListView2 {}  // Settings
-          ListView3 {}  // Graph
+          ListView4 { id: streamingPage }  // Streaming
+          ListView2 { id: settingsPage }   // Settings
+          ListView3 { id: graphPage }      // Graph
 
 
           //ListView0 {}  // Your original grid content

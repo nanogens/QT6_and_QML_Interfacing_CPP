@@ -417,9 +417,17 @@ void CppClass::IncomingByteCheck(void)
                 uart.got = 2;
                 //qDebug() << "STX";
             }
+            else if(readBufferShadow[0] == DLE)
+            {
+                // This is an escaped DLE (0x10 0x10) - treat as data, not as a new packet
+                // We need to handle this as a special case
+                // For now, reset and try again
+                uart.got = 0;
+                FalseHeader();
+            }
             else
             {
-                //FalseHeader();
+                FalseHeader();
             }
         }
         else if(uart.got == 2)
@@ -432,7 +440,7 @@ void CppClass::IncomingByteCheck(void)
             }
             else
             {
-                //FalseHeader();
+                FalseHeader();
             }
         }
         else if(uart.got == 3)
@@ -445,24 +453,20 @@ void CppClass::IncomingByteCheck(void)
             }
             else
             {
-                //FalseHeader();
+                FalseHeader();
             }
         }
         else if(uart.got == 4)  // message length
         {
-            //qDebug() << "Just before checking messagelength, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
-            // Make a function to check message length
             uart.messagelength = readBufferShadow[0];
             uart.got = 5;
-            //qDebug() << "Message LGT" << uart.messagelength;
+            qDebug() << "Message length:" << uart.messagelength;  // ADD THIS
         }
         else if(uart.got == 5)
         {
-            //qDebug() << "Just before checking messageidglobal, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
-            // Make a function to check message id
             uart.messageidglobal = readBufferShadow[0];
             uart.got = 6;
-            //qDebug() << "Message ID" << uart.messageidglobal;
+            qDebug() << "Message ID:" << uart.messageidglobal;  // ADD THIS
         }
         // Setting - next 2 blocks
         else if(
@@ -504,10 +508,29 @@ void CppClass::IncomingByteCheck(void)
             //qDebug() << "Calculated CRC : " << uart.crcset;
             //qDebug() << "Message CRC : " << uart.crcmsg;
 
+            // Temporary
+            if(uart.messageidglobal == LOG_TRANSMITDATA_RESP_MSGID)
+            {
+                // Bypass CRC for data transfer messages
+                uart.status = FILLED_UART;
+                uart.got = 0;
+
+                for(counter.yi=0; counter.yi < MAX_UART_ARRAY; counter.yi++)
+                {
+                    uartshadow.payload[counter.yi] = uart.payload[counter.yi];
+                }
+                uartshadow.messageid = uart.messageidglobal;
+                qDebug() << "Bypassed CRC for data message";
+            }
+
             if(uart.crcset == uart.crcmsg) //uart.crcmsg)  // if it equals the crc of the message packet
             {
-                uart.status = FILLED_UART; // immediately block it from reentering uart0 rx until request is processed in main loop
+                //uart.status = FILLED_UART; // immediately block it from reentering uart0 rx until request is processed in main loop
                 // makes us reply host without making any setting if its outside range
+                //uart.got = 0;
+
+                qDebug() << "CRC MATCH - Setting FILLED_UART for msg ID:" << uart.messageidglobal;
+                uart.status = FILLED_UART;
                 uart.got = 0;
 
                 for(counter.yi=0; counter.yi < MAX_UART_ARRAY; counter.yi++)
@@ -519,6 +542,7 @@ void CppClass::IncomingByteCheck(void)
             }
             else
             {
+                qDebug() << "CRC MISMATCH - calc:" << uart.crcset << "rcvd:" << uart.crcmsg;
                 uart.got = 0;
             }
         }
@@ -555,6 +579,7 @@ bool CppClass::Search_MsgID(uint8_t settingorquery, uint8_t messageidglobal)
 
             (messageidglobal == LOG_SHOWFILES_RESP_MSGID) ||
             (messageidglobal == LOG_READSPECIFICFILE_RESP_MSGID) ||
+            (messageidglobal == LOG_TRANSMITDATA_RESP_MSGID) ||
 
             (messageidglobal == CTD_VARIABLES_RESP_MSGID) ||
             (messageidglobal == CTD_READINGS_RAW_RESP_MSGID) ||

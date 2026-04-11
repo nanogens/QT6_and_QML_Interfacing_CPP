@@ -81,6 +81,7 @@ void CppClass::ProcessIncomingMsg(void)
             uartshadow.messageid = 0;
             break;
         }
+        uart.got = 0;
         uart.status = CLEAR_UART;
     }
 }
@@ -155,7 +156,8 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
 
             case LOG_TRANSMITDATA_SET_MSGID:
             {
-                if (list.size() >= 4) {
+                // Only process when i == 1 (the first data parameter)
+                if (i == 1 && list.size() >= 4) {
                     uint8_t fileIdx = list.at(1).toInt();
                     uint16_t pageNum = list.at(2).toInt();
                     uint8_t quadrant = list.at(3).toInt();
@@ -163,7 +165,6 @@ void CppClass::processOutgoingMsg(QVariantList list, QVariantMap map)
                 }
                 break;
             }
-
 
             default:
                 qDebug() << "Error : x should have a value";

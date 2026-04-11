@@ -146,6 +146,63 @@ Item {
 
     property string currentActivationMethod: "Switch"
 
+    // Reset to default state
+    function resetToDefaultState() {
+        console.log("Resetting Settings page to default state");
+
+        // Reset Instrument (Cell A)
+        id_Instrument_Device_ComboBox.currentIndex = 0;
+        text_Instrument_SerialNumber.text = "SZM-XZ-XXXXXX";
+        label_Instrument_Device = model_Instrument_Device_ComboBox[0];
+        label_Instrument_SerialNumber = "Default Serial";
+        label_Instrument_Usage = "Default Usage";
+
+        // Reset Communications (Cell B)
+        id_Communication_Connection_ComboBox.currentIndex = 0;
+        id_Communication_BaudRate_ComboBox.currentIndex = 0;
+        current_Communication_Connection = "RS-485";
+        current_Communication_BaudRate = "115200";
+
+        // Reset Power (Cell C)
+        id_Power_BatteryType_ComboBox.currentIndex = 0;
+        current_Power_BatteryType = "Internal_Alkaline";
+
+        // Reset Sampling (Cell E)
+        id_Sampling_Mode_ComboBox.currentIndex = 0;
+        id_Sampling_Rate_ComboBox.currentIndex = 0;
+        current_Sampling_Mode = "Scheduled_Continuous";
+        current_Sampling_Rate = "1 sec";
+
+        // Reset Activation (Cell F)
+        id_Activation_Event.currentIndex = 0;
+        id_Activation_EventTrigger.currentIndex = 0;
+        startDateTime = new Date();
+        endDateTime = startDateTime;
+        label_Activation_ScheduledStart.text = startDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+        label_Activation_ScheduledEnd.text = endDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+        current_Activation_Power = "Depth";
+
+        // Reset Time (Cell D)
+        instrumentDateTime = new Date();
+        syncDateTime = new Date();
+        syncEnabled = false;
+        syncCheckBox.checked = false;
+        label_Time_SetDateTimeInstrument.text = instrumentDateTime.toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+        label_Time_ComputerTime.text = new Date().toLocaleString(Qt.locale(), "yyyy-MM-dd hh:mm:ss AP");
+
+        // Reset Notes (Cell G)
+        scroll_Notes_ScrollView.text = "";
+
+        // Reset Cloud (Cell H)
+        id_Cloud_IP.text = "";
+        id_Cloud_Login.text = "";
+        id_Cloud_Password.text = "";
+
+        // Reset Misc (Cell I)
+        input_Miscellenous_SomeStuff.text = "";
+
+        console.log("Settings page reset complete");
+    }
 
     // Function to handle incoming data from C++ - for Instrument
     function onInstrumentDataReceived(data) {

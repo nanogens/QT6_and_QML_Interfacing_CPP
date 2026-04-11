@@ -974,35 +974,34 @@ void CppClass::sendDeviceFileListToQML()
 
 void CppClass::Log_TransmitData_Resp()
 {
-  logtransmitdata.filenumber_r = uartshadow.payload[0];   // file list ranges from 0 to 3 indicating which file data is being tranferred
-  logtransmitdata.sector_high_r = uartshadow.payload[1];  // the high byte of the sector from which the data has been obtained (total of high and low byte is from 0 to 8191)
-  logtransmitdata.sector_low_r = uartshadow.payload[2];   // the low byte of the sector from which the data has been obtained
-  logtransmitdata.page_r = uartshadow.payload[3];         // the page number from which the data has been obtained (0 to 7)
-  logtransmitdata.reserved0_r = uartshadow.payload[4];    // reserved for future use
-  logtransmitdata.reserved1_r = uartshadow.payload[5];    // reserved for future use
-  logtransmitdata.quadrant_r = uartshadow.payload[6];     // each page is divided into four 128 byte quadrants.  this tells you from which quadrant the data has been obtained (0 to 3)
+    uint8_t fileNumber = uartshadow.payload[0];
+    uint8_t sectorHigh = uartshadow.payload[1];
+    uint8_t sectorLow = uartshadow.payload[2];
+    uint8_t pageNumber = uartshadow.payload[3];
+    uint8_t reserved1 = uartshadow.payload[4];
+    uint8_t reserved0 = uartshadow.payload[5];
+    uint8_t quadrant = uartshadow.payload[6];
 
-  // Extract the 128-byte page data
-  QByteArray pageData;
-  // The page data starts at payload[7] (after the header bytes)
-  int dataStartOffset = 7;  // Adjust based on your protocol
-  for (int i = 0; i < QUADRANTBYTES; i++) {
-      if (dataStartOffset + i < MAX_UART_ARRAY)
-      {
-        pageData.append(uartshadow.payload[dataStartOffset + i]);
-      }
-  }
+    uint16_t sector = (sectorHigh << 8) | sectorLow;
 
-  qDebug() << "Log_TransmitData_Resp: File Index: " << logtransmitdata.filenumber_r
-           << "Page: " << logtransmitdata.page_r
-           << "Received records (approx): " << (pageData.size() >> 4) << " records";
+    // Extract the 128-byte quadrant data
+    QByteArray quadrantData;
+    quadrantData.reserve(128);  // Pre-allocate memory
+    for (int i = 0; i < 128; i++) {
+        quadrantData.append(uartshadow.payload[7 + i]);
+    }
 
-  // Emit signal to QML with the page data
-  QVariantList pageDataList;
-  for (char byte : pageData) {
-      pageDataList.append((int)(unsigned char)byte);
-  }
-  emit deviceFilePageReceived(logtransmitdata.filenumber_r, (logtransmitdata.sector_high_r << 8) + logtransmitdata.sector_low_r, logtransmitdata.page_r, logtransmitdata.quadrant_r, pageDataList);
+    // COMMENT OUT these debug prints - they are VERY slow!
+    // qDebug() << "Log_TransmitData_Resp: File" << fileNumber
+    //          << "Sector" << sector << "Page" << pageNumber
+    //          << "Quadrant" << quadrant << "Data size:" << quadrantData.size();
+
+    // Convert to QVariantList for QML
+    QVariantList pageDataList;
+    pageDataList.reserve(128);  // Pre-allocate memory
+    for (int i = 0; i < quadrantData.size(); i++) {
+        pageDataList.append((int)(unsigned char)quadrantData[i]);
+    }
+
+    emit deviceFilePageReceived(fileNumber, sector, pageNumber, quadrant, pageDataList);
 }
-
-

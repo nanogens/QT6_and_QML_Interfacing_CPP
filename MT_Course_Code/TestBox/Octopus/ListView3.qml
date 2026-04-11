@@ -36,9 +36,35 @@ GridLayout {
     // Graph related properties
     property var currentDataPoints: []  // Store current data for replotting
 
+    // requestQuadrant retry tracking
+    property int retryCount: 0
+    property int maxRetries: 3
+    property int pendingFileIndex: -1
+    property int pendingPage: -1
+    property int pendingQuadrant: -1
+
     anchors.fill: parent
     columns: 2
     rows: 1
+
+    // Timer for timeout handling
+    Timer {
+        id: quadrantTimeout
+        interval: 5000  // Increase from 2000 to 5000ms (5 seconds)
+        repeat: false
+        onTriggered: {
+            if (isDownloading && pendingFileIndex !== -1) {
+                console.log("Timeout - retrying quadrant. Pending:", pendingPage, pendingQuadrant);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    requestQuadrant(pendingFileIndex, pendingPage, pendingQuadrant);
+                } else {
+                    console.log("Max retries exceeded - download failed");
+                    cancelDownload();
+                }
+            }
+        }
+    }
 
     // Local Folder Dialog
     FolderDialog {
@@ -427,7 +453,16 @@ GridLayout {
     function cancelDownload() {
         isDownloading = false;
         currentDownloadFileIndex = -1;
-        downloadedQuadrants = 0;  // Change this
+        downloadedQuadrants = 0;
+
+        // Stop timeout timer
+        quadrantTimeout.stop();
+
+        // Reset retry tracking
+        retryCount = 0;
+        pendingFileIndex = -1;
+        pendingPage = -1;
+        pendingQuadrant = -1;
 
         downloadProgress.visible = false;
         downloadStatusText.visible = false;
@@ -437,9 +472,18 @@ GridLayout {
     }
 
     function requestQuadrant(fileIndex, pageNumber, quadrantNumber) {
-        console.log("Requesting page:", pageNumber, "quadrant:", quadrantNumber);
+        console.log("Sending request for quadrant:", quadrantNumber, "page:", pageNumber);
+        console.log("downloadedQuadrants:", downloadedQuadrants, "totalQuadrantsToDownload:", totalQuadrantsToDownload);
+
+        var requestTime = Date.now();
+        console.log("[" + requestTime + "] Requesting page:", pageNumber, "quadrant:", quadrantNumber);
+
+        pendingFileIndex = fileIndex;
+        pendingPage = pageNumber;
+        pendingQuadrant = quadrantNumber;
+
         var arr = [lOG_TRANSMITDATA_SET_MSGID, fileIndex, pageNumber, quadrantNumber];
-        CppClass.processOutgoingMsg(arr, {});  // Pass empty object instead of null
+        CppClass.processOutgoingMsg(arr, {});
     }
 
     function finishDeviceFileDownload() {
@@ -518,9 +562,18 @@ GridLayout {
         };
     }
 
-    // function to handle page data received
     function handleDeviceFilePageReceived(fileIndex, pageNumber, quadrantNumber, pageData) {
+        var receiveTime = Date.now();
+        console.log("[" + receiveTime + "] Received quadrant:", quadrantNumber, "for page:", pageNumber);
+
         if (!isDownloading || currentDownloadFileIndex !== fileIndex) return;
+
+        // Stop timeout timer
+        quadrantTimeout.stop();
+        console.log("Timer stopped");
+
+        // Reset retry count on successful receive
+        retryCount = 0;
 
         // Store quadrant in current page buffer
         currentPageData[quadrantNumber] = pageData;
@@ -554,6 +607,7 @@ GridLayout {
         var nextPage = currentPage;
         if (nextQuadrant === 0) nextPage++;
 
+        console.log("Requesting next quadrant:", nextQuadrant, "page:", nextPage);
         requestQuadrant(fileIndex, nextPage, nextQuadrant);
     }
 
@@ -577,6 +631,57 @@ GridLayout {
         axisYCond.max = 60;
 
         console.log("Graph cleared");
+    }
+
+    function resetToDefaultState() {
+        console.log("Resetting to default state");
+
+        // Reset source selection
+        selectedSource = "";
+
+        // Clear file list and selection
+        fileListModel.clear();
+        currentFileList = [];
+        selectedFileData = null;
+        fileListView.currentIndex = -1;
+
+        // Clear file details area
+        fileDetailsText.text = "No file selected";
+
+        // Hide load button
+        loadButton.visible = false;
+        loadButton.enabled = true;
+        loadButton.text = "Download & Graph";
+
+        // Clear any ongoing download
+        if (isDownloading) {
+            cancelDownload();
+        }
+        isDownloading = false;
+        currentDownloadFileIndex = -1;
+        downloadedQuadrants = 0;
+        totalQuadrantsToDownload = 0;
+        currentPage = 0;
+        currentQuadrant = 0;
+        currentPageData = [];
+        currentDownloadData = [];
+
+        // Reset retry tracking
+        retryCount = 0;
+        pendingFileIndex = -1;
+        pendingPage = -1;
+        pendingQuadrant = -1;
+
+        // Clear the graph
+        clearGraph();
+
+        // Reset button visual states
+        updateButtonStates();
+
+        // Reset folder model (clear any cached folder)
+        folderModel.folder = "";
+
+        console.log("Reset complete");
     }
 
     // Connections to C++ backend
@@ -699,14 +804,11 @@ GridLayout {
                             if (selectedSource !== "local") {
                                 folderDialog.open();
                             } else {
-                                if (folderModel.folder.toString() !== "") {
-                                    clearAndSetSource("local");
-                                    Qt.callLater(function() {
-                                        folderModel.folder = folderModel.folder;
-                                    });
-                                } else {
-                                    folderDialog.open();
-                                }
+                                // Already in local mode - refresh by reopening the dialog
+                                // Clear current state first
+                                clearAndSetSource("local");
+                                // Open dialog to select a (potentially different) folder
+                                folderDialog.open();
                             }
                         }
                     }
