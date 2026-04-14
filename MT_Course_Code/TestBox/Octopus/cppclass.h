@@ -381,6 +381,7 @@ public:
     Q_INVOKABLE void stopComm();
     Q_INVOKABLE void processOutgoingMsg(QVariantList list, QVariantMap map);
     Q_INVOKABLE void ringSwitch(bool active);
+    Q_INVOKABLE QVariantList processDeviceFileData(const QVariantList &rawData, double surfacePressure);
 
     // Property binding
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)

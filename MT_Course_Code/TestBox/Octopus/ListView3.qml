@@ -24,6 +24,7 @@ GridLayout {
     // Download state properties
     property bool isDownloading: false
     property int currentDownloadFileIndex: -1
+    property var pendingDownloadData: null  // Store downloaded data before surface pressure selection
 
     // To accumulate page data in QML
     property int totalQuadrantsToDownload: 0
@@ -42,6 +43,9 @@ GridLayout {
     property int pendingFileIndex: -1
     property int pendingPage: -1
     property int pendingQuadrant: -1
+
+    // barometric pressure compensation dialog
+
 
     anchors.fill: parent
     columns: 2
@@ -175,20 +179,30 @@ GridLayout {
     }
 
     // Update device file list from C++ data
-    // Update device file list from C++ data
     function updateDeviceFileList(deviceFiles) {
         fileListModel.clear();
         var filesData = [];
 
         for (var i = 0; i < deviceFiles.length; i++) {
-            // The value is number of records
-            var recordCount = deviceFiles[i].fileSizeBytes;
-            // Each quadrant holds 4 records (128 bytes / 32 bytes per record)
-            var quadrantsNeeded = Math.ceil(recordCount / 4);
+            // The value is total records INCLUDING page headers
+            var totalRecords = deviceFiles[i].fileSizeBytes;
+
+            // Calculate pages used (each page holds 16 records including 1 header)
+            var pagesUsed = Math.ceil(totalRecords / 16);
+
+            // Calculate actual data records (exclude the 1 header per page)
+            var dataRecords = totalRecords - pagesUsed;
+
+            // Calculate total quadrants needed (based on total bytes, not records)
+            // Each page is 512 bytes, each quadrant is 128 bytes
+            var totalBytes = pagesUsed * 512;  // Total bytes to download
+            var quadrantsNeeded = totalBytes / 128;  // Quadrants needed (4 per page)
 
             var fileInfo = {
                 fileName: deviceFiles[i].fileName,
-                recordCount: recordCount,
+                totalRecords: totalRecords,
+                dataRecords: dataRecords,
+                pagesUsed: pagesUsed,
                 totalQuadrants: quadrantsNeeded,
                 fileDateTime: deviceFiles[i].fileDateTime,
                 fileDateTimeTimestamp: deviceFiles[i].fileDateTimeTimestamp,
@@ -200,11 +214,13 @@ GridLayout {
 
             var displayInfo = {
                 fileName: fileInfo.fileName,
-                recordCount: fileInfo.recordCount + " records",
+                recordCount: fileInfo.dataRecords + " data records",
                 timeClosed: formatDeviceDateTime(fileInfo.fileDateTime),
                 source: "device",
                 fileIndex: fileInfo.fileIndex,
                 totalQuadrants: quadrantsNeeded,
+                totalRecords: totalRecords,
+                pagesUsed: pagesUsed,
                 fileDateTimeTimestamp: fileInfo.fileDateTimeTimestamp
             };
             fileListModel.append(displayInfo);
@@ -265,21 +281,38 @@ GridLayout {
     // Format device date/time (parse from instrument format)
     function formatDeviceDateTime(dateTimeObj) {
         if (!dateTimeObj) return "Unknown";
-        // Assuming dateTimeObj has year, month, day, hour, minute, second
+
+        // Extract components
         var year = 2000 + (dateTimeObj.year || 0);
         var month = (dateTimeObj.month || 1);
         var day = (dateTimeObj.day || 1);
         var hour = (dateTimeObj.hour || 0);
         var minute = (dateTimeObj.minute || 0);
         var second = (dateTimeObj.second || 0);
+        var ampm = dateTimeObj.ampm;
 
-        // Handle AM/PM if present
-        if (dateTimeObj.ampm !== undefined && dateTimeObj.ampm === 1 && hour < 12) {
-            hour += 12;
+        // Format hour for display (12-hour format)
+        var displayHour = hour;
+        var ampmStr = "";
+
+        if (ampm !== undefined) {
+            // Convert 24-hour to 12-hour for display
+            if (hour === 0 || hour === 12) {
+                displayHour = 12;
+            } else {
+                displayHour = hour % 12;
+            }
+            ampmStr = (ampm === 1) ? " PM" : " AM";
         }
 
+        // Format the date string with AM/PM
         var date = new Date(year, month - 1, day, hour, minute, second);
-        return date.toLocaleString(Qt.locale(), "yyyy-MM-dd HH:mm:ss");
+        var dateStr = date.toLocaleString(Qt.locale(), "yyyy-MM-dd");
+        var timeStr = displayHour.toString().padStart(2, '0') + ":" +
+                      minute.toString().padStart(2, '0') + ":" +
+                      second.toString().padStart(2, '0') + ampmStr;
+
+        return dateStr + " " + timeStr;
     }
 
     // Load and graph a local file
@@ -426,6 +459,7 @@ GridLayout {
             return;
         }
 
+        // RESET ALL DOWNLOAD STATE VARIABLES
         isDownloading = true;
         currentDownloadFileIndex = fileIndex;
         downloadedQuadrants = 0;
@@ -435,17 +469,22 @@ GridLayout {
         currentPageData = [];
         currentDownloadData = [];
 
-        console.log("Records:", selectedFile.recordCount, "Quadrants:", totalQuadrantsToDownload);
+        // RESET PROGRESS UI
+        downloadProgress.value = 0;
+        downloadStatusText.text = "0%";
+        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
+
+        console.log("Total records (including headers):", selectedFile.totalRecords);
+        console.log("Data records:", selectedFile.dataRecords);
+        console.log("Pages used:", selectedFile.pagesUsed);
+        console.log("Quadrants to download:", totalQuadrantsToDownload);
 
         // Clear the graph before starting new download
-        clearGraph();  // ← ADD THIS LINE
+        clearGraph();
 
         // Update UI
         downloadProgress.visible = true;
         downloadStatusText.visible = true;
-        downloadStatusText.text = "0%";
-        downloadStatusText.color = "#4CAF50";
-        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
         loadButton.visible = false;
         cancelButton.visible = true;
 
@@ -510,10 +549,6 @@ GridLayout {
     }
 
     function finishDeviceFileDownload() {
-        // Show load button, hide cancel button after completion
-        loadButton.visible = true;
-        cancelButton.visible = false;
-
         // Assemble all pages into complete file data
         var completeFileData = [];
         for (var i = 0; i < totalQuadrantsToDownload; i++) {
@@ -522,13 +557,8 @@ GridLayout {
             }
         }
 
-        // Parse the complete file data
-        var fileContent = parseDeviceFileData(completeFileData);
-
-        // Graph the data
-        if (fileContent && fileContent.points) {
-            updateChart(fileContent.points);
-        }
+        // Store the downloaded data temporarily
+        pendingDownloadData = completeFileData;
 
         // Reset UI
         isDownloading = false;
@@ -536,8 +566,8 @@ GridLayout {
         currentDownloadData = [];
         downloadProgress.visible = false;
         downloadStatusText.visible = false;
-        downloadStatusText.text = "";
-        fileDetailsText.text = "Download complete: " + selectedFileData.fileName;
+        loadButton.visible = true;
+        cancelButton.visible = false;
         loadButton.enabled = true;
         loadButton.text = "Download & Graph";
 
@@ -554,47 +584,9 @@ GridLayout {
         pendingFileIndex = -1;
         pendingPage = -1;
         pendingQuadrant = -1;
-    }
 
-    function parseDeviceFileData(rawData) {
-        // Convert raw byte array to text and parse
-        var text = "";
-        for (var i = 0; i < rawData.length; i++) {
-            text += String.fromCharCode(rawData[i]);
-        }
-
-        // Parse metadata and CSV data (same as local file parsing)
-        var lines = text.split('\n');
-        var metadata = {};
-        var dataPoints = [];
-        var readingMetadata = true;
-
-        for (var line of lines) {
-            line = line.trim();
-            if (line === "") continue;
-
-            if (readingMetadata && line.indexOf(":") !== -1) {
-                var colonIndex = line.indexOf(":");
-                var key = line.substring(0, colonIndex).trim();
-                var value = line.substring(colonIndex + 1).trim();
-                metadata[key] = value;
-            } else if (line.indexOf(",") !== -1) {
-                readingMetadata = false;
-                var parts = line.split(",");
-                if (parts.length >= 3) {
-                    dataPoints.push({
-                        time: parts[0].trim(),
-                        temperature: parseFloat(parts[1]),
-                        depth: parseFloat(parts[2])
-                    });
-                }
-            }
-        }
-
-        return {
-            metadata: metadata,
-            points: dataPoints
-        };
+        // Show the surface pressure dialog
+        surfacePressureDialog.open();
     }
 
     function handleDeviceFilePageReceived(fileIndex, pageNumber, quadrantNumber, pageData) {
@@ -615,17 +607,10 @@ GridLayout {
         downloadedQuadrants++;
         currentQuadrant = quadrantNumber;
 
-        // Check if download is complete BEFORE updating progress
-        if (downloadedQuadrants >= totalQuadrantsToDownload) {
-            console.log("All quadrants received - finishing download");
-            finishDeviceFileDownload();
-            return;
-        }
-
-        // Update progress (only if not complete)
+        // Update progress
         var progress = (downloadedQuadrants / totalQuadrantsToDownload) * 100;
         downloadProgress.value = progress;
-        downloadStatusText.text = progress.toFixed(1) + "%";  // Just percentage, no filename
+        downloadStatusText.text = progress.toFixed(1) + "%";
         fileDetailsText.text = "Downloading: " + selectedFileData.fileName + " (" + downloadedQuadrants + "/" + totalQuadrantsToDownload + " quadrants)";
 
         // Check if we have all 4 quadrants for current page
@@ -639,17 +624,19 @@ GridLayout {
             currentPageData = [];
             currentPage++;
 
-            // Check again if download complete after page assembly
-            if (downloadedQuadrants >= totalQuadrantsToDownload) {
-                finishDeviceFileDownload();
-                return;
-            }
+            console.log("Page assembled. Current page index:", currentPage);
         }
 
-        // Request next quadrant
+        // Check if download is complete
+        if (downloadedQuadrants >= totalQuadrantsToDownload) {
+            console.log("All quadrants received - finishing download");
+            finishDeviceFileDownload();
+            return;
+        }
+
+        // Calculate next quadrant and page
         var nextQuadrant = (currentQuadrant + 1) % 4;
         var nextPage = currentPage;
-        if (nextQuadrant === 0) nextPage++;
 
         console.log("Requesting next quadrant:", nextQuadrant, "page:", nextPage);
         requestQuadrant(fileIndex, nextPage, nextQuadrant);
@@ -734,6 +721,43 @@ GridLayout {
     function formatRecordCount(records) {
         return records + " records";
     }
+
+    function processAndGraphDownloadedData(surfacePressure) {
+        console.log("Processing downloaded data with surface pressure:", surfacePressure, "mbar");
+
+        // Call C++ backend to process the raw data
+        var processedPoints = CppClass.processDeviceFileData(pendingDownloadData, surfacePressure);
+
+        // Graph the data
+        if (processedPoints && processedPoints.length > 0) {
+            updateChart(processedPoints);
+
+            // Update file details with record count
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                   " (" + processedPoints.length + " data records)";
+        } else {
+            console.log("Warning: No data points processed");
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)";
+        }
+
+        // Clear the pending data
+        pendingDownloadData = null;
+    }
+
+    function calculateAutoDetectPressure(seconds) {
+        // Calculate average pressure from first 'seconds' seconds of data
+        if (!pendingDownloadData || pendingDownloadData.length === 0) {
+            console.log("No data available for auto-detection");
+            return 1013.25;
+        }
+
+        // TODO: Parse the first 'seconds' worth of data and average the pressure values
+        // For now, return standard pressure
+        console.log("Auto-detecting surface pressure from first", seconds, "seconds of data");
+        return 1013.25;  // Placeholder - implement actual calculation
+    }
+
+
 
     // Connections to C++ backend
     Connections {
@@ -1414,4 +1438,110 @@ GridLayout {
             standardButtons: DialogButtonBox.Ok | DialogButtonBox.Cancel
         }
     }
+
+    Dialog {
+        id: surfacePressureDialog
+        modal: true
+        focus: true
+        title: "Surface Pressure Reference"
+        width: 450
+        height: 590
+        anchors.centerIn: parent
+        standardButtons: Dialog.NoButton
+
+        ColumnLayout {
+            id: contentLayout
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 15
+
+            Label {
+                text: "Select surface pressure source for depth calculation:"
+                font.pixelSize: 22
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            RadioButton {
+                id: stdPressureRadio
+                font.pixelSize: 18
+                text: "Standard pressure: 1013.25 mbar (sea level)"
+                checked: true
+            }
+
+            RadioButton {
+                id: manualRadio
+                font.pixelSize: 18
+                text: "Manual entry:"
+            }
+
+            RowLayout {
+                Layout.leftMargin: 30
+                enabled: manualRadio.checked
+                TextField {
+                    id: manualPressureField
+                    font.pixelSize: 17
+                    text: "1013.25"
+                    validator: DoubleValidator { bottom: 800; top: 1100; decimals: 2 }
+                }
+                Label {
+                    text: "mbar"
+                    font.pixelSize: 17
+                }
+            }
+
+            RadioButton {
+                id: autoDetectRadio
+                font.pixelSize: 18
+                text: "Auto-detect from first:"
+            }
+
+            RowLayout {
+                Layout.leftMargin: 30
+                enabled: autoDetectRadio.checked
+                SpinBox {
+                    id: autoDetectSeconds
+                    font.pixelSize: 17
+                    from: 1
+                    to: 60
+                    value: 5
+                }
+                Label {
+                    text: "seconds of data"
+                    font.pixelSize: 17
+                }
+            }
+
+            // Add some space before buttons
+            // Item { Layout.preferredHeight: 1 }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: 10
+                Button {
+                    text: "Cancel"
+                    font.pixelSize: 18
+                    onClicked: {
+                        surfacePressureDialog.close();
+                        pendingDownloadData = null;
+                    }
+                }
+                Button {
+                    text: "Apply"
+                    font.pixelSize: 18
+                    onClicked: {
+                        var surfacePressure = 1013.25;
+                        if (manualRadio.checked) {
+                            surfacePressure = parseFloat(manualPressureField.text);
+                        } else if (autoDetectRadio.checked) {
+                            surfacePressure = calculateAutoDetectPressure(autoDetectSeconds.value);
+                        }
+                        processAndGraphDownloadedData(surfacePressure);
+                        surfacePressureDialog.close();
+                    }
+                }
+            }
+        }
+    }
+
 }

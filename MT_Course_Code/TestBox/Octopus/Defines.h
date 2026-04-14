@@ -10,6 +10,9 @@
 #define SOURCE 0x00
 #define DEST 0x88
 
+#define RLE 0x77
+#define RTX 0x76
+
 #define FILLED_UART 1
 #define CLEAR_UART 0
 
