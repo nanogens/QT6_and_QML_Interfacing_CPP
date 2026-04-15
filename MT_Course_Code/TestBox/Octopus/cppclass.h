@@ -382,10 +382,9 @@ public:
     Q_INVOKABLE void processOutgoingMsg(QVariantList list, QVariantMap map);
     Q_INVOKABLE void ringSwitch(bool active);
     Q_INVOKABLE QVariantList processDeviceFileData(const QVariantList &rawData, double surfacePressure);
-
-    // Property binding
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
-
+    Q_INVOKABLE bool loadBarometerFile(const QString &filePath);
+    Q_INVOKABLE QVariantList processDeviceFileDataWithBarometer(const QVariantList &rawData, const QVariantList &barometerData);
     void setQmlRootObject(QObject *value);
 
 public:
@@ -486,6 +485,9 @@ private:
     void Activation_Resp();
     void Notes_Resp();
     void Cloud_Resp();
+
+private:
+    QVariantList m_barometerData;
 
 public:
     void CTD_Readings_Processed_Query();

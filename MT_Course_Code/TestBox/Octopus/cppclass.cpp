@@ -417,14 +417,6 @@ void CppClass::IncomingByteCheck(void)
                 uart.got = 2;
                 //qDebug() << "STX";
             }
-            else if(readBufferShadow[0] == DLE)
-            {
-                // This is an escaped DLE (0x10 0x10) - treat as data, not as a new packet
-                // We need to handle this as a special case
-                // For now, reset and try again
-                uart.got = 0;
-                FalseHeader();
-            }
             else
             {
                 FalseHeader();
@@ -432,7 +424,6 @@ void CppClass::IncomingByteCheck(void)
         }
         else if(uart.got == 2)
         {
-            //qDebug() << "Just before checking DEST, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
             if(readBufferShadow[0] == DEST)
             {
                 uart.got = 3;
@@ -445,7 +436,6 @@ void CppClass::IncomingByteCheck(void)
         }
         else if(uart.got == 3)
         {
-            //qDebug() << "Just before checking SOURCE, value of readBufferShadow is : " << QString::number(readBufferShadow[0], 16);
             if(readBufferShadow[0] == SOURCE)
             {
                 uart.got = 4;
@@ -460,13 +450,13 @@ void CppClass::IncomingByteCheck(void)
         {
             uart.messagelength = readBufferShadow[0];
             uart.got = 5;
-            qDebug() << "Message length:" << uart.messagelength;  // ADD THIS
+            //qDebug() << "Message LGT" << uart.messagelength;
         }
         else if(uart.got == 5)
         {
             uart.messageidglobal = readBufferShadow[0];
             uart.got = 6;
-            qDebug() << "Message ID:" << uart.messageidglobal;  // ADD THIS
+            //qDebug() << "Message ID" << uart.messageidglobal;
         }
         // Setting - next 2 blocks
         else if(
@@ -474,10 +464,9 @@ void CppClass::IncomingByteCheck(void)
             ((uart.got >= 6) && (uart.got < (uart.messagelength - 1)))
             )
         {
-            if(((uart.got - 6) < MAX_UART_ARRAY) && ((uart.got - 6) >= 0)) // protection
+            if(((uart.got - 6) < MAX_UART_ARRAY) && ((uart.got - 6) >= 0))
             {
                 uart.payload[uart.got-6] = readBufferShadow[0];
-                //qDebug() << "Payload : " << uart.payload[uart.got-6];
                 uart.got++;
             }
             else
@@ -491,14 +480,13 @@ void CppClass::IncomingByteCheck(void)
             (Search_MsgID(RESP, uart.messageidglobal) == true)
             )
         {
-            uart.crcmsg = readBufferShadow[0]; // the crc at the end of Set Working Parameters
+            uart.crcmsg = readBufferShadow[0];
             //qDebug() << "CRCMSG : " << readBufferShadow[0];
-            // it is DEST + SOURCE and not SOURCE + DEST because dest & source values are in relation to what we send not receive.
             uart.crcset = DLE + STX + DEST + SOURCE + uart.messagelength + uart.messageidglobal;
 
-            for(counter.yi=0; counter.yi < (uart.messagelength - 7); counter.yi++)  // add up the incoming bytes in the incomingbuffer0 to check it against the crc
+            for(counter.yi=0; counter.yi < (uart.messagelength - 7); counter.yi++)
             {
-                if(counter.yi < MAX_UART_ARRAY) // protection
+                if(counter.yi < MAX_UART_ARRAY)
                 {
                     uart.crcset += uart.payload[counter.yi];
                 }
@@ -508,10 +496,8 @@ void CppClass::IncomingByteCheck(void)
             //qDebug() << "Calculated CRC : " << uart.crcset;
             //qDebug() << "Message CRC : " << uart.crcmsg;
 
-            // Temporary
-            if(uart.messageidglobal == LOG_TRANSMITDATA_RESP_MSGID)
+            if(uart.crcset == uart.crcmsg)
             {
-                // Bypass CRC for data transfer messages
                 uart.status = FILLED_UART;
                 uart.got = 0;
 
@@ -520,29 +506,10 @@ void CppClass::IncomingByteCheck(void)
                     uartshadow.payload[counter.yi] = uart.payload[counter.yi];
                 }
                 uartshadow.messageid = uart.messageidglobal;
-                qDebug() << "Bypassed CRC for data message";
-            }
-
-            if(uart.crcset == uart.crcmsg) //uart.crcmsg)  // if it equals the crc of the message packet
-            {
-                //uart.status = FILLED_UART; // immediately block it from reentering uart0 rx until request is processed in main loop
-                // makes us reply host without making any setting if its outside range
-                //uart.got = 0;
-
-                qDebug() << "CRC MATCH - Setting FILLED_UART for msg ID:" << uart.messageidglobal;
-                uart.status = FILLED_UART;
-                uart.got = 0;
-
-                for(counter.yi=0; counter.yi < MAX_UART_ARRAY; counter.yi++)
-                {
-                    uartshadow.payload[counter.yi] = uart.payload[counter.yi];
-                }
-                uartshadow.messageid = uart.messageidglobal;
-                //qDebug() << "SETTING SUCCESSFULLY RECEIVED!";
+                qDebug() << "PACKET SUCCESSFULLY RECEIVED!";
             }
             else
             {
-                qDebug() << "CRC MISMATCH - calc:" << uart.crcset << "rcvd:" << uart.crcmsg;
                 uart.got = 0;
             }
         }
@@ -1205,4 +1172,374 @@ void CppClass::stopComm()
 bool CppClass::isRunning()
 {
     return m_serialData.running;
+}
+
+QVariantList CppClass::processDeviceFileData(const QVariantList &rawData, double surfacePressure)
+{
+    QVariantList processedPoints;
+
+    // Convert QVariantList to QByteArray
+    QByteArray data;
+    data.reserve(rawData.size());
+    for (const QVariant &byte : rawData) {
+        data.append((char)byte.toInt());
+    }
+
+    qDebug() << "Total raw data size:" << data.size() << "bytes";
+    qDebug() << "Expected pages:" << ceil(data.size() / 512.0);
+
+    // Step 1: Extract calibration coefficients from page 0, record 0
+    // Search for RLE (0x77) and RTX (0x76) markers
+    uint16_t C[7] = {0};  // C0 through C6
+    bool calibrationFound = false;
+
+    for (int i = 0; i < data.size() - 30; i++) {
+        if ((uint8_t)data[i] == RLE && (uint8_t)data[i + 1] == RTX) {
+            // Found page header, extract calibration from bytes 16-29
+            C[0] = ((uint8_t)data[i + 16] << 8) | (uint8_t)data[i + 17];
+            C[1] = ((uint8_t)data[i + 18] << 8) | (uint8_t)data[i + 19];
+            C[2] = ((uint8_t)data[i + 20] << 8) | (uint8_t)data[i + 21];
+            C[3] = ((uint8_t)data[i + 22] << 8) | (uint8_t)data[i + 23];
+            C[4] = ((uint8_t)data[i + 24] << 8) | (uint8_t)data[i + 25];
+            C[5] = ((uint8_t)data[i + 26] << 8) | (uint8_t)data[i + 27];
+            C[6] = ((uint8_t)data[i + 28] << 8) | (uint8_t)data[i + 29];
+
+            calibrationFound = true;
+            qDebug() << "Calibration coefficients found:" << C[0] << C[1] << C[2] << C[3] << C[4] << C[5] << C[6];
+            break;
+        }
+    }
+
+    if (!calibrationFound) {
+        qDebug() << "ERROR: Could not find calibration coefficients in data";
+        return processedPoints;
+    }
+
+    // Step 2: Parse all pages, skip headers, extract records based on page header record count
+    int offset = 0;
+    int bytesPerPage = 512;
+    int headerSize = 32;  // First 32 bytes of each page is metadata
+    int recordSize = 32;
+    int totalRecordsProcessed = 0;
+
+    while (offset + bytesPerPage <= data.size()) {
+        qDebug() << "Processing page at offset:" << offset;
+
+        // Read the record count from the page header (byte 5 of the page)
+        uint8_t totalRecordsInPage = (uint8_t)data[offset + 5];
+        // Subtract 1 for the header record itself to get data records
+        int dataRecordsInPage = totalRecordsInPage - 1;
+
+        qDebug() << "Total records in page:" << totalRecordsInPage << "Data records:" << dataRecordsInPage;
+
+        // Skip the page header (first 32 bytes)
+        int dataOffset = offset + headerSize;
+
+        // Process only the valid data records in this page
+        for (int i = 0; i < dataRecordsInPage; i++) {
+            int recordStart = dataOffset + (i * recordSize);
+
+            // Check if we have enough data for a full record
+            if (recordStart + recordSize > data.size()) {
+                break;
+            }
+
+            // Extract time components (bytes 0-7 of record)
+            uint8_t year = (uint8_t)data[recordStart + 0];
+            uint8_t month = (uint8_t)data[recordStart + 1];
+            uint8_t day = (uint8_t)data[recordStart + 2];
+            uint8_t hour = (uint8_t)data[recordStart + 3];
+            uint8_t minute = (uint8_t)data[recordStart + 4];
+            uint8_t second = (uint8_t)data[recordStart + 5];
+            uint8_t ampm = (uint8_t)data[recordStart + 6];
+            uint8_t weekday = (uint8_t)data[recordStart + 7];
+
+            // Format time string
+            int hour12 = hour % 12;
+            if (hour12 == 0) hour12 = 12;
+            QString ampmStr = (ampm == 1) ? "PM" : "AM";
+            QString timeStr = QString("%1:%2:%3 %4")
+                                  .arg(hour12, 2, 10, QChar('0'))
+                                  .arg(minute, 2, 10, QChar('0'))
+                                  .arg(second, 2, 10, QChar('0'))
+                                  .arg(ampmStr);
+
+            // Extract raw ADC values (bytes 8-11 for D1, bytes 14-17 for D2)
+            uint32_t D1 = ((uint32_t)(uint8_t)data[recordStart + 8] << 24) |
+                          ((uint32_t)(uint8_t)data[recordStart + 9] << 16) |
+                          ((uint32_t)(uint8_t)data[recordStart + 10] << 8) |
+                          (uint32_t)(uint8_t)data[recordStart + 11];
+
+            uint32_t D2 = ((uint32_t)(uint8_t)data[recordStart + 14] << 24) |
+                          ((uint32_t)(uint8_t)data[recordStart + 15] << 16) |
+                          ((uint32_t)(uint8_t)data[recordStart + 16] << 8) |
+                          (uint32_t)(uint8_t)data[recordStart + 17];
+
+            // Apply MS5837 formulas using 64-bit integers
+            int64_t dT = D2 - ((int64_t)C[5] << 8);
+            int64_t TEMP = 2000 + (dT * C[6]) / 8388608LL;
+
+            int64_t OFF = ((int64_t)C[2] << 16) + (C[4] * dT) / 128;
+            int64_t SENS = ((int64_t)C[1] << 15) + (C[3] * dT) / 256;
+
+            int64_t P = (((D1 * SENS) / 2097152LL) - OFF) / 8192LL;
+
+            // Convert to final units
+            double temperature = TEMP / 100.0;      // °C
+            double pressure_mbar = P / 10.0;        // mbar
+
+            // Calculate depth
+            double depth = (pressure_mbar - surfacePressure) * 0.010197;  // meters
+            if (depth < 0) depth = 0;
+
+            // Conductivity placeholder (0 for now)
+            double conductivity = 0.0;
+
+            // Add to result
+            QVariantMap point;
+            point["time"] = timeStr;
+            point["temperature"] = temperature;
+            point["depth"] = depth;
+            point["conductivity"] = conductivity;
+            processedPoints.append(point);
+
+            totalRecordsProcessed++;
+        }
+
+        offset += bytesPerPage;
+    }
+
+    qDebug() << "Processed" << totalRecordsProcessed << "data records";
+    return processedPoints;
+}
+
+QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &rawData, const QVariantList &barometerData)
+{
+    QVariantList processedPoints;
+
+    // Convert QVariantList to QByteArray
+    QByteArray data;
+    data.reserve(rawData.size());
+    for (const QVariant &byte : rawData) {
+        data.append((char)byte.toInt());
+    }
+
+    // Step 1: Extract calibration coefficients from page 0, record 0
+    uint16_t C[7] = {0};
+    bool calibrationFound = false;
+
+    for (int i = 0; i < data.size() - 30; i++) {
+        if ((uint8_t)data[i] == RLE && (uint8_t)data[i + 1] == RTX) {
+            C[0] = ((uint8_t)data[i + 16] << 8) | (uint8_t)data[i + 17];
+            C[1] = ((uint8_t)data[i + 18] << 8) | (uint8_t)data[i + 19];
+            C[2] = ((uint8_t)data[i + 20] << 8) | (uint8_t)data[i + 21];
+            C[3] = ((uint8_t)data[i + 22] << 8) | (uint8_t)data[i + 23];
+            C[4] = ((uint8_t)data[i + 24] << 8) | (uint8_t)data[i + 25];
+            C[5] = ((uint8_t)data[i + 26] << 8) | (uint8_t)data[i + 27];
+            C[6] = ((uint8_t)data[i + 28] << 8) | (uint8_t)data[i + 29];
+
+            calibrationFound = true;
+            qDebug() << "Calibration coefficients found:" << C[0] << C[1] << C[2] << C[3] << C[4] << C[5] << C[6];
+            break;
+        }
+    }
+
+    if (!calibrationFound) {
+        qDebug() << "ERROR: Could not find calibration coefficients in data";
+        return processedPoints;
+    }
+
+    // Parse barometer data into a map for quick lookup
+    QMap<QDateTime, double> barometerMap;
+    for (const QVariant &item : barometerData) {
+        QVariantMap entry = item.toMap();
+        QDateTime timestamp = entry["timestamp"].toDateTime();
+        double pressure = entry["pressure"].toDouble();
+        barometerMap[timestamp] = pressure;
+    }
+
+    // Get first and last barometer timestamps for edge case handling
+    QDateTime firstBaroTime;
+    QDateTime lastBaroTime;
+    double firstBaroPressure = 1013.25;
+    double lastBaroPressure = 1013.25;
+
+    if (!barometerMap.isEmpty()) {
+        firstBaroTime = barometerMap.firstKey();
+        lastBaroTime = barometerMap.lastKey();
+        firstBaroPressure = barometerMap.first();
+        lastBaroPressure = barometerMap.last();
+        qDebug() << "Barometer range:" << firstBaroTime << "to" << lastBaroTime;
+    }
+
+    // Step 2: Parse all pages
+    int offset = 0;
+    int bytesPerPage = 512;
+    int headerSize = 32;
+    int recordSize = 32;
+    int totalRecordsProcessed = 0;
+
+    while (offset + bytesPerPage <= data.size()) {
+        uint8_t totalRecordsInPage = (uint8_t)data[offset + 5];
+        int dataRecordsInPage = totalRecordsInPage - 1;
+
+        int dataOffset = offset + headerSize;
+
+        for (int i = 0; i < dataRecordsInPage; i++) {
+            int recordStart = dataOffset + (i * recordSize);
+
+            if (recordStart + recordSize > data.size()) {
+                break;
+            }
+
+            // Extract time components
+            uint8_t year = (uint8_t)data[recordStart + 0];
+            uint8_t month = (uint8_t)data[recordStart + 1];
+            uint8_t day = (uint8_t)data[recordStart + 2];
+            uint8_t hour = (uint8_t)data[recordStart + 3];
+            uint8_t minute = (uint8_t)data[recordStart + 4];
+            uint8_t second = (uint8_t)data[recordStart + 5];
+            uint8_t ampm = (uint8_t)data[recordStart + 6];
+
+            // Create QDateTime for this record
+            QDateTime recordTime;
+            recordTime.setDate(QDate(2000 + year, month, day));
+            int hour24 = hour;
+            if (ampm == 1 && hour != 12) hour24 += 12;
+            else if (ampm == 0 && hour == 12) hour24 = 0;
+            recordTime.setTime(QTime(hour24, minute, second));
+
+            // Format time string for output
+            int hour12 = hour % 12;
+            if (hour12 == 0) hour12 = 12;
+            QString ampmStr = (ampm == 1) ? "PM" : "AM";
+            QString timeStr = QString("%1:%2:%3 %4")
+                                  .arg(hour12, 2, 10, QChar('0'))
+                                  .arg(minute, 2, 10, QChar('0'))
+                                  .arg(second, 2, 10, QChar('0'))
+                                  .arg(ampmStr);
+
+            // Extract raw ADC values
+            uint32_t D1 = ((uint32_t)(uint8_t)data[recordStart + 8] << 24) |
+                          ((uint32_t)(uint8_t)data[recordStart + 9] << 16) |
+                          ((uint32_t)(uint8_t)data[recordStart + 10] << 8) |
+                          (uint32_t)(uint8_t)data[recordStart + 11];
+
+            uint32_t D2 = ((uint32_t)(uint8_t)data[recordStart + 14] << 24) |
+                          ((uint32_t)(uint8_t)data[recordStart + 15] << 16) |
+                          ((uint32_t)(uint8_t)data[recordStart + 16] << 8) |
+                          (uint32_t)(uint8_t)data[recordStart + 17];
+
+            // Apply MS5837 formulas
+            int64_t dT = D2 - ((int64_t)C[5] << 8);
+            int64_t TEMP = 2000 + (dT * C[6]) / 8388608LL;
+
+            int64_t OFF = ((int64_t)C[2] << 16) + (C[4] * dT) / 128;
+            int64_t SENS = ((int64_t)C[1] << 15) + (C[3] * dT) / 256;
+
+            int64_t P = (((D1 * SENS) / 2097152LL) - OFF) / 8192LL;
+
+            double temperature = TEMP / 100.0;
+            double instrumentPressure_mbar = P / 10.0;
+
+            // Find closest barometer reading with edge case handling
+            double barometerPressure_mbar = 1013.25; // Default fallback
+
+            if (!barometerMap.isEmpty()) {
+                // Case 1: Instrument record is before first barometer reading
+                if (recordTime < firstBaroTime) {
+                    barometerPressure_mbar = firstBaroPressure;
+                    qDebug() << "Record before barometer start - using first barometer reading:"
+                             << barometerPressure_mbar << "at" << firstBaroTime;
+                }
+                // Case 2: Instrument record is after last barometer reading
+                else if (recordTime > lastBaroTime) {
+                    barometerPressure_mbar = lastBaroPressure;
+                    qDebug() << "Record after barometer end - using last barometer reading:"
+                             << barometerPressure_mbar << "at" << lastBaroTime;
+                }
+                // Case 3: Instrument record is within barometer timeframe - find closest
+                else {
+                    QDateTime closestTime;
+                    qint64 minDiff = LLONG_MAX;
+                    for (auto it = barometerMap.begin(); it != barometerMap.end(); ++it) {
+                        qint64 diff = qAbs(it.key().toMSecsSinceEpoch() - recordTime.toMSecsSinceEpoch());
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestTime = it.key();
+                            barometerPressure_mbar = it.value();
+                        }
+                    }
+                    // Optional: reduce debug noise by printing only every 5th record
+                    if (totalRecordsProcessed % 5 == 0) {
+                        qDebug() << "Record time:" << recordTime << "Closest barometer:" << closestTime
+                                 << "Diff(ms):" << minDiff << "Pressure:" << barometerPressure_mbar;
+                    }
+                }
+            }
+
+            // Calculate depth with barometer compensation
+            double waterPressure_mbar = instrumentPressure_mbar - barometerPressure_mbar;
+            double depth = waterPressure_mbar * 0.010197;
+            if (depth < 0) depth = 0;
+
+            double conductivity = 0.0;
+
+            QVariantMap point;
+            point["time"] = timeStr;
+            point["temperature"] = temperature;
+            point["depth"] = depth;
+            point["conductivity"] = conductivity;
+            processedPoints.append(point);
+
+            totalRecordsProcessed++;
+        }
+
+        offset += bytesPerPage;
+    }
+
+    qDebug() << "Processed" << totalRecordsProcessed << "data records with barometer compensation";
+    return processedPoints;
+}
+
+bool CppClass::loadBarometerFile(const QString &filePath)
+{
+    qDebug() << "Loading barometer file:" << filePath;
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qDebug() << "Failed to open barometer file:" << file.errorString();
+        return false;
+    }
+
+    QTextStream stream(&file);
+    QString line = stream.readLine(); // Skip header line
+
+    QVariantList barometerData;
+
+    while (!stream.atEnd()) {
+        line = stream.readLine().trimmed();
+        if (line.isEmpty()) continue;
+
+        QStringList parts = line.split(",");
+        if (parts.size() >= 2) {
+            QDateTime timestamp = QDateTime::fromString(parts[0].trimmed(), "yyyy-MM-dd HH:mm:ss");
+            double pressure = parts[1].trimmed().toDouble();
+
+            QVariantMap entry;
+            entry["timestamp"] = timestamp;
+            entry["pressure"] = pressure;
+            barometerData.append(entry);
+
+            qDebug() << "Barometer reading:" << timestamp << pressure;
+        }
+    }
+
+    file.close();
+
+    // Store barometer data for later use
+    m_barometerData = barometerData;
+
+    qDebug() << "Loaded" << barometerData.size() << "barometer readings";
+    return true;
 }

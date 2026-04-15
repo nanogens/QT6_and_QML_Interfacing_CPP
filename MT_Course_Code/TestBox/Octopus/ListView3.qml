@@ -45,7 +45,7 @@ GridLayout {
     property int pendingQuadrant: -1
 
     // barometric pressure compensation dialog
-
+    property var barometerData: []  // Stores {timestamp, pressure}
 
     anchors.fill: parent
     columns: 2
@@ -54,7 +54,7 @@ GridLayout {
     // Timer for timeout handling
     Timer {
         id: quadrantTimeout
-        interval: 5000  // Increase from 2000 to 5000ms (5 seconds)
+        interval: 5000
         repeat: false
         onTriggered: {
             if (isDownloading && pendingFileIndex !== -1) {
@@ -90,6 +90,17 @@ GridLayout {
             Qt.callLater(function() {
                 folderModel.folder = selectedFolder;
             });
+        }
+    }
+
+    // Barometer File Dialog
+    FileDialog {
+        id: baroFileDialog
+        title: "Select Barometer File"
+        nameFilters: ["Barometer files (*.bar)", "CSV files (*.csv)", "All files (*)"]
+        onAccepted: {
+            baroFilePathField.text = selectedFile.toString().replace(/^(file:\/{3})/, "");
+            console.log("Selected barometer file:", baroFilePathField.text);
         }
     }
 
@@ -184,26 +195,26 @@ GridLayout {
         var filesData = [];
 
         for (var i = 0; i < deviceFiles.length; i++) {
-            // The value is total records INCLUDING page headers
-            var totalRecords = deviceFiles[i].fileSizeBytes;
+            // The value is total page records INCLUDING page headers
+            var totalPageRecords = deviceFiles[i].fileSizeBytes;
 
-            // Calculate pages used (each page holds 16 records including 1 header)
-            var pagesUsed = Math.ceil(totalRecords / 16);
+            // Calculate pages used (each page holds 16 page records including 1 header)
+            var pageCount = Math.ceil(totalPageRecords / 16);
 
             // Calculate actual data records (exclude the 1 header per page)
-            var dataRecords = totalRecords - pagesUsed;
+            var fileDataRecords = totalPageRecords - pageCount;
 
             // Calculate total quadrants needed (based on total bytes, not records)
             // Each page is 512 bytes, each quadrant is 128 bytes
-            var totalBytes = pagesUsed * 512;  // Total bytes to download
-            var quadrantsNeeded = totalBytes / 128;  // Quadrants needed (4 per page)
+            var totalBytes = pageCount * 512;  // Total bytes to download
+            var quadrantsToDownload = totalBytes / 128;  // Quadrants needed (4 per page)
 
             var fileInfo = {
                 fileName: deviceFiles[i].fileName,
-                totalRecords: totalRecords,
-                dataRecords: dataRecords,
-                pagesUsed: pagesUsed,
-                totalQuadrants: quadrantsNeeded,
+                totalPageRecords: totalPageRecords,
+                fileDataRecords: fileDataRecords,
+                pageCount: pageCount,
+                quadrantsToDownload: quadrantsToDownload,
                 fileDateTime: deviceFiles[i].fileDateTime,
                 fileDateTimeTimestamp: deviceFiles[i].fileDateTimeTimestamp,
                 fileIndex: deviceFiles[i].fileIndex,
@@ -214,13 +225,13 @@ GridLayout {
 
             var displayInfo = {
                 fileName: fileInfo.fileName,
-                recordCount: fileInfo.dataRecords + " data records",
+                recordCount: fileInfo.fileDataRecords + " data records",
                 timeClosed: formatDeviceDateTime(fileInfo.fileDateTime),
                 source: "device",
                 fileIndex: fileInfo.fileIndex,
-                totalQuadrants: quadrantsNeeded,
-                totalRecords: totalRecords,
-                pagesUsed: pagesUsed,
+                quadrantsToDownload: quadrantsToDownload,
+                totalPageRecords: totalPageRecords,
+                pageCount: pageCount,
                 fileDateTimeTimestamp: fileInfo.fileDateTimeTimestamp
             };
             fileListModel.append(displayInfo);
@@ -333,13 +344,34 @@ GridLayout {
         CppClass.processOutgoingMsg(arr, obj);
     }
 
-    // Helper function to convert time strings to plotable values
-    function timeStringToMinutes(timeStr) {
+    // Convert time string (e.g., "6:41:24 PM") to elapsed minutes since midnight
+    function timeToElapsedMinutes(timeStr) {
+        // Parse format like "6:41:24 PM" or "06:41:24"
         var parts = timeStr.split(":");
-        if (parts.length === 3) {
+        if (parts.length >= 2) {
             var hours = parseInt(parts[0]);
             var minutes = parseInt(parts[1]);
-            var seconds = parseInt(parts[2]);
+            var seconds = 0;
+            var isPM = false;
+
+            // Extract seconds (may have AM/PM attached)
+            var secondPart = parts[2];
+            if (secondPart) {
+                var secondParts = secondPart.split(" ");
+                seconds = parseInt(secondParts[0]);
+                if (secondParts.length > 1 && secondParts[1] === "PM") {
+                    isPM = true;
+                }
+            }
+
+            // Convert to 24-hour format
+            if (isPM && hours !== 12) {
+                hours += 12;
+            } else if (!isPM && hours === 12) {
+                hours = 0;
+            }
+
+            // Convert to minutes
             return hours * 60 + minutes + seconds / 60;
         }
         return 0;
@@ -349,7 +381,7 @@ GridLayout {
     function updateChart(points) {
         if (!points || points.length === 0) {
             console.log("No points to chart");
-            clearGraph();  // Add this line
+            clearGraph();
             return;
         }
 
@@ -361,8 +393,16 @@ GridLayout {
         temperatureSeries.clear();
         conductivitySeries.clear();
 
-        var minTime = Number.MAX_VALUE;
-        var maxTime = Number.MIN_VALUE;
+        // Get first timestamp as reference
+        var firstTimeMinutes = timeToElapsedMinutes(points[0].time);
+
+        // Determine if we should use seconds (duration < 1 minute)
+        var lastTimeMinutes = timeToElapsedMinutes(points[points.length - 1].time);
+        var totalDurationMinutes = lastTimeMinutes - firstTimeMinutes;
+        var useSeconds = (totalDurationMinutes < 1);
+
+        var minTime = 0;  // First point is always 0
+        var maxTime = 0;
         var minDepth = Number.MAX_VALUE;
         var maxDepth = Number.MIN_VALUE;
         var minTemp = Number.MAX_VALUE;
@@ -372,23 +412,25 @@ GridLayout {
 
         for (var i = 0; i < points.length; i++) {
             var point = points[i];
-            var timeMinutes = timeStringToMinutes(point.time);
+            var elapsedMinutes = timeToElapsedMinutes(point.time) - firstTimeMinutes;
+
+            // Convert to seconds if needed
+            var timeValue = useSeconds ? elapsedMinutes * 60 : elapsedMinutes;
             var depth = point.depth;
             var temp = point.temperature;
             var cond = point.conductivity;
 
             if (showDepthCheckBox.checked) {
-                depthSeries.append(timeMinutes, depth);
+                depthSeries.append(timeValue, depth);
             }
             if (showTempCheckBox.checked) {
-                temperatureSeries.append(timeMinutes, temp);
+                temperatureSeries.append(timeValue, temp);
             }
             if (showCondCheckBox.checked) {
-                conductivitySeries.append(timeMinutes, cond);
+                conductivitySeries.append(timeValue, cond);
             }
 
-            minTime = Math.min(minTime, timeMinutes);
-            maxTime = Math.max(maxTime, timeMinutes);
+            maxTime = Math.max(maxTime, timeValue);
             minDepth = Math.min(minDepth, depth);
             maxDepth = Math.max(maxDepth, depth);
             minTemp = Math.min(minTemp, temp);
@@ -397,9 +439,18 @@ GridLayout {
             maxCond = Math.max(maxCond, cond);
         }
 
-        // Update axes with padding
-        axisX.min = Math.max(0, minTime - 5);
-        axisX.max = maxTime + 5;
+        // Set axis ranges with padding
+        axisX.min = Math.max(0, minTime - (useSeconds ? 5 : 5));
+        axisX.max = maxTime + (useSeconds ? 5 : 5);
+
+        // Set axis title based on unit
+        if (useSeconds) {
+            axisX.titleText = "Time (seconds)";
+            axisX.labelFormat = "%.0f";
+        } else {
+            axisX.titleText = "Time (minutes)";
+            axisX.labelFormat = "%.1f";
+        }
 
         if (showDepthCheckBox.checked && minDepth !== Number.MAX_VALUE) {
             axisYDepth.min = Math.max(0, minDepth - 5);
@@ -424,6 +475,9 @@ GridLayout {
         } else {
             axisYCond.visible = false;
         }
+
+        var durationDisplay = useSeconds ? (maxTime).toFixed(0) + " seconds" : (maxTime).toFixed(1) + " minutes";
+        console.log("Chart updated - Duration:", durationDisplay);
     }
 
     function addToChart(newPoints) {
@@ -431,7 +485,7 @@ GridLayout {
 
         for (var i = 0; i < newPoints.length; i++) {
             var point = newPoints[i];
-            var timeMinutes = timeStringToMinutes(point.time);
+            var timeMinutes = timeToElapsedMinutes(point.time);  // Change this line
 
             depthSeries.append(timeMinutes, point.depth);
             temperatureSeries.append(timeMinutes, point.temperature);
@@ -445,7 +499,7 @@ GridLayout {
             cancelDownload();
         }
 
-        // Find the selected file to get total quadrants
+        // Find the selected file to get quadrants to download
         var selectedFile = null;
         for (var i = 0; i < currentFileList.length; i++) {
             if (currentFileList[i].fileIndex === fileIndex) {
@@ -463,7 +517,7 @@ GridLayout {
         isDownloading = true;
         currentDownloadFileIndex = fileIndex;
         downloadedQuadrants = 0;
-        totalQuadrantsToDownload = selectedFile.totalQuadrants;
+        totalQuadrantsToDownload = selectedFile.quadrantsToDownload;
         currentPage = 0;
         currentQuadrant = 0;
         currentPageData = [];
@@ -474,9 +528,9 @@ GridLayout {
         downloadStatusText.text = "0%";
         fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
 
-        console.log("Total records (including headers):", selectedFile.totalRecords);
-        console.log("Data records:", selectedFile.dataRecords);
-        console.log("Pages used:", selectedFile.pagesUsed);
+        console.log("Total page records:", selectedFile.totalPageRecords);
+        console.log("File data records:", selectedFile.fileDataRecords);
+        console.log("Page count:", selectedFile.pageCount);
         console.log("Quadrants to download:", totalQuadrantsToDownload);
 
         // Clear the graph before starting new download
@@ -757,7 +811,23 @@ GridLayout {
         return 1013.25;  // Placeholder - implement actual calculation
     }
 
+    function loadBarometerFile(filePath) {
+        console.log("Loading barometer file:", filePath);
+        // Read file using C++ backend or Qt.file
+        // For now, we'll assume C++ will handle this
+        CppClass.loadBarometerFile(filePath);
+    }
 
+    function processAndGraphDownloadedDataWithBarometer(surfacePressure) {
+        console.log("Processing downloaded data with barometer file");
+        var processedPoints = CppClass.processDeviceFileDataWithBarometer(pendingDownloadData, barometerData);
+        if (processedPoints && processedPoints.length > 0) {
+            updateChart(processedPoints);
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                   " (" + processedPoints.length + " data records)";
+        }
+        pendingDownloadData = null;
+    }
 
     // Connections to C++ backend
     Connections {
@@ -1445,7 +1515,7 @@ GridLayout {
         focus: true
         title: "Surface Pressure Reference"
         width: 450
-        height: 590
+        height: 720
         anchors.centerIn: parent
         standardButtons: Dialog.NoButton
 
@@ -1512,6 +1582,31 @@ GridLayout {
                 }
             }
 
+            RadioButton {
+                id: baroFileRadio
+                font.pixelSize: 18
+                text: "Import barometer file:"
+            }
+
+            RowLayout {
+                Layout.leftMargin: 30
+                enabled: baroFileRadio.checked
+
+                TextField {
+                    id: baroFilePathField
+                    font.pixelSize: 16
+                    readOnly: true
+                    placeholderText: "No file selected"
+                    Layout.fillWidth: true
+                }
+
+                Button {
+                    text: "Browse..."
+                    font.pixelSize: 16
+                    onClicked: baroFileDialog.open()
+                }
+            }
+
             // Add some space before buttons
             // Item { Layout.preferredHeight: 1 }
 
@@ -1531,11 +1626,24 @@ GridLayout {
                     font.pixelSize: 18
                     onClicked: {
                         var surfacePressure = 1013.25;
+                        var pressureSource = "Standard";
+
                         if (manualRadio.checked) {
                             surfacePressure = parseFloat(manualPressureField.text);
+                            pressureSource = "Manual";
                         } else if (autoDetectRadio.checked) {
                             surfacePressure = calculateAutoDetectPressure(autoDetectSeconds.value);
+                            pressureSource = "AutoDetect";
+                        } else if (baroFileRadio.checked && baroFilePathField.text !== "") {
+                            // Load and use barometer file
+                            loadBarometerFile(baroFilePathField.text);
+                            pressureSource = "BarometerFile";
+                            // Note: Depth will be calculated per-record using interpolated pressure
+                            processAndGraphDownloadedDataWithBarometer(surfacePressure);
+                            surfacePressureDialog.close();
+                            return;
                         }
+
                         processAndGraphDownloadedData(surfacePressure);
                         surfacePressureDialog.close();
                     }
