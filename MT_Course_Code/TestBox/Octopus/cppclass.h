@@ -311,6 +311,13 @@ struct Uartshadow
     uint8_t payload[MAX_UART_ARRAY] = {0};
 };
 
+struct OverlapInfo {
+    bool hasFullOverlap;
+    double overlapPercentage;
+    QString warningMessage;
+};
+
+
 class CppClass : public QObject
 {
     Q_OBJECT
@@ -346,6 +353,8 @@ signals:
     void deviceFileDownloadComplete(int fileIndex, int sectorNumber, int pageNumber, int quadrantNumber, const QVariantMap &fileData);
     void deviceFileMetadataReceived(int fileIndex, bool isValid, const QByteArray &metadata);
     void deviceFilePageReceived(int fileIndex, int sectorNumber, int pageNumber, int quadrantNumber, const QVariantList &pageData);
+
+    void barometerDataLoaded(const QVariantList &barometerData);
 
 private:
     struct FileMetadataBuffer {
@@ -386,6 +395,7 @@ public:
     Q_INVOKABLE bool loadBarometerFile(const QString &filePath);
     Q_INVOKABLE QVariantList processDeviceFileDataWithBarometer(const QVariantList &rawData, const QVariantList &barometerData);
     Q_INVOKABLE QVariantList getBarometerData() const { return m_barometerData; }
+    Q_INVOKABLE QVariantMap calculateBarometerOverlap(const QVariantList &instrumentRecords, const QVariantList &barometerData);
 
     void setQmlRootObject(QObject *value);
 

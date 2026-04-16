@@ -154,32 +154,32 @@ void CppClass::Inits(void)
     // Log_ShowFiles
     for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
     {
-      logshowfiles.reserved[counter.y0] = 0;
+        logshowfiles.reserved[counter.y0] = 0;
     }
     for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
     {
-      logshowfiles.fileindex[counter.y0] = 0;
+        logshowfiles.fileindex[counter.y0] = 0;
     }
     for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
     {
-      for(counter.y1 = 0; counter.y1 < FILENAME_ARRAY; counter.y1++)
-      {
-        logshowfiles.filename[counter.y0][counter.y1]; // 4, 8
-      }
+        for(counter.y1 = 0; counter.y1 < FILENAME_ARRAY; counter.y1++)
+        {
+            logshowfiles.filename[counter.y0][counter.y1]; // 4, 8
+        }
     }
     for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
     {
-      for(counter.y1 = 0; counter.y1 < FILESIZE_ARRAY; counter.y1++)
-      {
-        logshowfiles.filesize[counter.y0][counter.y1]; // 4, 4
-      }
+        for(counter.y1 = 0; counter.y1 < FILESIZE_ARRAY; counter.y1++)
+        {
+            logshowfiles.filesize[counter.y0][counter.y1]; // 4, 4
+        }
     }
     for(counter.y0 = 0; counter.y0 < FILENUM_ARRAY; counter.y0++)
     {
-      for(counter.y1 = 0; counter.y1 < FILEDATE_ARRAY; counter.y1++)
-      {
-        logshowfiles.filedate[counter.y0][counter.y1]; // 4, 8
-      }
+        for(counter.y1 = 0; counter.y1 < FILEDATE_ARRAY; counter.y1++)
+        {
+            logshowfiles.filedate[counter.y0][counter.y1]; // 4, 8
+        }
     }
 
     // Log_ShowFiles
@@ -207,10 +207,10 @@ void CppClass::Inits(void)
 
     for(counter.y0 = 0; counter.y0 < QUADRANTS; counter.y0++)
     {
-      for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++)
-      {
-        logtransmitdata.pagedata_rq[counter.y0][counter.y1]; // 4, 128
-      }
+        for(counter.y1 = 0; counter.y1 < QUADRANTBYTES; counter.y1++)
+        {
+            logtransmitdata.pagedata_rq[counter.y0][counter.y1]; // 4, 128
+        }
     }
 }
 
@@ -1156,7 +1156,7 @@ void CppClass::startComm()
 
 void CppClass::ringSwitch(bool active)
 {
-  emit ringStateChanged(active);
+    emit ringStateChanged(active);
 }
 
 void CppClass::stopComm()
@@ -1328,6 +1328,12 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
     qDebug() << "Total raw data size:" << data.size() << "bytes";
     qDebug() << "Barometer data size:" << barometerData.size() << "readings";
 
+    // If no barometer data, return empty list
+    if (barometerData.isEmpty()) {
+        qDebug() << "WARNING: No barometer data provided!";
+        return processedPoints;
+    }
+
     // Step 1: Extract calibration coefficients from page 0, record 0
     uint16_t C[7] = {0};
     bool calibrationFound = false;
@@ -1360,7 +1366,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
         QDateTime timestamp = entry["timestamp"].toDateTime();
         double pressure = entry["pressure"].toDouble();
         barometerMap[timestamp] = pressure;
-        qDebug() << "Barometer reading:" << timestamp << pressure;
+        qDebug() << "Barometer reading in map:" << timestamp << pressure;
     }
 
     // Get first and last barometer timestamps for edge case handling
@@ -1457,14 +1463,18 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                 // Case 1: Instrument record is before first barometer reading
                 if (recordTime < firstBaroTime) {
                     barometerPressure_mbar = firstBaroPressure;
-                    qDebug() << "Record before barometer start - using first barometer reading:"
-                             << barometerPressure_mbar << "at" << firstBaroTime;
+                    if (totalRecordsProcessed < 20) {
+                        qDebug() << "Record before barometer start - using first barometer reading:"
+                                 << barometerPressure_mbar << "at" << firstBaroTime;
+                    }
                 }
                 // Case 2: Instrument record is after last barometer reading
                 else if (recordTime > lastBaroTime) {
                     barometerPressure_mbar = lastBaroPressure;
-                    qDebug() << "Record after barometer end - using last barometer reading:"
-                             << barometerPressure_mbar << "at" << lastBaroTime;
+                    if (totalRecordsProcessed < 20) {
+                        qDebug() << "Record after barometer end - using last barometer reading:"
+                                 << barometerPressure_mbar << "at" << lastBaroTime;
+                    }
                 }
                 // Case 3: Instrument record is within barometer timeframe - find closest
                 else {
@@ -1479,7 +1489,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                         }
                     }
                     // Print debug for first few records only
-                    if (totalRecordsProcessed < 5 || totalRecordsProcessed % 5 == 0) {
+                    if (totalRecordsProcessed < 20) {
                         qDebug() << "Record time:" << recordTime << "Closest barometer:" << closestTime
                                  << "Diff(ms):" << minDiff << "Pressure:" << barometerPressure_mbar;
                     }
@@ -1521,6 +1531,7 @@ bool CppClass::loadBarometerFile(const QString &filePath)
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qDebug() << "Failed to open barometer file:" << file.errorString();
+        emit barometerDataLoaded(QVariantList()); // Emit empty list on error
         return false;
     }
 
@@ -1549,9 +1560,123 @@ bool CppClass::loadBarometerFile(const QString &filePath)
 
     file.close();
 
+    // Check for empty barometer data
+    if (barometerData.isEmpty()) {
+        qDebug() << "ERROR: Barometer file has no valid readings";
+        emit barometerDataLoaded(QVariantList()); // Emit empty list
+        return false;
+    }
+
     // Store barometer data for later use
     m_barometerData = barometerData;
 
+    // EMIT THE SIGNAL to notify QML that barometer data is loaded
+    emit barometerDataLoaded(barometerData);
+
     qDebug() << "Loaded" << barometerData.size() << "barometer readings";
     return true;
+}
+
+QVariantMap CppClass::calculateBarometerOverlap(const QVariantList &instrumentRecords, const QVariantList &barometerData)
+{
+    QVariantMap result;
+    result["warningMessage"] = "";
+    result["hasFullOverlap"] = false;
+    result["overlapPercentage"] = 0.0;
+
+    if (instrumentRecords.isEmpty() || barometerData.isEmpty()) {
+        result["warningMessage"] = "No barometer data available for overlap calculation";
+        return result;
+    }
+
+    // Get first and last barometer times
+    QVariantMap firstBaro = barometerData.first().toMap();
+    QVariantMap lastBaro = barometerData.last().toMap();
+
+    QDateTime firstBaroTime = firstBaro["timestamp"].toDateTime();
+    QDateTime lastBaroTime = lastBaro["timestamp"].toDateTime();
+
+    // For instrument records, we only have time strings (no date)
+    // So we need to create QDateTime using the barometer date as reference
+    QDate baroDate = firstBaroTime.date();
+
+    // Parse instrument times and find min/max
+    QDateTime firstInstrumentTime;
+    QDateTime lastInstrumentTime;
+    bool firstSet = false;
+
+    for (const QVariant &record : instrumentRecords) {
+        QVariantMap point = record.toMap();
+        QString timeStr = point["time"].toString();
+
+        // Parse time string like "10:10:10 AM" or "10:10:10 PM"
+        QTime time = QDateTime::fromString(timeStr, "h:mm:ss AP").time();
+        if (time.isValid()) {
+            QDateTime fullDateTime(baroDate, time);
+
+            if (!firstSet) {
+                firstInstrumentTime = fullDateTime;
+                lastInstrumentTime = fullDateTime;
+                firstSet = true;
+            } else {
+                if (fullDateTime < firstInstrumentTime) firstInstrumentTime = fullDateTime;
+                if (fullDateTime > lastInstrumentTime) lastInstrumentTime = fullDateTime;
+            }
+        }
+    }
+
+    if (!firstSet) {
+        result["warningMessage"] = "Unable to parse instrument timestamps";
+        return result;
+    }
+
+    // Calculate overlap
+    QDateTime overlapStart = (firstInstrumentTime > firstBaroTime) ? firstInstrumentTime : firstBaroTime;
+    QDateTime overlapEnd = (lastInstrumentTime < lastBaroTime) ? lastInstrumentTime : lastBaroTime;
+
+    qint64 instrumentDuration = firstInstrumentTime.msecsTo(lastInstrumentTime);
+    qint64 overlapDuration = overlapStart.msecsTo(overlapEnd);
+
+    double overlapPercent = 0.0;
+    if (instrumentDuration > 0) {
+        overlapPercent = (double)overlapDuration / instrumentDuration * 100.0;
+    }
+
+    // Ensure overlap percentage is never negative
+    if (overlapPercent < 0) {
+        overlapPercent = 0;
+    }
+
+    // Debug output
+    qDebug() << "Instrument range:" << firstInstrumentTime << "to" << lastInstrumentTime;
+    qDebug() << "Barometer range:" << firstBaroTime << "to" << lastBaroTime;
+    qDebug() << "Overlap duration:" << overlapDuration << "ms, Instrument duration:" << instrumentDuration << "ms";
+    qDebug() << "Overlap percentage:" << overlapPercent;
+
+    result["overlapPercentage"] = overlapPercent;
+
+    // Determine warning message and status icon
+    if (overlapPercent >= 99.0) {
+        result["hasFullOverlap"] = true;
+        result["warningMessage"] = "";
+        result["overlapStatus"] = "✓ Complete overlap (100%)";
+    } else if (overlapPercent <= 0.0) {
+        result["hasFullOverlap"] = false;
+        result["warningMessage"] = "⚠️ No overlap between barometer and instrument data. Using closest available readings (first/last barometer values).";
+        result["overlapStatus"] = QString("✗ No overlap (%1%)").arg(qRound(overlapPercent));
+    } else if (overlapPercent < 50.0) {
+        result["hasFullOverlap"] = false;
+        result["warningMessage"] = QString("⚠️ Barometer data only partially overlaps recording (%1% overlap). Using closest available readings.").arg(qRound(overlapPercent));
+        result["overlapStatus"] = QString("⚠️ Partial overlap (%1%)").arg(qRound(overlapPercent));
+    } else if (overlapPercent < 99.0) {
+        result["hasFullOverlap"] = false;
+        result["warningMessage"] = QString("ℹ️ Barometer data partially overlaps recording (%1% overlap). Using closest available readings.").arg(qRound(overlapPercent));
+        result["overlapStatus"] = QString("ℹ️ Partial overlap (%1%)").arg(qRound(overlapPercent));
+    }
+
+    // Also add overlap percentage to result
+    result["overlapPercentage"] = overlapPercent;
+    result["overlapPercentageRounded"] = qRound(overlapPercent);
+
+    return result;
 }

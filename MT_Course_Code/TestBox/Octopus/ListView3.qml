@@ -52,7 +52,7 @@ GridLayout {
     property string pendingPressureSource: "Standard"
 
     // barometric pressure compensation dialog
-    property var barometerData: []  // Stores {timestamp, pressure}
+    property var barometerData: []  // Stores {timestamp, pressure} from C++
 
     // Surface pressure indicator
     property string currentPressureMethod: "Standard"
@@ -61,6 +61,12 @@ GridLayout {
     property bool isAdjustingPressure: false
 
     property var rawPressureData: []  // Store {time, temperature, pressure_mbar, conductivity}
+    property var persistentRawData: null  // Store raw downloaded data permanently
+
+    property string barometerOverlapWarning: ""  // Empty = no warning
+    property string barometerOverlapStatus: ""  // e.g., "✓ Complete overlap (100%)", "⚠️ Partial overlap (50%)"
+
+    property bool isEmptyBarometerFallback: false  // Track if we're using empty barometer fallback
 
     anchors.fill: parent
     columns: 2
@@ -284,11 +290,32 @@ GridLayout {
         fileListModel.clear();
         currentFileList = [];
 
+        // Reset barometer-related properties
+        barometerOverlapWarning = "";
+        barometerOverlapStatus = "";
+        isEmptyBarometerFallback = false;
+        barometerData = [];
+
+        // Reset pressure method to default
+        currentPressureMethod = "Standard";
+        currentPressureValue = 1013.25;
+
+        // Clear raw data
+        rawSensorData = [];
+        rawPressureData = [];
+        persistentRawData = null;
+        currentDataPoints = [];
+
+        // Hide adjust pressure button
+        adjustPressureButton.visible = false;
+
         // Set new source
         selectedSource = source;
 
         // Update button visual states
         updateButtonStates();
+
+        console.log("Source changed to:", source, "- UI reset complete");
     }
 
     // Update visual states of source buttons
@@ -521,6 +548,9 @@ GridLayout {
             cancelDownload();
         }
 
+        // Clear persistent data when starting a new download
+        clearPersistentData();
+
         // Find the selected file to get quadrants to download
         var selectedFile = null;
         for (var i = 0; i < currentFileList.length; i++) {
@@ -550,7 +580,7 @@ GridLayout {
     }
 
     // Cancel ongoing download
-    function cancelDownload() {
+    function cancelDownload(clearPersistent = false) {
         isDownloading = false;
         currentDownloadFileIndex = -1;
         downloadedQuadrants = 0;
@@ -578,6 +608,11 @@ GridLayout {
         // Hide cancel button, show load button
         cancelButton.visible = false;
         loadButton.visible = true;
+
+        // Optionally clear persistent data
+        if (clearPersistent) {
+            clearPersistentData();
+        }
     }
 
     function requestQuadrant(fileIndex, pageNumber, quadrantNumber) {
@@ -604,8 +639,9 @@ GridLayout {
             }
         }
 
-        // Store the downloaded data temporarily
-        pendingDownloadData = completeFileData;
+        // Store the downloaded data PERSISTENTLY (not just pending)
+        persistentRawData = completeFileData;  // Store permanently
+        pendingDownloadData = completeFileData;  // Also keep for current operation
 
         // Reset UI
         isDownloading = false;
@@ -640,14 +676,19 @@ GridLayout {
 
         // Process the data based on pressure source
         if (pendingPressureSource === "BarometerFile") {
-            // Process with barometer data
-            processAndGraphDownloadedDataWithBarometer(pendingSurfacePressure, pendingPressureSource);
+            // Check if we have an empty barometer fallback
+            if (isEmptyBarometerFallback) {
+                processAndGraphDownloadedData(pendingSurfacePressure, "Standard", true);
+            } else {
+                // Process with barometer data
+                processAndGraphDownloadedDataWithBarometer(pendingSurfacePressure, pendingPressureSource);
+            }
         } else {
             // Process with regular pressure method
             processAndGraphDownloadedData(pendingSurfacePressure, pendingPressureSource);
         }
 
-        // Clear pending data
+        // Clear pending data but keep persistentRawData
         pendingDownloadData = null;
     }
 
@@ -768,6 +809,25 @@ GridLayout {
         pendingPage = -1;
         pendingQuadrant = -1;
 
+        // Reset barometer-related properties
+        barometerOverlapWarning = "";
+        barometerOverlapStatus = "";
+        isEmptyBarometerFallback = false;
+        barometerData = [];
+
+        // Reset pressure method to default
+        currentPressureMethod = "Standard";
+        currentPressureValue = 1013.25;
+
+        // Clear raw data
+        rawSensorData = [];
+        rawPressureData = [];
+        persistentRawData = null;
+        currentDataPoints = [];
+
+        // Hide adjust pressure button
+        adjustPressureButton.visible = false;
+
         // Clear the graph
         clearGraph();
 
@@ -784,12 +844,28 @@ GridLayout {
         return records + " records";
     }
 
-    function processAndGraphDownloadedData(surfacePressure, pressureMethod) {
-        console.log("Processing downloaded data with surface pressure:", surfacePressure, "mbar", "Method:", pressureMethod)
+    function processAndGraphDownloadedData(surfacePressure, pressureMethod, isEmptyBarometerFallbackParam = false) {
+        console.log("Processing downloaded data with surface pressure:", surfacePressure, "mbar", "Method:", pressureMethod, "isEmptyBarometerFallbackParam:", isEmptyBarometerFallbackParam)
 
         // Store the pressure method and value for indicator
         currentPressureMethod = pressureMethod
         currentPressureValue = surfacePressure
+
+        // Set empty barometer warning if this is a fallback
+        if (isEmptyBarometerFallbackParam || isEmptyBarometerFallback) {
+            barometerOverlapStatus = "✗ No barometer data (using Standard pressure)"
+            barometerOverlapWarning = "⚠️ No barometer data available. Using Standard pressure (1013.25 mbar) instead."
+            // Make sure the file details text shows the warning
+            if (selectedFileData) {
+                fileDetailsText.text = "Warning: Barometer file empty - using Standard pressure. " + selectedFileData.fileName
+            }
+        } else {
+            // Only clear barometer warnings if this is NOT a fallback from empty barometer
+            if (pressureMethod !== "BarometerFile") {
+                barometerOverlapWarning = ""
+                barometerOverlapStatus = ""
+            }
+        }
 
         // Call C++ backend to process the raw data
         var processedPoints = CppClass.processDeviceFileData(pendingDownloadData, surfacePressure)
@@ -798,23 +874,28 @@ GridLayout {
         if (processedPoints && processedPoints.length > 0) {
             updateChart(processedPoints)
 
-            // Update file details with record count
-            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
-                                   " (" + processedPoints.length + " data records)"
+            // Update file details with record count if not already set by the warning
+            if (!isEmptyBarometerFallbackParam && !isEmptyBarometerFallback) {
+                fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                       " (" + processedPoints.length + " data records) - " + pressureMethod + " pressure"
+            } else {
+                // Append record count to existing warning
+                fileDetailsText.text = fileDetailsText.text + " (" + processedPoints.length + " data records)"
+            }
 
             // Store raw sensor data for future adjustments (WITH RAW PRESSURE)
             rawSensorData = processedPoints
 
             // ALSO store raw pressure values separately for recalculation
-            // You need to modify C++ to return pressure_mbar as well
-            // For now, we'll store a copy
             rawPressureData = JSON.parse(JSON.stringify(processedPoints))
 
             // Show adjust button after successful download
             adjustPressureButton.visible = true
         } else {
             console.log("Warning: No data points processed")
-            fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)"
+            if (!isEmptyBarometerFallbackParam && !isEmptyBarometerFallback) {
+                fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)"
+            }
         }
     }
 
@@ -841,29 +922,69 @@ GridLayout {
     function processAndGraphDownloadedDataWithBarometer(surfacePressure, pressureMethod) {
         console.log("Processing downloaded data with barometer file, Method:", pressureMethod);
 
-        // Call C++ backend to process the raw data with barometer compensation
-        var processedPoints = CppClass.processDeviceFileDataWithBarometer(pendingDownloadData, barometerData);
+        // Get barometer data from C++ instead of using QML property
+        var barometerDataFromCpp = CppClass.getBarometerData()
 
-        if (processedPoints && processedPoints.length > 0) {
-            // Store raw sensor data for future adjustments
-            rawSensorData = processedPoints;
-            currentPressureMethod = pressureMethod;
-            currentPressureValue = surfacePressure;
+        console.log("Barometer data from C++ count:", barometerDataFromCpp ? barometerDataFromCpp.length : 0)
 
-            updateChart(processedPoints);
-
-            // Update file details with record count
-            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
-                                   " (" + processedPoints.length + " data records)";
-
-            // Show adjust button after successful download
-            adjustPressureButton.visible = true;
-        } else {
-            console.log("Warning: No data points processed");
-            fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)";
+        if (!barometerDataFromCpp || barometerDataFromCpp.length === 0) {
+            console.log("ERROR: No barometer data available from C++")
+            return
         }
 
-        pendingDownloadData = null;
+        // FIRST: Process the raw data to get points with timestamps
+        var processedPoints = CppClass.processDeviceFileDataWithBarometer(persistentRawData, barometerDataFromCpp)
+
+        if (!processedPoints || processedPoints.length === 0) {
+            console.log("Warning: No data points processed with barometer file")
+            fileDetailsText.text = "Error: No data processed - check barometer file format"
+            return
+        }
+
+        // SECOND: Calculate overlap warning using the processed points (which have time strings)
+        var overlapInfo = CppClass.calculateBarometerOverlap(processedPoints, barometerDataFromCpp)
+        barometerOverlapWarning = overlapInfo.warningMessage
+        barometerOverlapStatus = overlapInfo.overlapStatus
+        console.log("Overlap warning:", barometerOverlapWarning)
+        console.log("Overlap status:", barometerOverlapStatus)
+        console.log("Overlap info full object:", JSON.stringify(overlapInfo))
+
+        // Store barometer data in QML for later recalculation
+        barometerData = barometerDataFromCpp
+
+        // Store raw sensor data for future adjustments
+        rawSensorData = processedPoints
+        currentPressureMethod = pressureMethod
+        currentPressureValue = surfacePressure
+        console.log("currentPressureMethod set to:", currentPressureMethod)
+
+        // Extract pressure_mbar from processed points for future recalculation
+        rawPressureData = []
+        for (var i = 0; i < processedPoints.length; i++) {
+            rawPressureData.push({
+                time: processedPoints[i].time,
+                temperature: processedPoints[i].temperature,
+                pressure_mbar: processedPoints[i].pressure_mbar,
+                conductivity: processedPoints[i].conductivity || 0
+            })
+        }
+
+        updateChart(processedPoints)
+
+        // Update file details with record count and overlap warning
+        if (barometerOverlapWarning !== "") {
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                   " (" + processedPoints.length + " data records) - " + barometerOverlapWarning
+        } else {
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                   " (" + processedPoints.length + " data records) - Barometer Compensated"
+        }
+
+        // Show adjust button after successful download
+        adjustPressureButton.visible = true
+        console.log("adjustPressureButton.visible set to true")
+
+        pendingDownloadData = null
     }
 
     function recalculateWithBarometerPressure() {
@@ -873,22 +994,31 @@ GridLayout {
         var barometerDataFromCpp = CppClass.getBarometerData()
 
         console.log("Barometer data count:", barometerDataFromCpp ? barometerDataFromCpp.length : 0)
-        console.log("Raw sensor data count:", rawSensorData.length)
+        console.log("Persistent raw data available:", persistentRawData ? persistentRawData.length : 0)
 
         if (!barometerDataFromCpp || barometerDataFromCpp.length === 0) {
             console.log("No barometer data available for recalculation")
+            console.log("Please load a barometer file first")
             return
         }
 
-        if (!pendingDownloadData || pendingDownloadData.length === 0) {
+        // Use persistentRawData instead of pendingDownloadData
+        if (!persistentRawData || persistentRawData.length === 0) {
             console.log("No raw data available for barometer recalculation")
+            console.log("Please download the file again before using barometer adjustment")
             return
         }
 
         // Call C++ backend to process the raw data with barometer compensation
-        var processedPoints = CppClass.processDeviceFileDataWithBarometer(pendingDownloadData, barometerDataFromCpp)
+        var processedPoints = CppClass.processDeviceFileDataWithBarometer(persistentRawData, barometerDataFromCpp)
 
         if (processedPoints && processedPoints.length > 0) {
+            // Calculate overlap warning using the processed points (after they are created)
+            var overlapInfo = CppClass.calculateBarometerOverlap(processedPoints, barometerDataFromCpp)
+            barometerOverlapWarning = overlapInfo.warningMessage
+            barometerOverlapStatus = overlapInfo.overlapStatus
+            console.log("Overlap status:", barometerOverlapStatus)
+
             // Store raw sensor data for future adjustments
             rawSensorData = processedPoints
             currentPressureMethod = "BarometerFile"
@@ -906,8 +1036,13 @@ GridLayout {
 
             updateChart(processedPoints)
 
-            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
-                                   " (" + processedPoints.length + " data records)"
+            if (barometerOverlapWarning !== "") {
+                fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                       " (" + processedPoints.length + " data records) - Recalculated - " + barometerOverlapWarning
+            } else {
+                fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                       " (" + processedPoints.length + " data records) - Recalculated with barometer"
+            }
         } else {
             console.log("Warning: No data points processed with barometer file")
         }
@@ -1009,12 +1144,24 @@ GridLayout {
         // Start the download process - Request first quadrant
         requestQuadrant(fileIndex, 0, 0);
     }
+
     function recalculateWithNewPressure(surfacePressure, pressureMethod) {
         console.log("Recalculating depth with new pressure:", surfacePressure, "mbar", "Method:", pressureMethod)
 
         // Update current method and value
         currentPressureMethod = pressureMethod
         currentPressureValue = surfacePressure
+
+        // Check if we have the empty barometer warning
+        var hadEmptyBarometerWarning = (barometerOverlapStatus.indexOf("No barometer data") !== -1)
+
+        // Clear barometer-specific warnings when switching to non-barometer methods
+        if (pressureMethod !== "BarometerFile") {
+            if (!hadEmptyBarometerWarning) {
+                barometerOverlapWarning = ""
+                barometerOverlapStatus = ""
+            }
+        }
 
         // Check if we have raw pressure data
         if (!rawPressureData || rawPressureData.length === 0) {
@@ -1027,13 +1174,6 @@ GridLayout {
         for (var i = 0; i < rawPressureData.length; i++) {
             var point = rawPressureData[i]
 
-            // IMPORTANT: You need the raw pressure in mbar from the C++ processing
-            // Currently, processedPoints only has depth, not pressure_mbar
-            // You need to modify C++ to return pressure_mbar as well
-
-            // For now, let's log what we have
-            console.log("Point", i, "keys:", Object.keys(point))
-
             var newDepth = (point.pressure_mbar - surfacePressure) * 0.010197
             if (newDepth < 0) newDepth = 0
 
@@ -1041,7 +1181,8 @@ GridLayout {
                 time: point.time,
                 temperature: point.temperature,
                 depth: newDepth,
-                conductivity: point.conductivity || 0
+                conductivity: point.conductivity || 0,
+                pressure_mbar: point.pressure_mbar
             })
         }
 
@@ -1051,11 +1192,40 @@ GridLayout {
         // Update stored data points
         rawSensorData = newPoints
 
+        // Update file details text based on method
+        if (hadEmptyBarometerWarning) {
+            fileDetailsText.text = "Warning: Barometer file empty - using Standard pressure. " + selectedFileData.fileName +
+                                   " (" + newPoints.length + " data records) (Recalculated with " + pressureMethod + " pressure: " + surfacePressure.toFixed(2) + " mbar)"
+        } else {
+            if (pressureMethod === "Standard") {
+                fileDetailsText.text = "Recalculated with Standard pressure (" + surfacePressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
+            } else if (pressureMethod === "Manual") {
+                fileDetailsText.text = "Recalculated with Manual pressure (" + surfacePressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
+            } else if (pressureMethod === "AutoDetect") {
+                fileDetailsText.text = "Recalculated with Auto-detected pressure (" + surfacePressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
+            }
+        }
+
         console.log("Graph updated with new pressure compensation")
     }
 
     function clearPendingDownloadData() {
         pendingDownloadData = null
+    }
+
+    // Add a function to clear persistent data when loading a new file
+    function clearPersistentData() {
+        persistentRawData = null
+        rawSensorData = []
+        rawPressureData = []
+        currentDataPoints = []
+        barometerOverlapWarning = ""
+        barometerOverlapStatus = ""
+        isEmptyBarometerFallback = false
+        currentPressureMethod = "Standard"
+        currentPressureValue = 1013.25
+        adjustPressureButton.visible = false
+        clearGraph()
     }
 
     // Connections to C++ backend
@@ -1106,6 +1276,51 @@ GridLayout {
                 fileDetailsText.text = "File " + fileIndex + ": Has valid data";
             } else {
                 fileDetailsText.text = "File " + fileIndex + ": Empty slot";
+            }
+        }
+        onBarometerDataLoaded: function(loadedData) {
+            console.log("Barometer data loaded signal received in QML, count:", loadedData.length);
+
+            // Check for empty barometer file
+            if (!loadedData || loadedData.length === 0) {
+                console.log("WARNING: Empty barometer file - using standard pressure");
+
+                // Set the empty barometer flag
+                isEmptyBarometerFallback = true;
+
+                // Set the warning status immediately for UI
+                barometerOverlapStatus = "✗ No barometer data (using Standard pressure)"
+                barometerOverlapWarning = "⚠️ No barometer data available. Using Standard pressure (1013.25 mbar) instead."
+
+                // Update file details immediately if we have selected file info
+                if (selectedFileData) {
+                    fileDetailsText.text = "Warning: Barometer file empty - using Standard pressure. " + selectedFileData.fileName
+                } else {
+                    fileDetailsText.text = "Warning: Barometer file empty - using Standard pressure"
+                }
+
+                // Fall back to standard pressure method
+                pendingPressureSource = "Standard";
+                pendingSurfacePressure = 1013.25;
+                barometerData = [];
+
+                // If download data is already available, process it
+                if (pendingDownloadData) {
+                    processAndGraphDownloadedData(1013.25, "Standard", true);
+                }
+                return;
+            }
+
+            // Reset empty barometer flag when we have valid data
+            isEmptyBarometerFallback = false;
+
+            // Store the barometer data for use in recalculation
+            barometerData = loadedData;
+
+            // If we're in the middle of a download with barometer option
+            if (pendingPressureSource === "BarometerFile" && pendingDownloadData) {
+                console.log("Processing download with barometer data");
+                processAndGraphDownloadedDataWithBarometer(pendingSurfacePressure, pendingPressureSource);
             }
         }
     }
@@ -1343,7 +1558,7 @@ GridLayout {
                 // Surface Pressure Indicator
                 Rectangle {
                     width: parent.width
-                    visible: rawSensorData.length > 0  // Only show after download
+                    visible: rawSensorData.length > 0  // This should be true after download
                     color: "#1a1a2a"
                     radius: 4
                     border.color: "#FFA500"
@@ -1371,7 +1586,10 @@ GridLayout {
                                 } else if (currentPressureMethod === "AutoDetect") {
                                     return "Surface Pressure: Auto-detect (" + currentPressureValue.toFixed(2) + " mbar)"
                                 } else if (currentPressureMethod === "BarometerFile") {
-                                    return "Surface Pressure: Barometer file (varies by time)"
+                                    if (barometerOverlapStatus !== "") {
+                                        return "Surface Pressure: Barometer file - " + barometerOverlapStatus
+                                    }
+                                    return "Surface Pressure: Barometer file"
                                 }
                                 return "Surface Pressure: Not set"
                             }
@@ -1379,6 +1597,28 @@ GridLayout {
                             color: "#FFA500"
                             Layout.fillWidth: true
                             wrapMode: Text.WordWrap
+                        }
+
+                        // Info icon with tooltip for overlap warnings
+                        Text {
+                            id: infoIcon
+                            text: "ⓘ"
+                            font.pixelSize: 16
+                            color: barometerOverlapWarning !== "" ? "#FFD700" : "#555555"
+                            visible: true
+                            opacity: 0.8
+
+                            ToolTip {
+                                visible: infoIcon.hovered
+                                text: barometerOverlapWarning !== "" ? barometerOverlapWarning : "Barometer data fully overlaps recording"
+                                delay: 500
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                            }
                         }
                     }
                 }
@@ -1948,21 +2188,48 @@ GridLayout {
                             surfacePressure = calculateAutoDetectPressure(autoDetectSeconds.value);
                             pressureSource = "AutoDetect";
                         } else if (baroFileRadio.checked && baroFilePathField.text !== "") {
-                            loadBarometerFile(baroFilePathField.text);
+                            // Load barometer file and check result
+                            var success = CppClass.loadBarometerFile(baroFilePathField.text);
+
+                            if (!success) {
+                                console.log("Barometer file load failed or empty - falling back to Standard pressure");
+                                pressureSource = "Standard";
+                                surfacePressure = 1013.25;
+
+                                if (isAdjustingPressure) {
+                                    surfacePressureDialog.close();
+                                    isAdjustingPressure = false;
+                                    recalculateWithNewPressure(surfacePressure, pressureSource);
+                                    return;
+                                } else {
+                                    pendingSurfacePressure = surfacePressure;
+                                    pendingPressureSource = pressureSource;
+                                    surfacePressureDialog.close();
+                                    startActualDownload();
+                                    return;
+                                }
+                            }
+
                             pressureSource = "BarometerFile";
 
                             if (isAdjustingPressure) {
                                 // Recalculate with barometer data (no new download)
                                 surfacePressureDialog.close();
                                 isAdjustingPressure = false;
-                                recalculateWithBarometerPressure();
+                                // Wait a moment for barometer data to load, then recalculate
+                                Qt.callLater(function() {
+                                    recalculateWithBarometerPressure();
+                                });
                                 return;
                             } else {
                                 // New download with barometer data
                                 pendingSurfacePressure = surfacePressure;
                                 pendingPressureSource = pressureSource;
                                 surfacePressureDialog.close();
-                                startActualDownloadWithBarometer();
+                                // Wait a moment for barometer data to load, then start download
+                                Qt.callLater(function() {
+                                    startActualDownloadWithBarometer();
+                                });
                                 return;
                             }
                         }
