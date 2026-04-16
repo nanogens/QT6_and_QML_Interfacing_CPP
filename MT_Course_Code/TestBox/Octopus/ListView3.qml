@@ -44,8 +44,23 @@ GridLayout {
     property int pendingPage: -1
     property int pendingQuadrant: -1
 
+    // Pending download info (before pressure selection)
+    property int pendingDownloadFileIndex: -1
+    property string pendingDownloadFileName: ""
+    property var pendingDownloadSelectedFile: null
+    property real pendingSurfacePressure: 1013.25
+    property string pendingPressureSource: "Standard"
+
     // barometric pressure compensation dialog
     property var barometerData: []  // Stores {timestamp, pressure}
+
+    // Surface pressure indicator
+    property string currentPressureMethod: "Standard"
+    property real currentPressureValue: 1013.25
+    property var rawSensorData: []  // Store raw data for re-calculation
+    property bool isAdjustingPressure: false
+
+    property var rawPressureData: []  // Store {time, temperature, pressure_mbar, conductivity}
 
     anchors.fill: parent
     columns: 2
@@ -195,8 +210,14 @@ GridLayout {
         var filesData = [];
 
         for (var i = 0; i < deviceFiles.length; i++) {
+            // ONLY check the 0x99 marker - skip if not occupied
+            if (!deviceFiles[i].isValid) {
+                console.log("Skipping file slot", deviceFiles[i].fileIndex, "- not occupied (no 0x99 marker)");
+                continue;
+            }
+
             // The value is total page records INCLUDING page headers
-            var totalPageRecords = deviceFiles[i].fileSizeBytes;
+            var totalPageRecords = deviceFiles[i].totalPageRecords;
 
             // Calculate pages used (each page holds 16 page records including 1 header)
             var pageCount = Math.ceil(totalPageRecords / 16);
@@ -205,9 +226,8 @@ GridLayout {
             var fileDataRecords = totalPageRecords - pageCount;
 
             // Calculate total quadrants needed (based on total bytes, not records)
-            // Each page is 512 bytes, each quadrant is 128 bytes
-            var totalBytes = pageCount * 512;  // Total bytes to download
-            var quadrantsToDownload = totalBytes / 128;  // Quadrants needed (4 per page)
+            var totalBytes = pageCount * 512;
+            var quadrantsToDownload = totalBytes / 128;
 
             var fileInfo = {
                 fileName: deviceFiles[i].fileName,
@@ -218,6 +238,7 @@ GridLayout {
                 fileDateTime: deviceFiles[i].fileDateTime,
                 fileDateTimeTimestamp: deviceFiles[i].fileDateTimeTimestamp,
                 fileIndex: deviceFiles[i].fileIndex,
+                isValid: deviceFiles[i].isValid,
                 source: "device"
             };
 
@@ -232,6 +253,7 @@ GridLayout {
                 quadrantsToDownload: quadrantsToDownload,
                 totalPageRecords: totalPageRecords,
                 pageCount: pageCount,
+                isValid: fileInfo.isValid,
                 fileDateTimeTimestamp: fileInfo.fileDateTimeTimestamp
             };
             fileListModel.append(displayInfo);
@@ -492,7 +514,7 @@ GridLayout {
         }
     }
 
-    // Start downloading a device file
+    // Start downloading a device file (shows pressure dialog first)
     function startDeviceFileDownload(fileIndex, fileName) {
         if (isDownloading) {
             console.log("Download already in progress, canceling first");
@@ -513,42 +535,13 @@ GridLayout {
             return;
         }
 
-        // RESET ALL DOWNLOAD STATE VARIABLES
-        isDownloading = true;
-        currentDownloadFileIndex = fileIndex;
-        downloadedQuadrants = 0;
-        totalQuadrantsToDownload = selectedFile.quadrantsToDownload;
-        currentPage = 0;
-        currentQuadrant = 0;
-        currentPageData = [];
-        currentDownloadData = [];
+        // Store pending download info
+        pendingDownloadFileIndex = fileIndex;
+        pendingDownloadFileName = fileName;
+        pendingDownloadSelectedFile = selectedFile;
 
-        // RESET PROGRESS UI
-        downloadProgress.value = 0;
-        downloadStatusText.text = "0%";
-        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
-
-        console.log("Total page records:", selectedFile.totalPageRecords);
-        console.log("File data records:", selectedFile.fileDataRecords);
-        console.log("Page count:", selectedFile.pageCount);
-        console.log("Quadrants to download:", totalQuadrantsToDownload);
-
-        // Clear the graph before starting new download
-        clearGraph();
-
-        // Update UI
-        downloadProgress.visible = true;
-        downloadStatusText.visible = true;
-        loadButton.visible = false;
-        cancelButton.visible = true;
-
-        // Disable source buttons during download
-        deviceButton.enabled = false;
-        localButton.enabled = false;
-        cloudButton.enabled = false;
-
-        // Start the download process - Request first quadrant
-        requestQuadrant(fileIndex, 0, 0);
+        // Show the surface pressure dialog BEFORE downloading
+        surfacePressureDialog.open();
     }
 
     // Request a specific page of the device file
@@ -618,6 +611,12 @@ GridLayout {
         isDownloading = false;
         currentDownloadFileIndex = -1;
         currentDownloadData = [];
+
+        // Reset pending download info
+        pendingDownloadFileIndex = -1;
+        pendingDownloadFileName = "";
+        pendingDownloadSelectedFile = null;
+
         downloadProgress.visible = false;
         downloadStatusText.visible = false;
         loadButton.visible = true;
@@ -639,8 +638,17 @@ GridLayout {
         pendingPage = -1;
         pendingQuadrant = -1;
 
-        // Show the surface pressure dialog
-        surfacePressureDialog.open();
+        // Process the data based on pressure source
+        if (pendingPressureSource === "BarometerFile") {
+            // Process with barometer data
+            processAndGraphDownloadedDataWithBarometer(pendingSurfacePressure, pendingPressureSource);
+        } else {
+            // Process with regular pressure method
+            processAndGraphDownloadedData(pendingSurfacePressure, pendingPressureSource);
+        }
+
+        // Clear pending data
+        pendingDownloadData = null;
     }
 
     function handleDeviceFilePageReceived(fileIndex, pageNumber, quadrantNumber, pageData) {
@@ -776,26 +784,38 @@ GridLayout {
         return records + " records";
     }
 
-    function processAndGraphDownloadedData(surfacePressure) {
-        console.log("Processing downloaded data with surface pressure:", surfacePressure, "mbar");
+    function processAndGraphDownloadedData(surfacePressure, pressureMethod) {
+        console.log("Processing downloaded data with surface pressure:", surfacePressure, "mbar", "Method:", pressureMethod)
+
+        // Store the pressure method and value for indicator
+        currentPressureMethod = pressureMethod
+        currentPressureValue = surfacePressure
 
         // Call C++ backend to process the raw data
-        var processedPoints = CppClass.processDeviceFileData(pendingDownloadData, surfacePressure);
+        var processedPoints = CppClass.processDeviceFileData(pendingDownloadData, surfacePressure)
 
         // Graph the data
         if (processedPoints && processedPoints.length > 0) {
-            updateChart(processedPoints);
+            updateChart(processedPoints)
 
             // Update file details with record count
             fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
-                                   " (" + processedPoints.length + " data records)";
-        } else {
-            console.log("Warning: No data points processed");
-            fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)";
-        }
+                                   " (" + processedPoints.length + " data records)"
 
-        // Clear the pending data
-        pendingDownloadData = null;
+            // Store raw sensor data for future adjustments (WITH RAW PRESSURE)
+            rawSensorData = processedPoints
+
+            // ALSO store raw pressure values separately for recalculation
+            // You need to modify C++ to return pressure_mbar as well
+            // For now, we'll store a copy
+            rawPressureData = JSON.parse(JSON.stringify(processedPoints))
+
+            // Show adjust button after successful download
+            adjustPressureButton.visible = true
+        } else {
+            console.log("Warning: No data points processed")
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)"
+        }
     }
 
     function calculateAutoDetectPressure(seconds) {
@@ -818,15 +838,224 @@ GridLayout {
         CppClass.loadBarometerFile(filePath);
     }
 
-    function processAndGraphDownloadedDataWithBarometer(surfacePressure) {
-        console.log("Processing downloaded data with barometer file");
+    function processAndGraphDownloadedDataWithBarometer(surfacePressure, pressureMethod) {
+        console.log("Processing downloaded data with barometer file, Method:", pressureMethod);
+
+        // Call C++ backend to process the raw data with barometer compensation
         var processedPoints = CppClass.processDeviceFileDataWithBarometer(pendingDownloadData, barometerData);
+
         if (processedPoints && processedPoints.length > 0) {
+            // Store raw sensor data for future adjustments
+            rawSensorData = processedPoints;
+            currentPressureMethod = pressureMethod;
+            currentPressureValue = surfacePressure;
+
             updateChart(processedPoints);
+
+            // Update file details with record count
             fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
                                    " (" + processedPoints.length + " data records)";
+
+            // Show adjust button after successful download
+            adjustPressureButton.visible = true;
+        } else {
+            console.log("Warning: No data points processed");
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)";
         }
+
         pendingDownloadData = null;
+    }
+
+    function recalculateWithBarometerPressure() {
+        console.log("=== BAROMETER RECALCULATION START ===")
+
+        // Get barometer data from C++ instead of using QML property
+        var barometerDataFromCpp = CppClass.getBarometerData()
+
+        console.log("Barometer data count:", barometerDataFromCpp ? barometerDataFromCpp.length : 0)
+        console.log("Raw sensor data count:", rawSensorData.length)
+
+        if (!barometerDataFromCpp || barometerDataFromCpp.length === 0) {
+            console.log("No barometer data available for recalculation")
+            return
+        }
+
+        if (!pendingDownloadData || pendingDownloadData.length === 0) {
+            console.log("No raw data available for barometer recalculation")
+            return
+        }
+
+        // Call C++ backend to process the raw data with barometer compensation
+        var processedPoints = CppClass.processDeviceFileDataWithBarometer(pendingDownloadData, barometerDataFromCpp)
+
+        if (processedPoints && processedPoints.length > 0) {
+            // Store raw sensor data for future adjustments
+            rawSensorData = processedPoints
+            currentPressureMethod = "BarometerFile"
+
+            // Extract pressure_mbar from processed points for future recalculation
+            rawPressureData = []
+            for (var i = 0; i < processedPoints.length; i++) {
+                rawPressureData.push({
+                    time: processedPoints[i].time,
+                    temperature: processedPoints[i].temperature,
+                    pressure_mbar: processedPoints[i].pressure_mbar,
+                    conductivity: processedPoints[i].conductivity || 0
+                })
+            }
+
+            updateChart(processedPoints)
+
+            fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                   " (" + processedPoints.length + " data records)"
+        } else {
+            console.log("Warning: No data points processed with barometer file")
+        }
+    }
+
+    // Start the actual download after pressure selection
+    function startActualDownload() {
+        var selectedFile = pendingDownloadSelectedFile;
+        var fileName = pendingDownloadFileName;
+        var fileIndex = pendingDownloadFileIndex;
+
+        if (!selectedFile) {
+            console.log("Error: No file selected for download");
+            return;
+        }
+
+        // RESET ALL DOWNLOAD STATE VARIABLES
+        isDownloading = true;
+        currentDownloadFileIndex = fileIndex;
+        downloadedQuadrants = 0;
+        totalQuadrantsToDownload = selectedFile.quadrantsToDownload;
+        currentPage = 0;
+        currentQuadrant = 0;
+        currentPageData = [];
+        currentDownloadData = [];
+
+        // RESET PROGRESS UI
+        downloadProgress.value = 0;
+        downloadStatusText.text = "0%";
+        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
+
+        console.log("Total page records:", selectedFile.totalPageRecords);
+        console.log("File data records:", selectedFile.fileDataRecords);
+        console.log("Page count:", selectedFile.pageCount);
+        console.log("Quadrants to download:", totalQuadrantsToDownload);
+
+        // Clear the graph before starting new download
+        clearGraph();
+
+        // Update UI
+        downloadProgress.visible = true;
+        downloadStatusText.visible = true;
+        loadButton.visible = false;
+        cancelButton.visible = true;
+
+        // Disable source buttons during download
+        deviceButton.enabled = false;
+        localButton.enabled = false;
+        cloudButton.enabled = false;
+
+        // Start the download process - Request first quadrant
+        requestQuadrant(fileIndex, 0, 0);
+    }
+
+    function startActualDownloadWithBarometer() {
+        var selectedFile = pendingDownloadSelectedFile;
+        var fileName = pendingDownloadFileName;
+        var fileIndex = pendingDownloadFileIndex;
+
+        if (!selectedFile) {
+            console.log("Error: No file selected for download");
+            return;
+        }
+
+        // RESET ALL DOWNLOAD STATE VARIABLES
+        isDownloading = true;
+        currentDownloadFileIndex = fileIndex;
+        downloadedQuadrants = 0;
+        totalQuadrantsToDownload = selectedFile.quadrantsToDownload;
+        currentPage = 0;
+        currentQuadrant = 0;
+        currentPageData = [];
+        currentDownloadData = [];
+
+        // RESET PROGRESS UI
+        downloadProgress.value = 0;
+        downloadStatusText.text = "0%";
+        fileDetailsText.text = "Downloading: " + fileName + " (0/" + totalQuadrantsToDownload + " quadrants)";
+
+        console.log("Total page records:", selectedFile.totalPageRecords);
+        console.log("File data records:", selectedFile.fileDataRecords);
+        console.log("Page count:", selectedFile.pageCount);
+        console.log("Quadrants to download:", totalQuadrantsToDownload);
+
+        // Clear the graph before starting new download
+        clearGraph();
+
+        // Update UI
+        downloadProgress.visible = true;
+        downloadStatusText.visible = true;
+        loadButton.visible = false;
+        cancelButton.visible = true;
+
+        // Disable source buttons during download
+        deviceButton.enabled = false;
+        localButton.enabled = false;
+        cloudButton.enabled = false;
+
+        // Start the download process - Request first quadrant
+        requestQuadrant(fileIndex, 0, 0);
+    }
+    function recalculateWithNewPressure(surfacePressure, pressureMethod) {
+        console.log("Recalculating depth with new pressure:", surfacePressure, "mbar", "Method:", pressureMethod)
+
+        // Update current method and value
+        currentPressureMethod = pressureMethod
+        currentPressureValue = surfacePressure
+
+        // Check if we have raw pressure data
+        if (!rawPressureData || rawPressureData.length === 0) {
+            console.log("ERROR: No raw pressure data available for recalculation")
+            return
+        }
+
+        // Recalculate depth for each stored point
+        var newPoints = []
+        for (var i = 0; i < rawPressureData.length; i++) {
+            var point = rawPressureData[i]
+
+            // IMPORTANT: You need the raw pressure in mbar from the C++ processing
+            // Currently, processedPoints only has depth, not pressure_mbar
+            // You need to modify C++ to return pressure_mbar as well
+
+            // For now, let's log what we have
+            console.log("Point", i, "keys:", Object.keys(point))
+
+            var newDepth = (point.pressure_mbar - surfacePressure) * 0.010197
+            if (newDepth < 0) newDepth = 0
+
+            newPoints.push({
+                time: point.time,
+                temperature: point.temperature,
+                depth: newDepth,
+                conductivity: point.conductivity || 0
+            })
+        }
+
+        // Update graph with new points
+        updateChart(newPoints)
+
+        // Update stored data points
+        rawSensorData = newPoints
+
+        console.log("Graph updated with new pressure compensation")
+    }
+
+    function clearPendingDownloadData() {
+        pendingDownloadData = null
     }
 
     // Connections to C++ backend
@@ -909,12 +1138,12 @@ GridLayout {
                         property bool selected: false
                         text: "Device"
                         Layout.fillWidth: true
-                        implicitHeight: 40
+                        implicitHeight: 50
                         enabled: true
 
                         contentItem: Text {
                             text: parent.text
-                            font.pixelSize: 20
+                            font.pixelSize: 25
                             font.bold: deviceButton.selected
                             color: deviceButton.selected ? "#FFA500" : "#FFFFFF"
                             horizontalAlignment: Text.AlignHCenter
@@ -935,12 +1164,12 @@ GridLayout {
                         property bool selected: false
                         text: "Local"
                         Layout.fillWidth: true
-                        implicitHeight: 40
+                        implicitHeight: 50
                         enabled: true
 
                         contentItem: Text {
                             text: parent.text
-                            font.pixelSize: 20
+                            font.pixelSize: 25
                             font.bold: localButton.selected
                             color: localButton.selected ? "#FFA500" : "#FFFFFF"
                             horizontalAlignment: Text.AlignHCenter
@@ -965,12 +1194,12 @@ GridLayout {
                         property bool selected: false
                         text: "Cloud"
                         Layout.fillWidth: true
-                        implicitHeight: 40
+                        implicitHeight: 50
                         enabled: false
 
                         contentItem: Text {
                             text: parent.text
-                            font.pixelSize: 20
+                            font.pixelSize: 25
                             font.bold: cloudButton.selected
                             color: cloudButton.selected ? "#FFA500" : "#888888"
                             horizontalAlignment: Text.AlignHCenter
@@ -1111,6 +1340,49 @@ GridLayout {
                     width: parent.width
                 }
 
+                // Surface Pressure Indicator
+                Rectangle {
+                    width: parent.width
+                    visible: rawSensorData.length > 0  // Only show after download
+                    color: "#1a1a2a"
+                    radius: 4
+                    border.color: "#FFA500"
+                    border.width: 1
+                    height: indicatorText.height + 10
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 5
+                        spacing: 5
+
+                        Text {
+                            text: "⚙️"
+                            font.pixelSize: 18
+                            color: "#FFA500"
+                        }
+
+                        Text {
+                            id: indicatorText
+                            text: {
+                                if (currentPressureMethod === "Standard") {
+                                    return "Surface Pressure: Standard (" + currentPressureValue.toFixed(2) + " mbar)"
+                                } else if (currentPressureMethod === "Manual") {
+                                    return "Surface Pressure: Manual (" + currentPressureValue.toFixed(2) + " mbar)"
+                                } else if (currentPressureMethod === "AutoDetect") {
+                                    return "Surface Pressure: Auto-detect (" + currentPressureValue.toFixed(2) + " mbar)"
+                                } else if (currentPressureMethod === "BarometerFile") {
+                                    return "Surface Pressure: Barometer file (varies by time)"
+                                }
+                                return "Surface Pressure: Not set"
+                            }
+                            font.pixelSize: 16
+                            color: "#FFA500"
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
                 // Progress bar for device file download
                 ProgressBar {
                     id: downloadProgress
@@ -1120,15 +1392,14 @@ GridLayout {
                     to: 100
                     value: 0
 
-                    // Make the progress bar thicker
                     background: Rectangle {
-                        implicitHeight: 12  // Add this - controls bar thickness
+                        implicitHeight: 12
                         radius: 6
                         color: "#555555"
                     }
 
                     contentItem: Item {
-                        implicitHeight: 12  // Add this - matches background height
+                        implicitHeight: 12
 
                         Rectangle {
                             width: downloadProgress.visualPosition * parent.width
@@ -1223,6 +1494,48 @@ GridLayout {
             onClicked: {
                 console.log("Cancel button clicked - aborting download");
                 cancelDownload();
+            }
+        }
+
+        // Adjust Surface Pressure Button (appears after download)
+        Button {
+            id: adjustPressureButton
+            text: "Adjust Surface Pressure"
+            Layout.fillWidth: true
+            implicitHeight: 45
+            visible: false
+
+            contentItem: Text {
+                text: parent.text
+                font.pixelSize: 20
+                font.bold: true
+                color: "#FFA500"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                color: "#333333"
+                radius: 6
+                border.color: "#FFA500"
+                border.width: 1
+            }
+
+            onClicked: {
+                isAdjustingPressure = true
+                // Store current method to pre-select in dialog
+                if (currentPressureMethod === "Standard") {
+                    stdPressureRadio.checked = true
+                } else if (currentPressureMethod === "Manual") {
+                    manualRadio.checked = true
+                    manualPressureField.text = currentPressureValue.toString()
+                } else if (currentPressureMethod === "AutoDetect") {
+                    autoDetectRadio.checked = true
+                    autoDetectSeconds.value = 5
+                } else if (currentPressureMethod === "BarometerFile") {
+                    baroFileRadio.checked = true
+                }
+                surfacePressureDialog.open()
             }
         }
     }
@@ -1635,17 +1948,34 @@ GridLayout {
                             surfacePressure = calculateAutoDetectPressure(autoDetectSeconds.value);
                             pressureSource = "AutoDetect";
                         } else if (baroFileRadio.checked && baroFilePathField.text !== "") {
-                            // Load and use barometer file
                             loadBarometerFile(baroFilePathField.text);
                             pressureSource = "BarometerFile";
-                            // Note: Depth will be calculated per-record using interpolated pressure
-                            processAndGraphDownloadedDataWithBarometer(surfacePressure);
-                            surfacePressureDialog.close();
-                            return;
+
+                            if (isAdjustingPressure) {
+                                // Recalculate with barometer data (no new download)
+                                surfacePressureDialog.close();
+                                isAdjustingPressure = false;
+                                recalculateWithBarometerPressure();
+                                return;
+                            } else {
+                                // New download with barometer data
+                                pendingSurfacePressure = surfacePressure;
+                                pendingPressureSource = pressureSource;
+                                surfacePressureDialog.close();
+                                startActualDownloadWithBarometer();
+                                return;
+                            }
                         }
 
-                        processAndGraphDownloadedData(surfacePressure);
+                        if (isAdjustingPressure) {
+                            recalculateWithNewPressure(surfacePressure, pressureSource);
+                        } else {
+                            pendingSurfacePressure = surfacePressure;
+                            pendingPressureSource = pressureSource;
+                            startActualDownload();
+                        }
                         surfacePressureDialog.close();
+                        isAdjustingPressure = false;
                     }
                 }
             }

@@ -385,6 +385,8 @@ public:
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
     Q_INVOKABLE bool loadBarometerFile(const QString &filePath);
     Q_INVOKABLE QVariantList processDeviceFileDataWithBarometer(const QVariantList &rawData, const QVariantList &barometerData);
+    Q_INVOKABLE QVariantList getBarometerData() const { return m_barometerData; }
+
     void setQmlRootObject(QObject *value);
 
 public:

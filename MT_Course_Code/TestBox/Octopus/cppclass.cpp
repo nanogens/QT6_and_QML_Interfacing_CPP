@@ -1295,11 +1295,12 @@ QVariantList CppClass::processDeviceFileData(const QVariantList &rawData, double
             // Conductivity placeholder (0 for now)
             double conductivity = 0.0;
 
-            // Add to result
+            // Add to result, when creating the point:
             QVariantMap point;
             point["time"] = timeStr;
             point["temperature"] = temperature;
             point["depth"] = depth;
+            point["pressure_mbar"] = pressure_mbar;  // Add this line
             point["conductivity"] = conductivity;
             processedPoints.append(point);
 
@@ -1323,6 +1324,9 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
     for (const QVariant &byte : rawData) {
         data.append((char)byte.toInt());
     }
+
+    qDebug() << "Total raw data size:" << data.size() << "bytes";
+    qDebug() << "Barometer data size:" << barometerData.size() << "readings";
 
     // Step 1: Extract calibration coefficients from page 0, record 0
     uint16_t C[7] = {0};
@@ -1356,6 +1360,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
         QDateTime timestamp = entry["timestamp"].toDateTime();
         double pressure = entry["pressure"].toDouble();
         barometerMap[timestamp] = pressure;
+        qDebug() << "Barometer reading:" << timestamp << pressure;
     }
 
     // Get first and last barometer timestamps for edge case handling
@@ -1383,6 +1388,8 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
         uint8_t totalRecordsInPage = (uint8_t)data[offset + 5];
         int dataRecordsInPage = totalRecordsInPage - 1;
 
+        qDebug() << "Processing page at offset:" << offset << "Records in page:" << dataRecordsInPage;
+
         int dataOffset = offset + headerSize;
 
         for (int i = 0; i < dataRecordsInPage; i++) {
@@ -1400,6 +1407,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
             uint8_t minute = (uint8_t)data[recordStart + 4];
             uint8_t second = (uint8_t)data[recordStart + 5];
             uint8_t ampm = (uint8_t)data[recordStart + 6];
+            uint8_t weekday = (uint8_t)data[recordStart + 7];
 
             // Create QDateTime for this record
             QDateTime recordTime;
@@ -1419,7 +1427,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                                   .arg(second, 2, 10, QChar('0'))
                                   .arg(ampmStr);
 
-            // Extract raw ADC values
+            // Extract raw ADC values (bytes 8-11 for D1, bytes 14-17 for D2)
             uint32_t D1 = ((uint32_t)(uint8_t)data[recordStart + 8] << 24) |
                           ((uint32_t)(uint8_t)data[recordStart + 9] << 16) |
                           ((uint32_t)(uint8_t)data[recordStart + 10] << 8) |
@@ -1430,7 +1438,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                           ((uint32_t)(uint8_t)data[recordStart + 16] << 8) |
                           (uint32_t)(uint8_t)data[recordStart + 17];
 
-            // Apply MS5837 formulas
+            // Apply MS5837 formulas using 64-bit integers
             int64_t dT = D2 - ((int64_t)C[5] << 8);
             int64_t TEMP = 2000 + (dT * C[6]) / 8388608LL;
 
@@ -1470,12 +1478,14 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                             barometerPressure_mbar = it.value();
                         }
                     }
-                    // Optional: reduce debug noise by printing only every 5th record
-                    if (totalRecordsProcessed % 5 == 0) {
+                    // Print debug for first few records only
+                    if (totalRecordsProcessed < 5 || totalRecordsProcessed % 5 == 0) {
                         qDebug() << "Record time:" << recordTime << "Closest barometer:" << closestTime
                                  << "Diff(ms):" << minDiff << "Pressure:" << barometerPressure_mbar;
                     }
                 }
+            } else {
+                qDebug() << "No barometer data available - using standard pressure: 1013.25 mbar";
             }
 
             // Calculate depth with barometer compensation
@@ -1485,10 +1495,12 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
 
             double conductivity = 0.0;
 
+            // Add to result
             QVariantMap point;
             point["time"] = timeStr;
             point["temperature"] = temperature;
             point["depth"] = depth;
+            point["pressure_mbar"] = instrumentPressure_mbar;
             point["conductivity"] = conductivity;
             processedPoints.append(point);
 
