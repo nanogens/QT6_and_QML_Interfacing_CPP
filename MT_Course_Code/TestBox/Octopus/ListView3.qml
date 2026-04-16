@@ -68,6 +68,9 @@ GridLayout {
 
     property bool isEmptyBarometerFallback: false  // Track if we're using empty barometer fallback
 
+    property int autoZeroSeconds: 5  // Default 5 seconds
+
+
     anchors.fill: parent
     columns: 2
     rows: 1
@@ -867,7 +870,33 @@ GridLayout {
             }
         }
 
-        // Call C++ backend to process the raw data
+        // Handle Auto-zero method specially - calculate pressure after download
+        if (pressureMethod === "AutoDetect") {
+            // Calculate auto-zero pressure from the downloaded data
+            var calculatedPressure = calculateAutoDetectPressure(autoZeroSeconds);
+            currentPressureValue = calculatedPressure;
+            console.log("Auto-zero method - calculated surface pressure:", calculatedPressure, "mbar");
+
+            // Re-process with the calculated pressure
+            var processedPoints = CppClass.processDeviceFileData(pendingDownloadData, calculatedPressure);
+
+            if (processedPoints && processedPoints.length > 0) {
+                updateChart(processedPoints);
+                fileDetailsText.text = "Download complete: " + selectedFileData.fileName +
+                                       " (" + processedPoints.length + " data records) - Auto-zero (" + calculatedPressure.toFixed(2) + " mbar)"
+
+                // Store raw sensor data for future adjustments
+                rawSensorData = processedPoints
+                rawPressureData = JSON.parse(JSON.stringify(processedPoints))
+                adjustPressureButton.visible = true
+            } else {
+                console.log("Warning: No data points processed with Auto-zero")
+                fileDetailsText.text = "Download complete: " + selectedFileData.fileName + " (0 records)"
+            }
+            return  // Exit early
+        }
+
+        // Call C++ backend to process the raw data for other methods
         var processedPoints = CppClass.processDeviceFileData(pendingDownloadData, surfacePressure)
 
         // Graph the data
@@ -900,16 +929,114 @@ GridLayout {
     }
 
     function calculateAutoDetectPressure(seconds) {
-        // Calculate average pressure from first 'seconds' seconds of data
-        if (!pendingDownloadData || pendingDownloadData.length === 0) {
-            console.log("No data available for auto-detection");
+        console.log("Auto-zero: Calculating surface pressure from first", seconds, "seconds of data");
+
+        // Use persistentRawData if available (for recalculation), otherwise use pendingDownloadData
+        var rawData = persistentRawData !== null ? persistentRawData : pendingDownloadData;
+
+        // Check if we have data
+        if (!rawData || rawData.length === 0) {
+            console.log("No data available for auto-zero - using standard pressure");
             return 1013.25;
         }
 
-        // TODO: Parse the first 'seconds' worth of data and average the pressure values
-        // For now, return standard pressure
-        console.log("Auto-detecting surface pressure from first", seconds, "seconds of data");
-        return 1013.25;  // Placeholder - implement actual calculation
+        console.log("Auto-zero: Using data with", rawData.length, "bytes");
+
+        // Get the raw downloaded data as bytes
+        var rawBytes = rawData;
+
+        // Find the calibration coefficients (C0-C6) from the first page header
+        var calibrationFound = false;
+        var C = [0, 0, 0, 0, 0, 0, 0];
+
+        // Search for RLE (0x77) and RTX (0x76) markers in the raw data
+        for (var i = 0; i < rawBytes.length - 30; i++) {
+            if (rawBytes[i] === 0x77 && rawBytes[i + 1] === 0x76) {
+                // Found page header, extract calibration from bytes 16-29
+                C[0] = (rawBytes[i + 16] << 8) | rawBytes[i + 17];
+                C[1] = (rawBytes[i + 18] << 8) | rawBytes[i + 19];
+                C[2] = (rawBytes[i + 20] << 8) | rawBytes[i + 21];
+                C[3] = (rawBytes[i + 22] << 8) | rawBytes[i + 23];
+                C[4] = (rawBytes[i + 24] << 8) | rawBytes[i + 25];
+                C[5] = (rawBytes[i + 26] << 8) | rawBytes[i + 27];
+                C[6] = (rawBytes[i + 28] << 8) | rawBytes[i + 29];
+
+                calibrationFound = true;
+                console.log("Auto-zero: Calibration coefficients found");
+                break;
+            }
+        }
+
+        if (!calibrationFound) {
+            console.log("Auto-zero: Could not find calibration coefficients");
+            return 1013.25;
+        }
+
+        // Calculate how many records to process based on seconds
+        // Record interval is 2 seconds based on your test data
+        var recordIntervalSeconds = 2;
+        var recordsToAverage = Math.ceil(seconds / recordIntervalSeconds);
+        if (recordsToAverage < 1) recordsToAverage = 1;
+
+        console.log("Auto-zero: Averaging first", recordsToAverage, "records");
+
+        // Parse the raw data and collect pressure readings from the first N records
+        var pressureSum = 0;
+        var pressureCount = 0;
+        var recordsProcessed = 0;
+
+        var offset = 0;
+        var bytesPerPage = 512;
+        var headerSize = 32;
+        var recordSize = 32;
+
+        while (offset + bytesPerPage <= rawBytes.length && recordsProcessed < recordsToAverage) {
+            var totalRecordsInPage = rawBytes[offset + 5];
+            var dataRecordsInPage = totalRecordsInPage - 1;
+
+            var dataOffset = offset + headerSize;
+
+            for (var i = 0; i < dataRecordsInPage && recordsProcessed < recordsToAverage; i++) {
+                var recordStart = dataOffset + (i * recordSize);
+
+                if (recordStart + recordSize > rawBytes.length) break;
+
+                // Extract raw ADC values (bytes 8-11 for D1, bytes 14-17 for D2)
+                var D1 = (rawBytes[recordStart + 8] << 24) |
+                         (rawBytes[recordStart + 9] << 16) |
+                         (rawBytes[recordStart + 10] << 8) |
+                         rawBytes[recordStart + 11];
+
+                var D2 = (rawBytes[recordStart + 14] << 24) |
+                         (rawBytes[recordStart + 15] << 16) |
+                         (rawBytes[recordStart + 16] << 8) |
+                         rawBytes[recordStart + 17];
+
+                // Apply MS5837 formulas
+                var dT = D2 - (C[5] << 8);
+                var OFF = (C[2] << 16) + (C[4] * dT) / 128;
+                var SENS = (C[1] << 15) + (C[3] * dT) / 256;
+                var P = (((D1 * SENS) / 2097152) - OFF) / 8192;
+
+                var pressure_mbar = P / 10.0;
+
+                pressureSum += pressure_mbar;
+                pressureCount++;
+                recordsProcessed++;
+            }
+
+            offset += bytesPerPage;
+        }
+
+        if (pressureCount === 0) {
+            console.log("Auto-zero: No pressure readings found");
+            return 1013.25;
+        }
+
+        var avgPressure = pressureSum / pressureCount;
+        console.log("Auto-zero: Average surface pressure =", avgPressure.toFixed(2), "mbar from", pressureCount, "readings");
+
+        return avgPressure;
     }
 
     function loadBarometerFile(filePath) {
@@ -1148,9 +1275,8 @@ GridLayout {
     function recalculateWithNewPressure(surfacePressure, pressureMethod) {
         console.log("Recalculating depth with new pressure:", surfacePressure, "mbar", "Method:", pressureMethod)
 
-        // Update current method and value
+        // Update current method
         currentPressureMethod = pressureMethod
-        currentPressureValue = surfacePressure
 
         // Check if we have the empty barometer warning
         var hadEmptyBarometerWarning = (barometerOverlapStatus.indexOf("No barometer data") !== -1)
@@ -1163,20 +1289,97 @@ GridLayout {
             }
         }
 
+        // ====================================================================
+        // Handle Auto-zero method - reprocess from original raw data
+        // ====================================================================
+        if (pressureMethod === "AutoDetect") {
+            if (!persistentRawData || persistentRawData.length === 0) {
+                console.log("ERROR: No persistent raw data available for Auto-zero recalculation")
+                return
+            }
+
+            // Calculate auto-zero pressure from persistent raw data
+            var calculatedPressure = calculateAutoDetectPressure(autoZeroSeconds);
+            currentPressureValue = calculatedPressure;
+            console.log("Auto-zero recalculation - calculated surface pressure:", calculatedPressure, "mbar");
+
+            // Reprocess the original raw data with the calculated auto-zero pressure
+            var newProcessedPoints = CppClass.processDeviceFileData(persistentRawData, calculatedPressure);
+
+            if (newProcessedPoints && newProcessedPoints.length > 0) {
+                updateChart(newProcessedPoints);
+                rawSensorData = newProcessedPoints;
+                // Store the processed points for future recalculations
+                rawPressureData = JSON.parse(JSON.stringify(newProcessedPoints));
+                fileDetailsText.text = "Recalculated with Auto-zero pressure (" + calculatedPressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newProcessedPoints.length + " data records)"
+                adjustPressureButton.visible = true
+            } else {
+                console.log("ERROR: Failed to reprocess data with Auto-zero pressure")
+            }
+            return
+        }
+
+        // ====================================================================
+        // Handle Barometer File method - reprocess from original raw data
+        // ====================================================================
+        if (pressureMethod === "BarometerFile") {
+            if (!persistentRawData || persistentRawData.length === 0) {
+                console.log("ERROR: No persistent raw data available for Barometer recalculation")
+                return
+            }
+
+            var barometerDataFromCpp = CppClass.getBarometerData()
+
+            if (!barometerDataFromCpp || barometerDataFromCpp.length === 0) {
+                console.log("No barometer data available for recalculation")
+                console.log("Please load a barometer file first")
+                return
+            }
+
+            // Reprocess the original raw data with barometer compensation
+            var newProcessedPoints = CppClass.processDeviceFileDataWithBarometer(persistentRawData, barometerDataFromCpp)
+
+            if (newProcessedPoints && newProcessedPoints.length > 0) {
+                // Calculate overlap warning
+                var overlapInfo = CppClass.calculateBarometerOverlap(newProcessedPoints, barometerDataFromCpp)
+                barometerOverlapWarning = overlapInfo.warningMessage
+                barometerOverlapStatus = overlapInfo.overlapStatus
+
+                updateChart(newProcessedPoints)
+                rawSensorData = newProcessedPoints
+                rawPressureData = JSON.parse(JSON.stringify(newProcessedPoints))
+
+                if (barometerOverlapWarning !== "") {
+                    fileDetailsText.text = "Recalculated - " + barometerOverlapWarning + " - " + selectedFileData.fileName + " (" + newProcessedPoints.length + " data records)"
+                } else {
+                    fileDetailsText.text = "Recalculated with barometer file - " + selectedFileData.fileName + " (" + newProcessedPoints.length + " data records)"
+                }
+                adjustPressureButton.visible = true
+            } else {
+                console.log("Warning: No data points processed with barometer file")
+            }
+            return
+        }
+
+        // ====================================================================
+        // Handle Standard, Manual, and other methods - use stored rawPressureData
+        // ====================================================================
+
         // Check if we have raw pressure data
         if (!rawPressureData || rawPressureData.length === 0) {
             console.log("ERROR: No raw pressure data available for recalculation")
             return
         }
 
-        // Recalculate depth for each stored point
         var newPoints = []
+        var usedPressure = surfacePressure
+        currentPressureValue = surfacePressure
+
+        // Recalculate depth for each stored point
         for (var i = 0; i < rawPressureData.length; i++) {
             var point = rawPressureData[i]
-
-            var newDepth = (point.pressure_mbar - surfacePressure) * 0.010197
+            var newDepth = (point.pressure_mbar - usedPressure) * 0.010197
             if (newDepth < 0) newDepth = 0
-
             newPoints.push({
                 time: point.time,
                 temperature: point.temperature,
@@ -1188,21 +1391,17 @@ GridLayout {
 
         // Update graph with new points
         updateChart(newPoints)
-
-        // Update stored data points
         rawSensorData = newPoints
 
         // Update file details text based on method
         if (hadEmptyBarometerWarning) {
             fileDetailsText.text = "Warning: Barometer file empty - using Standard pressure. " + selectedFileData.fileName +
-                                   " (" + newPoints.length + " data records) (Recalculated with " + pressureMethod + " pressure: " + surfacePressure.toFixed(2) + " mbar)"
+                                   " (" + newPoints.length + " data records) (Recalculated with " + pressureMethod + " pressure: " + usedPressure.toFixed(2) + " mbar)"
         } else {
             if (pressureMethod === "Standard") {
-                fileDetailsText.text = "Recalculated with Standard pressure (" + surfacePressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
+                fileDetailsText.text = "Recalculated with Standard pressure (" + usedPressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
             } else if (pressureMethod === "Manual") {
-                fileDetailsText.text = "Recalculated with Manual pressure (" + surfacePressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
-            } else if (pressureMethod === "AutoDetect") {
-                fileDetailsText.text = "Recalculated with Auto-detected pressure (" + surfacePressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
+                fileDetailsText.text = "Recalculated with Manual pressure (" + usedPressure.toFixed(2) + " mbar) - " + selectedFileData.fileName + " (" + newPoints.length + " data records)"
             }
         }
 
@@ -1575,7 +1774,6 @@ GridLayout {
                             font.pixelSize: 18
                             color: "#FFA500"
                         }
-
                         Text {
                             id: indicatorText
                             text: {
@@ -1584,7 +1782,7 @@ GridLayout {
                                 } else if (currentPressureMethod === "Manual") {
                                     return "Surface Pressure: Manual (" + currentPressureValue.toFixed(2) + " mbar)"
                                 } else if (currentPressureMethod === "AutoDetect") {
-                                    return "Surface Pressure: Auto-detect (" + currentPressureValue.toFixed(2) + " mbar)"
+                                    return "Surface Pressure: Auto-zero (" + currentPressureValue.toFixed(2) + " mbar)"
                                 } else if (currentPressureMethod === "BarometerFile") {
                                     if (barometerOverlapStatus !== "") {
                                         return "Surface Pressure: Barometer file - " + barometerOverlapStatus
@@ -2116,7 +2314,7 @@ GridLayout {
             RadioButton {
                 id: autoDetectRadio
                 font.pixelSize: 18
-                text: "Auto-detect from first:"
+                text: "Auto-zero (first N seconds):"
             }
 
             RowLayout {
@@ -2185,8 +2383,10 @@ GridLayout {
                             surfacePressure = parseFloat(manualPressureField.text);
                             pressureSource = "Manual";
                         } else if (autoDetectRadio.checked) {
-                            surfacePressure = calculateAutoDetectPressure(autoDetectSeconds.value);
+                            // Store the seconds value, but don't calculate yet
+                            autoZeroSeconds = autoDetectSeconds.value;
                             pressureSource = "AutoDetect";
+                            surfacePressure = 1013.25;  // Placeholder, will be calculated after download
                         } else if (baroFileRadio.checked && baroFilePathField.text !== "") {
                             // Load barometer file and check result
                             var success = CppClass.loadBarometerFile(baroFilePathField.text);
@@ -2248,5 +2448,4 @@ GridLayout {
             }
         }
     }
-
 }
