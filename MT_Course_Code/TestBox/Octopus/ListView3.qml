@@ -871,9 +871,9 @@ GridLayout {
         }
 
         // Handle Auto-zero method specially - calculate pressure after download
-        if (pressureMethod === "AutoDetect") {
+        if (pressureMethod === "AutoZero") {
             // Calculate auto-zero pressure from the downloaded data
-            var calculatedPressure = calculateAutoDetectPressure(autoZeroSeconds);
+            var calculatedPressure = calculateAutoZeroPressure(autoZeroSeconds);
             currentPressureValue = calculatedPressure;
             console.log("Auto-zero method - calculated surface pressure:", calculatedPressure, "mbar");
 
@@ -928,7 +928,7 @@ GridLayout {
         }
     }
 
-    function calculateAutoDetectPressure(seconds) {
+    function calculateAutoZeroPressure(seconds) {
         console.log("Auto-zero: Calculating surface pressure from first", seconds, "seconds of data");
 
         // Use persistentRawData if available (for recalculation), otherwise use pendingDownloadData
@@ -1292,14 +1292,14 @@ GridLayout {
         // ====================================================================
         // Handle Auto-zero method - reprocess from original raw data
         // ====================================================================
-        if (pressureMethod === "AutoDetect") {
+        if (pressureMethod === "AutoZero") {
             if (!persistentRawData || persistentRawData.length === 0) {
                 console.log("ERROR: No persistent raw data available for Auto-zero recalculation")
                 return
             }
 
             // Calculate auto-zero pressure from persistent raw data
-            var calculatedPressure = calculateAutoDetectPressure(autoZeroSeconds);
+            var calculatedPressure = calculateAutoZeroPressure(autoZeroSeconds);
             currentPressureValue = calculatedPressure;
             console.log("Auto-zero recalculation - calculated surface pressure:", calculatedPressure, "mbar");
 
@@ -1781,7 +1781,7 @@ GridLayout {
                                     return "Surface Pressure: Standard (" + currentPressureValue.toFixed(2) + " mbar)"
                                 } else if (currentPressureMethod === "Manual") {
                                     return "Surface Pressure: Manual (" + currentPressureValue.toFixed(2) + " mbar)"
-                                } else if (currentPressureMethod === "AutoDetect") {
+                                } else if (currentPressureMethod === "AutoZero") {
                                     return "Surface Pressure: Auto-zero (" + currentPressureValue.toFixed(2) + " mbar)"
                                 } else if (currentPressureMethod === "BarometerFile") {
                                     if (barometerOverlapStatus !== "") {
@@ -1967,9 +1967,9 @@ GridLayout {
                 } else if (currentPressureMethod === "Manual") {
                     manualRadio.checked = true
                     manualPressureField.text = currentPressureValue.toString()
-                } else if (currentPressureMethod === "AutoDetect") {
-                    autoDetectRadio.checked = true
-                    autoDetectSeconds.value = 5
+                } else if (currentPressureMethod === "AutoZero") {
+                    autoZeroRadio.checked = true
+                    autoZeroSecondsSpinBox.value = autoZeroSeconds
                 } else if (currentPressureMethod === "BarometerFile") {
                     baroFileRadio.checked = true
                 }
@@ -2312,16 +2312,16 @@ GridLayout {
             }
 
             RadioButton {
-                id: autoDetectRadio
+                id: autoZeroRadio
                 font.pixelSize: 18
                 text: "Auto-zero (first N seconds):"
             }
 
             RowLayout {
                 Layout.leftMargin: 30
-                enabled: autoDetectRadio.checked
+                enabled: autoZeroRadio.checked
                 SpinBox {
-                    id: autoDetectSeconds
+                    id: autoZeroSecondsSpinBox
                     font.pixelSize: 17
                     from: 1
                     to: 60
@@ -2382,10 +2382,10 @@ GridLayout {
                         if (manualRadio.checked) {
                             surfacePressure = parseFloat(manualPressureField.text);
                             pressureSource = "Manual";
-                        } else if (autoDetectRadio.checked) {
+                        } else if (autoZeroRadio.checked) {
                             // Store the seconds value, but don't calculate yet
-                            autoZeroSeconds = autoDetectSeconds.value;
-                            pressureSource = "AutoDetect";
+                            autoZeroSeconds = autoZeroSecondsSpinBox.value;
+                            pressureSource = "AutoZero";
                             surfacePressure = 1013.25;  // Placeholder, will be calculated after download
                         } else if (baroFileRadio.checked && baroFilePathField.text !== "") {
                             // Load barometer file and check result

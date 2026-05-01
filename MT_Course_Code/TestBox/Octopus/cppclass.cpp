@@ -1147,7 +1147,7 @@ void CppClass::stopFileMonitoring() {
 
 void CppClass::startComm()
 {
-    setPortName("COM2"); // COM5 on tablet
+    setPortName("COM4"); // COM1 and COM3 (POGO) // COM2 and COM4 (IR) // COM2 on pogo // COM5 on tablet
     if(startCommunication(m_portName.toUtf8().constData()) == true)
     {
         emit runningChanged();  // Emit signal when status changes
@@ -1282,6 +1282,29 @@ QVariantList CppClass::processDeviceFileData(const QVariantList &rawData, double
             int64_t OFF = ((int64_t)C[2] << 16) + (C[4] * dT) / 128;
             int64_t SENS = ((int64_t)C[1] << 15) + (C[3] * dT) / 256;
 
+            // Second order temperature compensation
+            int64_t T2 = 0;
+            int64_t OFF2 = 0;
+            int64_t SENS2 = 0;
+
+            if (TEMP < 2000) {
+                // Low temperature compensation (below 20°C)
+                T2 = (dT * dT) / 2147483648LL;
+                OFF2 = 3 * ((TEMP - 2000) * (TEMP - 2000)) / 2;
+                SENS2 = 5 * ((TEMP - 2000) * (TEMP - 2000)) / 8;
+
+                // Very low temperature compensation (below -15°C)
+                if (TEMP < -1500) {
+                    OFF2 = OFF2 + 7 * ((TEMP + 1500) * (TEMP + 1500));
+                    SENS2 = SENS2 + 11 * ((TEMP + 1500) * (TEMP + 1500)) / 2;
+                }
+            }
+
+            // Apply second order corrections
+            TEMP = TEMP - T2;
+            OFF = OFF - OFF2;
+            SENS = SENS - SENS2;
+
             int64_t P = (((D1 * SENS) / 2097152LL) - OFF) / 8192LL;
 
             // Convert to final units
@@ -1300,7 +1323,7 @@ QVariantList CppClass::processDeviceFileData(const QVariantList &rawData, double
             point["time"] = timeStr;
             point["temperature"] = temperature;
             point["depth"] = depth;
-            point["pressure_mbar"] = pressure_mbar;  // Add this line
+            point["pressure_mbar"] = pressure_mbar;
             point["conductivity"] = conductivity;
             processedPoints.append(point);
 
@@ -1451,6 +1474,29 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
             int64_t OFF = ((int64_t)C[2] << 16) + (C[4] * dT) / 128;
             int64_t SENS = ((int64_t)C[1] << 15) + (C[3] * dT) / 256;
 
+            // Second order temperature compensation
+            int64_t T2 = 0;
+            int64_t OFF2 = 0;
+            int64_t SENS2 = 0;
+
+            if (TEMP < 2000) {
+                // Low temperature compensation (below 20°C)
+                T2 = (dT * dT) / 2147483648LL;
+                OFF2 = 3 * ((TEMP - 2000) * (TEMP - 2000)) / 2;
+                SENS2 = 5 * ((TEMP - 2000) * (TEMP - 2000)) / 8;
+
+                // Very low temperature compensation (below -15°C)
+                if (TEMP < -1500) {
+                    OFF2 = OFF2 + 7 * ((TEMP + 1500) * (TEMP + 1500));
+                    SENS2 = SENS2 + 11 * ((TEMP + 1500) * (TEMP + 1500)) / 2;
+                }
+            }
+
+            // Apply second order corrections
+            TEMP = TEMP - T2;
+            OFF = OFF - OFF2;
+            SENS = SENS - SENS2;
+
             int64_t P = (((D1 * SENS) / 2097152LL) - OFF) / 8192LL;
 
             double temperature = TEMP / 100.0;
@@ -1463,7 +1509,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                 // Case 1: Instrument record is before first barometer reading
                 if (recordTime < firstBaroTime) {
                     barometerPressure_mbar = firstBaroPressure;
-                    if (totalRecordsProcessed < 20) {
+                    if (totalRecordsProcessed < 5) {
                         qDebug() << "Record before barometer start - using first barometer reading:"
                                  << barometerPressure_mbar << "at" << firstBaroTime;
                     }
@@ -1471,7 +1517,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                 // Case 2: Instrument record is after last barometer reading
                 else if (recordTime > lastBaroTime) {
                     barometerPressure_mbar = lastBaroPressure;
-                    if (totalRecordsProcessed < 20) {
+                    if (totalRecordsProcessed < 5) {
                         qDebug() << "Record after barometer end - using last barometer reading:"
                                  << barometerPressure_mbar << "at" << lastBaroTime;
                     }
@@ -1489,7 +1535,7 @@ QVariantList CppClass::processDeviceFileDataWithBarometer(const QVariantList &ra
                         }
                     }
                     // Print debug for first few records only
-                    if (totalRecordsProcessed < 20) {
+                    if (totalRecordsProcessed < 5) {
                         qDebug() << "Record time:" << recordTime << "Closest barometer:" << closestTime
                                  << "Diff(ms):" << minDiff << "Pressure:" << barometerPressure_mbar;
                     }
